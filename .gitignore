@@ -16,7 +16,9 @@ data/ticket_panels.json
 data/*.tmp
 data/backups/
 data/backups/*
-
+web/data/*.json
+web/data/*.tmp
+migration/
 
 # AI Agent folders
 .gemini/

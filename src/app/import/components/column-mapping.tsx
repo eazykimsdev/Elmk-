@@ -1,4 +1,10 @@
-import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "@/components/ui/select"
 
 import { FIELDS, UNMAPPED, type FieldKey } from "../fields"
 
@@ -43,25 +49,27 @@ export function ColumnMapping({
             </span>
 
             <span className="flex flex-col items-end gap-1">
-              <NativeSelect
-                size="sm"
-                aria-label={`${column || `Column ${index + 1}`} maps to`}
+              <Select
                 value={current ?? UNMAPPED}
-                onChange={(event) =>
-                  onChange(index, event.target.value === UNMAPPED ? null : (event.target.value as FieldKey))
+                onValueChange={(val) =>
+                  onChange(index, val === UNMAPPED ? null : (val as FieldKey))
                 }
-                className="w-44"
               >
-                <NativeSelectOption value={UNMAPPED}>Do not import</NativeSelectOption>
-                {FIELDS.filter((entry) => entry.key === current || !taken.has(entry.key)).map(
-                  (entry) => (
-                    <NativeSelectOption key={entry.key} value={entry.key}>
-                      {entry.label}
-                      {entry.required ? " (required)" : ""}
-                    </NativeSelectOption>
-                  )
-                )}
-              </NativeSelect>
+                <SelectTrigger className="w-44 h-8 text-xs bg-[#0E0E11] border-[var(--border)]">
+                  <SelectValue placeholder="Map field" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={UNMAPPED}>Do not import</SelectItem>
+                  {FIELDS.filter((entry) => entry.key === current || !taken.has(entry.key)).map(
+                    (entry) => (
+                      <SelectItem key={entry.key} value={entry.key}>
+                        {entry.label}
+                        {entry.required ? " (required)" : ""}
+                      </SelectItem>
+                    )
+                  )}
+                </SelectContent>
+              </Select>
               <span className="text-xs text-muted-foreground">
                 {field ? field.hint : "This column will be left out"}
               </span>

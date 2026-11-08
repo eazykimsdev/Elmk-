@@ -61,7 +61,7 @@ export function RewardsTab({ addToast }: { addToast?: (variant: 'success' | 'inf
       const res = await fetch('/api/user/test-dm', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'streak', guildName: 'Mavely Treasury' })
+        body: JSON.stringify({ type: 'streak', guildName: 'ConnectingERLC Treasury' })
       });
       const data = await res.json().catch(() => ({}));
       localStorage.setItem('erlcus_reward_launch_notified', 'true');
@@ -148,7 +148,7 @@ export function RewardsTab({ addToast }: { addToast?: (variant: 'success' | 'inf
             className={`font-semibold text-xs h-11 px-7 rounded-xl transition-all cursor-pointer ${
               notified
                 ? 'bg-white/[0.06] text-zinc-300 border border-white/10'
-                : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-md active:scale-95'
+                : 'bg-emerald-600 hover:bg-[var(--accent)] text-white shadow-md active:scale-95'
             }`}
           >
             {isSendingNotify ? 'Sending Discord DM...' : notified ? 'Discord DM Notification Active' : 'Notify Me in Discord DM'}
@@ -179,7 +179,7 @@ export function RewardsTab({ addToast }: { addToast?: (variant: 'success' | 'inf
 
           <div className="space-y-1.5">
             <div className="flex items-center gap-2 text-xs font-semibold text-white">
-              <ShieldCheck className="size-4 text-emerald-400" />
+              <ShieldCheck className="size-4 text-[var(--accent)]" />
               <span>Sybil-Protected</span>
             </div>
             <p className="text-[11px] text-zinc-400 leading-relaxed font-sans">

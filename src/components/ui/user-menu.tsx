@@ -4,7 +4,7 @@ import * as React from "react"
 import { ChevronsUpDownIcon, LogOutIcon } from "lucide-react"
 
 import { cn } from "@/lib/utils"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { UserAvatar } from "@/components/ui/UserAvatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -65,13 +65,14 @@ function UserMenu({
 }: UserMenuProps) {
   const initials = user.fallback ?? getInitials(user.name)
 
-  // Decorative everywhere it appears: the trigger names itself, and the name
-  // is right beside it in the menu — initials would only add "A L" to both.
   const avatar = (size: "sm" | "default") => (
-    <Avatar size={size} aria-hidden="true">
-      {user.src ? <AvatarImage src={user.src} alt="" /> : null}
-      <AvatarFallback>{initials}</AvatarFallback>
-    </Avatar>
+    <UserAvatar
+      avatarUrl={user.src}
+      name={user.name}
+      displayName={user.name}
+      size={size === "sm" ? 20 : 28}
+      className="shrink-0"
+    />
   )
 
   return (

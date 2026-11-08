@@ -34,7 +34,7 @@ export interface PricingComponentProps {
   showComparison?: boolean;
 }
 
-// Default plans tailored for Mavely ER:LC Communities
+// Default plans tailored for ConnectingERLC ER:LC Communities
 export const defaultPlans: PricingPlan[] = [
   {
     id: 'starter',

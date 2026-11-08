@@ -27,9 +27,9 @@ import { PanelLeftIcon } from "lucide-react"
 
 const SIDEBAR_COOKIE_NAME = "sidebar_state"
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7
-const SIDEBAR_WIDTH = "16rem"
-const SIDEBAR_WIDTH_MOBILE = "18rem"
-const SIDEBAR_WIDTH_ICON = "3rem"
+const SIDEBAR_WIDTH = "264px"
+const SIDEBAR_WIDTH_MOBILE = "264px"
+const SIDEBAR_WIDTH_ICON = "68px"
 const SIDEBAR_KEYBOARD_SHORTCUT = "b"
 
 type SidebarContextProps = {
@@ -323,7 +323,7 @@ function Sidebar({
           "inset-y-0 z-10 hidden w-(--sidebar-width) transition-[left,right,width] duration-(--duration-base) ease-(--ease-emphasized) data-[side=left]:left-0 data-[side=left]:group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)] data-[side=right]:right-0 data-[side=right]:group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)] md:flex",
           // Fixed to the window's edge in an app; a contained provider's box
           // is the edge, so the sidebar is placed in it, as tall as it is.
-          contained ? "absolute h-full" : "fixed h-svh",
+          contained ? "absolute h-full" : "fixed top-0 bottom-0 h-[100dvh]",
           // Adjust the padding for floating and inset variants.
           variant === "floating" || variant === "inset"
             ? "p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4))+2px)]"
@@ -554,7 +554,7 @@ function SidebarMenuItem({ className, ...props }: React.ComponentProps<"li">) {
 }
 
 const sidebarMenuButtonVariants = cva(
-  "peer/menu-button group/menu-button relative flex w-full items-center gap-2.5 overflow-hidden rounded-xl px-3 py-2 text-start text-sm font-medium transition-all duration-150 focus-ring group-has-data-[sidebar=menu-action]/menu-item:pe-8 group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-2! text-slate-400 hover:bg-white/[0.05] hover:text-slate-100 active:bg-white/[0.08] disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 data-active:bg-[#191d28] data-active:text-white data-active:font-semibold data-active:shadow-[0_1px_3px_0_rgba(0,0,0,0.4),inset_0_1px_0_0_rgba(255,255,255,0.08)] data-active:border data-active:border-white/[0.12] data-active:[&_svg]:text-emerald-400 [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:transition-colors [&>span:last-child]:truncate",
+  "peer/menu-button group/menu-button relative flex w-full items-center gap-2.5 overflow-hidden rounded-xl px-3 py-2 text-start text-sm font-medium transition-all duration-150 focus-ring group-has-data-[sidebar=menu-action]/menu-item:pe-8 group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-2! text-slate-400 hover:bg-white/[0.05] hover:text-slate-100 active:bg-white/[0.08] disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 data-active:bg-[#191d28] data-active:text-white data-active:font-semibold data-active:shadow-[0_1px_3px_0_rgba(0,0,0,0.4),inset_0_1px_0_0_rgba(255, 255, 255, 0.07)] data-active:border data-active:border-white/[0.12] data-active:[&_svg]:text-[var(--accent)] [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:transition-colors [&>span:last-child]:truncate",
   {
     variants: {
       variant: {

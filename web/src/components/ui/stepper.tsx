@@ -59,9 +59,18 @@ function useStepperItem(part: string) {
 /** True inside a `StepperTrigger`, which then carries `aria-current` instead of the indicator. */
 const StepperTriggerContext = createContext(false);
 
+export interface StepperStepItem {
+  id?: string;
+  title: string;
+  description?: string;
+}
+
 interface StepperProps extends Omit<ComponentProps<"nav">, "defaultValue"> {
   /** The current step, as a 0-based index. Steps before it are complete. */
   value?: number;
+  activeStep?: number;
+  size?: 'sm' | 'default' | 'lg' | string;
+  steps?: StepperStepItem[];
   /** The first current step when uncontrolled. */
   defaultValue?: number;
   /** Called with the index of the step a `StepperTrigger` asks for. */
@@ -85,6 +94,9 @@ interface StepperProps extends Omit<ComponentProps<"nav">, "defaultValue"> {
  */
 function Stepper({
   value: valueProp,
+  activeStep,
+  size,
+  steps,
   defaultValue = 0,
   onValueChange,
   orientation = "horizontal",
@@ -96,9 +108,9 @@ function Stepper({
   ...props
 }: StepperProps) {
   const [internal, setInternal] = useState(defaultValue);
-  const value = valueProp ?? internal;
+  const value = valueProp ?? activeStep ?? internal;
   const setValue = (next: number) => {
-    if (valueProp === undefined) setInternal(next);
+    if (valueProp === undefined && activeStep === undefined) setInternal(next);
     onValueChange?.(next);
   };
   const labels = { ...defaultLabels, ...labelsProp };
@@ -123,7 +135,22 @@ function Stepper({
         <StepperContext.Provider
           value={{ value, setValue, orientation, linear, labels }}
         >
-          {children}
+          {steps
+            ? steps.map((s, idx) => (
+                <StepperItem key={s.id || idx} step={idx}>
+                  <StepperTrigger>
+                    <StepperIndicator />
+                    <div>
+                      <StepperTitle>{s.title}</StepperTitle>
+                      {s.description && (
+                        <StepperDescription>{s.description}</StepperDescription>
+                      )}
+                    </div>
+                  </StepperTrigger>
+                  {idx < steps.length - 1 && <StepperSeparator />}
+                </StepperItem>
+              ))
+            : children}
         </StepperContext.Provider>
       </ol>
     </nav>
@@ -228,7 +255,7 @@ function StepperIndicator({
     >
       {state === "complete" ? (
         <>
-          <CheckIcon aria-hidden="true" className="size-3.5 text-emerald-400 stroke-[2.5]" />
+          <CheckIcon aria-hidden="true" className="size-3.5 text-[var(--accent)] stroke-[2.5]" />
           <span className="sr-only">{step + 1}</span>
         </>
       ) : (
@@ -282,7 +309,7 @@ function StepperSeparator({ className, ...props }: ComponentProps<"span">) {
       aria-hidden="true"
       className={cn(
         "bg-white/10 block shrink-0 group-last/stepper-item:hidden",
-        "group-data-[state=complete]/stepper-item:bg-emerald-500/50 transition-colors motion-reduce:transition-none",
+        "group-data-[state=complete]/stepper-item:bg-[var(--accent-soft)] transition-colors motion-reduce:transition-none",
         orientation === "vertical"
           ? "absolute top-10 bottom-2 left-[calc(1rem-0.5px)] w-px"
           : "h-px min-w-2 flex-1 sm:min-w-4",

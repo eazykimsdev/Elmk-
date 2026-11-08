@@ -62,10 +62,10 @@ export function CredentialsTab() {
       <div className="p-6 rounded-2xl border border-white/10 bg-white/[0.02] space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Lock className="size-4 text-emerald-400" />
+            <Lock className="size-4 text-[var(--accent)]" />
             <h3 className="text-sm font-semibold text-white">Private Server Integration Key</h3>
           </div>
-          <Badge variant="outline" className="border-emerald-500/30 text-emerald-400 bg-emerald-500/10 text-[10px] font-mono">
+          <Badge variant="outline" className="border-[var(--accent-border)] text-[var(--accent)] bg-[var(--accent-soft)] text-[10px] font-mono">
             ISOLATED & ENCRYPTED
           </Badge>
         </div>
@@ -86,7 +86,7 @@ export function CredentialsTab() {
             <Button
               type="submit"
               disabled={saving}
-              className="h-10 px-5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl shadow-md cursor-pointer transition-all active:scale-95"
+              className="h-10 px-5 text-xs font-semibold bg-emerald-600 hover:bg-[var(--accent)] text-white rounded-xl shadow-md cursor-pointer transition-all active:scale-95"
             >
               {saving ? 'Saving…' : 'Save Key'}
             </Button>
@@ -104,7 +104,7 @@ export function CredentialsTab() {
           <h3 className="text-sm font-semibold text-white">In-Game Ingestion Webhook</h3>
         </div>
         <p className="text-xs text-zinc-400 leading-relaxed">
-          Copy this webhook URL into your in-game Roblox scripts or third-party dispatchers to stream join and shift logs into Mavely.
+          Copy this webhook URL into your in-game Roblox scripts or third-party dispatchers to stream join and shift logs into ConnectingERLC.
         </p>
 
         <div className="flex items-center gap-2 bg-black/40 border border-white/10 p-2.5 rounded-xl">
@@ -114,7 +114,7 @@ export function CredentialsTab() {
             onClick={handleCopyWebhook}
             className="text-xs font-semibold text-zinc-400 hover:text-white px-2.5 py-1 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] transition-colors cursor-pointer flex items-center gap-1.5 shrink-0"
           >
-            {copiedWebhook ? <Check className="size-3 text-emerald-400" /> : <Copy className="size-3" />}
+            {copiedWebhook ? <Check className="size-3 text-[var(--accent)]" /> : <Copy className="size-3" />}
             <span>{copiedWebhook ? 'Copied' : 'Copy'}</span>
           </button>
         </div>

@@ -57,7 +57,7 @@ export function TransferTab({ addToast }: TransferTabProps) {
       'info',
       next ? 'Auto-Bump Engine Active' : 'Auto-Bump Engine Paused',
       next
-        ? 'Mavely will automatically bump your community every 2 hours to keep you near the top of the directory.'
+        ? 'ConnectingERLC will automatically bump your community every 2 hours to keep you near the top of the directory.'
         : 'Automated bumpers paused. You can still bump manually from the directory.'
     );
   };
@@ -86,7 +86,7 @@ export function TransferTab({ addToast }: TransferTabProps) {
     <div className="space-y-10 max-w-6xl mx-auto animate-in fade-in-50 duration-200 pb-16">
       {/* ── AMBIENT BACKGROUND GLOW ── */}
       <div className="relative">
-        <div className="absolute -top-16 left-1/2 -translate-x-1/2 w-[600px] h-48 bg-emerald-500/10 blur-[100px] pointer-events-none rounded-full" />
+        <div className="absolute -top-16 left-1/2 -translate-x-1/2 w-[600px] h-48 bg-[var(--accent-soft)] blur-[100px] pointer-events-none rounded-full" />
       </div>
 
       {/* ── TREASURY COMMAND BANNER ── */}
@@ -96,10 +96,10 @@ export function TransferTab({ addToast }: TransferTabProps) {
         <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 relative z-10">
           <div className="space-y-2">
             <div className="flex items-center gap-2">
-              <span className="text-[10px] font-mono uppercase tracking-widest text-emerald-400 font-bold px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20">
+              <span className="text-[10px] font-mono uppercase tracking-widest text-[var(--accent)] font-bold px-2 py-0.5 rounded bg-[var(--accent-soft)] border border-[var(--accent-border)]">
                 CREDITS & COMMUNITY TREASURY
               </span>
-              <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="size-1.5 rounded-full bg-[var(--accent)] animate-pulse" />
             </div>
 
             <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
@@ -130,7 +130,7 @@ export function TransferTab({ addToast }: TransferTabProps) {
             <div className="flex items-center justify-between gap-4 px-5 py-3 rounded-2xl bg-white/[0.03] border border-white/10">
               <div className="text-left">
                 <div className="flex items-center gap-1.5">
-                  <Radio className={`size-3.5 ${autoBumpEnabled ? 'text-emerald-400 animate-pulse' : 'text-zinc-500'}`} />
+                  <Radio className={`size-3.5 ${autoBumpEnabled ? 'text-[var(--accent)] animate-pulse' : 'text-zinc-500'}`} />
                   <span className="text-xs font-bold text-white">Auto-Bump Engine</span>
                 </div>
                 <span className="text-[10px] font-mono text-zinc-400 block">
@@ -142,7 +142,7 @@ export function TransferTab({ addToast }: TransferTabProps) {
                 type="button"
                 onClick={handleToggleAutoBump}
                 className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
-                  autoBumpEnabled ? 'bg-emerald-500' : 'bg-zinc-700'
+                  autoBumpEnabled ? 'bg-[var(--accent)]' : 'bg-zinc-700'
                 }`}
               >
                 <span
@@ -160,7 +160,7 @@ export function TransferTab({ addToast }: TransferTabProps) {
       <div className="space-y-4">
         <div className="flex items-center justify-between border-b border-white/5 pb-3">
           <div className="flex items-center gap-2">
-            <Zap className="size-4 text-emerald-400" />
+            <Zap className="size-4 text-[var(--accent)]" />
             <h2 className="text-sm font-bold text-white tracking-tight">Community Credit Capabilities</h2>
           </div>
           <span className="text-[11px] font-mono text-zinc-400">
@@ -172,10 +172,10 @@ export function TransferTab({ addToast }: TransferTabProps) {
           {/* Card 1 */}
           <div className="p-5 rounded-2xl border border-white/10 bg-white/[0.02] hover:bg-white/[0.04] transition-all space-y-2.5">
             <div className="flex items-center justify-between">
-              <div className="size-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+              <div className="size-8 rounded-lg bg-[var(--accent-soft)] border border-[var(--accent-border)] flex items-center justify-center text-[var(--accent)]">
                 <Users className="size-4" />
               </div>
-              <Badge variant="outline" className="border-emerald-500/30 text-emerald-400 bg-emerald-500/5 text-[10px] font-mono">
+              <Badge variant="outline" className="border-[var(--accent-border)] text-[var(--accent)] bg-[var(--accent)]/5 text-[10px] font-mono">
                 BOUNTY
               </Badge>
             </div>
@@ -183,7 +183,7 @@ export function TransferTab({ addToast }: TransferTabProps) {
             <p className="text-xs text-zinc-400 leading-relaxed">
               Deposit credits to reward authenticated players when they join your community through the global directory.
             </p>
-            <div className="pt-1 text-[11px] font-mono text-emerald-400">
+            <div className="pt-1 text-[11px] font-mono text-[var(--accent)]">
               Configurable: +2 to +10 Credits / Join
             </div>
           </div>
@@ -290,7 +290,7 @@ export function TransferTab({ addToast }: TransferTabProps) {
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-5 relative z-10 border-b border-white/5 pb-4">
           <div className="space-y-1.5">
             <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-white/[0.04] border border-white/10 text-[10px] font-mono text-zinc-400">
-              <Sparkles className="size-3 text-emerald-400" />
+              <Sparkles className="size-3 text-[var(--accent)]" />
               <span>SUBSCRIPTION PLANS</span>
             </div>
             <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
@@ -326,7 +326,7 @@ export function TransferTab({ addToast }: TransferTabProps) {
               )}
             >
               <span>Annually</span>
-              <span className="text-[10px] font-mono font-bold text-emerald-400 bg-emerald-500/20 px-1.5 py-0.5 rounded-full border border-emerald-500/30">
+              <span className="text-[10px] font-mono font-bold text-[var(--accent)] bg-[var(--accent-soft)] px-1.5 py-0.5 rounded-full border border-[var(--accent-border)]">
                 -20%
               </span>
             </button>
@@ -369,7 +369,7 @@ export function TransferTab({ addToast }: TransferTabProps) {
                   'Daily streak credit rewards'
                 ].map((feat, i) => (
                   <div key={i} className="flex items-center gap-2.5">
-                    <Check className="size-3.5 text-emerald-400 shrink-0" />
+                    <Check className="size-3.5 text-[var(--accent)] shrink-0" />
                     <span className="text-zinc-300">{feat}</span>
                   </div>
                 ))}
@@ -378,16 +378,16 @@ export function TransferTab({ addToast }: TransferTabProps) {
           </div>
 
           {/* Tier 2: Community Plus (Popular with Spotlight Glow) */}
-          <div className="flex flex-col justify-between rounded-3xl border-2 border-emerald-500/50 bg-gradient-to-b from-emerald-500/[0.08] via-white/[0.02] to-transparent p-7 relative hover:border-emerald-500/70 transition-all duration-300 shadow-2xl shadow-emerald-500/10">
+          <div className="flex flex-col justify-between rounded-3xl border-2 border-[var(--accent-border)] bg-gradient-to-b from-emerald-500/[0.08] via-white/[0.02] to-transparent p-7 relative hover:border-[var(--accent)]/70 transition-all duration-300 shadow-2xl shadow-emerald-500/10">
             <div className="absolute -top-3 right-6">
-              <span className="px-3 py-0.5 rounded-full bg-emerald-500 text-black text-[10px] font-mono font-black tracking-wider uppercase shadow-md shadow-emerald-500/30">
+              <span className="px-3 py-0.5 rounded-full bg-[var(--accent)] text-black text-[10px] font-mono font-black tracking-wider uppercase shadow-md shadow-emerald-500/30">
                 RECOMMENDED
               </span>
             </div>
 
             <div className="space-y-5">
               <div className="space-y-1">
-                <span className="text-[11px] font-mono text-emerald-400 uppercase tracking-wider font-semibold">Growth Booster</span>
+                <span className="text-[11px] font-mono text-[var(--accent)] uppercase tracking-wider font-semibold">Growth Booster</span>
                 <h3 className="text-lg font-bold text-white tracking-tight">Community Plus</h3>
                 <p className="text-xs text-zinc-400 leading-relaxed min-h-[32px]">
                   Boost member growth with monthly credit bounties and automated bumping.
@@ -403,12 +403,12 @@ export function TransferTab({ addToast }: TransferTabProps) {
 
               <Button
                 onClick={() => handleSelectPlan('plus', 'Community Plus', 250)}
-                className="w-full h-10 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs cursor-pointer shadow-lg shadow-emerald-600/25 transition-all hover:scale-[1.02] active:scale-98"
+                className="w-full h-10 rounded-2xl bg-emerald-600 hover:bg-[var(--accent)] text-white font-bold text-xs cursor-pointer shadow-lg shadow-emerald-600/25 transition-all hover:scale-[1.02] active:scale-98"
               >
                 {purchasedPlan === 'plus' ? 'Active Plan' : 'Upgrade to Plus (+250 Credits)'}
               </Button>
 
-              <div className="border-t border-emerald-500/20 pt-5 space-y-3 text-xs text-zinc-200">
+              <div className="border-t border-[var(--accent-border)] pt-5 space-y-3 text-xs text-zinc-200">
                 {[
                   'Includes everything in Free',
                   '+250 Credits deposited monthly',
@@ -417,7 +417,7 @@ export function TransferTab({ addToast }: TransferTabProps) {
                   'Verified server checkmark badge'
                 ].map((feat, i) => (
                   <div key={i} className="flex items-center gap-2.5">
-                    <Check className="size-3.5 text-emerald-400 shrink-0" />
+                    <Check className="size-3.5 text-[var(--accent)] shrink-0" />
                     <span className="text-zinc-200 font-medium">{feat}</span>
                   </div>
                 ))}
@@ -461,7 +461,7 @@ export function TransferTab({ addToast }: TransferTabProps) {
                   'VIP Dedicated Developer Support'
                 ].map((feat, i) => (
                   <div key={i} className="flex items-center gap-2.5">
-                    <Check className="size-3.5 text-emerald-400 shrink-0" />
+                    <Check className="size-3.5 text-[var(--accent)] shrink-0" />
                     <span className="text-zinc-300">{feat}</span>
                   </div>
                 ))}

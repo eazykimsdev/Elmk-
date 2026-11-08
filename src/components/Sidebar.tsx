@@ -16,6 +16,7 @@ import {
 import { useAuth } from '@/lib/auth';
 import { getDiscordLoginUrl } from '@/lib/api';
 import { SiteSettingsModal } from '@/components/ui/site-settings-modal';
+import { UserAvatar } from '@/components/ui/UserAvatar';
 
 export function Sidebar() {
   const location = useLocation();
@@ -46,7 +47,7 @@ export function Sidebar() {
     { href: '/dashboard', label: 'Dashboard', icon: LayoutGrid, active: path.startsWith('/dashboard') },
     { href: '/pricing', label: 'Pricing Plans', icon: CreditCard, active: path === '/pricing' },
     { href: '/docs', label: 'Documentation', icon: BookOpen, active: path.startsWith('/docs') },
-    { href: '/dashboard', label: 'Live Telemetry Radar', icon: Activity, active: false },
+    { href: '/dashboard', label: 'System Status', icon: Activity, active: false },
   ];
 
   return (
@@ -54,9 +55,9 @@ export function Sidebar() {
       <aside className="fixed left-0 top-0 bottom-0 z-50 w-14 sm:w-16 flex flex-col items-center justify-between py-5 border-r border-white/[0.08] bg-[#161616] select-none">
       {/* Top Branding / Logo */}
       <div className="flex flex-col items-center gap-7">
-        <Link to="/" className="flex items-center justify-center p-0 hover:opacity-80 transition-opacity outline-none focus:outline-none" title="Mavely">
-          <img src="/mavely-mark.png" alt="Mavely" className="size-7 object-contain" />
-          <span className="sr-only">Mavely Home</span>
+        <Link to="/" className="flex items-center justify-center p-0 hover:opacity-80 transition-opacity outline-none focus:outline-none" title="ConnectingERLC">
+          <img src="/brand/logo.png" alt="ConnectingERLC" className="size-7 object-contain" />
+          <span className="sr-only">ConnectingERLC Home</span>
         </Link>
 
         {/* Main Nav Icons */}
@@ -111,17 +112,13 @@ export function Sidebar() {
                 userMenuOpen ? 'ring-[#2ecc71] scale-105' : 'ring-white/20 hover:ring-white/60'
               }`}
             >
-              {user.avatar ? (
-                <img
-                  src={`https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png?size=128`}
-                  alt={user.username}
-                  className="size-full object-cover rounded-full"
-                />
-              ) : (
-                <div className="size-full bg-zinc-800 flex items-center justify-center text-[10px] font-bold text-white uppercase">
-                  {user.username.slice(0, 2)}
-                </div>
-              )}
+              <UserAvatar
+                userId={user.id}
+                avatarHash={user.avatar}
+                name={user.username}
+                size={32}
+                className="size-full rounded-full"
+              />
             </button>
 
             {/* User Popover Menu showing profile & Log Out */}
@@ -129,17 +126,13 @@ export function Sidebar() {
               <div className="absolute left-12 bottom-0 w-64 rounded-xl bg-[#161616] border border-white/10 shadow-2xl p-3 space-y-3 z-50 animate-in fade-in-50 zoom-in-95 duration-150">
                 {/* Header User Profile Info */}
                 <div className="flex items-center gap-2.5 pb-2.5 border-b border-white/[0.06]">
-                  {user.avatar ? (
-                    <img
-                      src={`https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png?size=128`}
-                      alt={user.username}
-                      className="size-9 object-cover rounded-full ring-1 ring-white/15"
-                    />
-                  ) : (
-                    <div className="size-9 bg-zinc-800 rounded-full flex items-center justify-center text-xs font-bold text-white">
-                      {user.username.slice(0, 2).toUpperCase()}
-                    </div>
-                  )}
+                  <UserAvatar
+                    userId={user.id}
+                    avatarHash={user.avatar}
+                    name={user.username}
+                    size={36}
+                    className="size-9 rounded-full ring-1 ring-white/15"
+                  />
                   <div className="min-w-0 flex-1">
                     <p className="text-xs font-semibold text-white truncate">
                       {user.globalName || user.username}
@@ -148,7 +141,7 @@ export function Sidebar() {
                       @{user.username}
                     </p>
                   </div>
-                  <span className="size-2 rounded-full bg-[#2ecc71]" title="Online" />
+                  <span className="size-2 rounded-full bg-[var(--accent)]" title="Online" />
                 </div>
 
                 {/* Quick Menu Actions */}

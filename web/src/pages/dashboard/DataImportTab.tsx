@@ -16,6 +16,13 @@ import {
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@/components/ui/select';
 import type { WorkspaceBot } from '@/types';
 
 // ==========================================
@@ -412,7 +419,7 @@ export function DataImportTab({ workspace: _workspace, onImportSuccess }: DataIm
         <div>
           <div className="flex items-center gap-2.5">
             <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight flex items-center gap-2.5">
-              <FileSpreadsheet className="size-6 text-emerald-400" />
+              <FileSpreadsheet className="size-6 text-[var(--accent)]" />
               <span>Server Data & Roster Import</span>
             </h1>
           </div>
@@ -428,7 +435,7 @@ export function DataImportTab({ workspace: _workspace, onImportSuccess }: DataIm
             onClick={downloadSampleTemplate}
             className="border-white/10 bg-white/5 hover:bg-white/10 text-xs text-slate-300 hover:text-white h-9 px-3.5 rounded-xl gap-1.5 transition-all"
           >
-            <Download className="size-3.5 text-emerald-400" />
+            <Download className="size-3.5 text-[var(--accent)]" />
             <span>Sample CSV</span>
           </Button>
 
@@ -468,14 +475,14 @@ export function DataImportTab({ workspace: _workspace, onImportSuccess }: DataIm
                 isActive
                   ? 'border-white/30 bg-[#12131c] shadow-sm'
                   : isPassed
-                  ? 'border-emerald-500/20 bg-[#0a0f12] text-zinc-300'
+                  ? 'border-[var(--accent-border)] bg-[#0a0f12] text-zinc-300'
                   : 'border-white/[0.08] bg-[#11141c] text-slate-500'
               }`}
             >
               <div className="flex items-center justify-between mb-1">
                 <span className="font-mono text-[10px] tracking-wider uppercase font-semibold">
                   {isPassed ? (
-                    <span className="text-emerald-400 flex items-center gap-1">
+                    <span className="text-[var(--accent)] flex items-center gap-1">
                       <CheckCircle2 className="size-3" /> Done
                     </span>
                   ) : (
@@ -483,7 +490,7 @@ export function DataImportTab({ workspace: _workspace, onImportSuccess }: DataIm
                   )}
                 </span>
                 {isActive && (
-                  <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  <span className="size-1.5 rounded-full bg-[var(--accent)] animate-pulse" />
                 )}
               </div>
               <div className="text-xs font-bold text-white truncate">{s.title}</div>
@@ -505,7 +512,7 @@ export function DataImportTab({ workspace: _workspace, onImportSuccess }: DataIm
             onDrop={handleFileDrop}
             className={`border-2 border-dashed rounded-xl p-10 text-center transition-all flex flex-col items-center justify-center cursor-pointer ${
               isDragging
-                ? 'border-emerald-500 bg-emerald-500/5'
+                ? 'border-[var(--accent)] bg-[var(--accent)]/5'
                 : 'border-white/10 hover:border-white/20 bg-black/20'
             }`}
             onClick={() => document.getElementById(fileInputId)?.click()}
@@ -552,7 +559,7 @@ export function DataImportTab({ workspace: _workspace, onImportSuccess }: DataIm
               variant="ghost"
               size="sm"
               onClick={() => loadCsvText('sample-erlc-roster.csv', SAMPLE_ERLC_ROSTER_CSV)}
-              className="text-xs text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 h-7 px-2.5"
+              className="text-xs text-[var(--accent)] hover:text-emerald-300 hover:bg-[var(--accent-soft)] h-7 px-2.5"
             >
               Load Sample ER:LC Roster (8 rows)
             </Button>
@@ -567,7 +574,7 @@ export function DataImportTab({ workspace: _workspace, onImportSuccess }: DataIm
             <div>
               <h3 className="text-sm font-bold text-white flex items-center gap-2">
                 <SlidersHorizontal className="size-4 text-zinc-400" />
-                <span>Map Columns to Mavely Attributes</span>
+                <span>Map Columns to ConnectingERLC Attributes</span>
               </h3>
               <p className="text-xs text-zinc-400 mt-0.5">
                 File: <strong className="text-zinc-200">{fileName}</strong> ({table.columns.length} columns, {table.rows.length} data rows)
@@ -622,22 +629,25 @@ export function DataImportTab({ workspace: _workspace, onImportSuccess }: DataIm
                   </div>
 
                   <div className="flex flex-col md:items-end gap-1 shrink-0">
-                    <select
-                      aria-label={`${column} maps to`}
+                    <Select
                       value={current ?? UNMAPPED}
-                      onChange={(e) => {
-                        const val = e.target.value === UNMAPPED ? null : (e.target.value as FieldKey);
-                        setMapping((prev) => ({ ...prev, [index]: val }));
+                      onValueChange={(val) => {
+                        const nextVal = val === UNMAPPED ? null : (val as FieldKey);
+                        setMapping((prev) => ({ ...prev, [index]: nextVal }));
                       }}
-                      className="bg-[#12131c] border border-white/15 rounded-md text-xs text-white h-8 px-2.5 w-52 focus:outline-none focus:border-white/30"
                     >
-                      <option value={UNMAPPED}>Do not import (Ignore)</option>
-                      {FIELDS.map((f) => (
-                        <option key={f.key} value={f.key}>
-                          {f.label} {f.required ? '*(Required)' : ''}
-                        </option>
-                      ))}
-                    </select>
+                      <SelectTrigger className="w-52 h-8 text-xs bg-[#0E0E11] border-[var(--border)]">
+                        <SelectValue placeholder="Map field" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={UNMAPPED}>Do not import (Ignore)</SelectItem>
+                        {FIELDS.map((f) => (
+                          <SelectItem key={f.key} value={f.key}>
+                            {f.label} {f.required ? '*(Required)' : ''}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <span className="text-[10px] text-zinc-400">
                       {field ? field.hint : 'This column will be omitted.'}
                     </span>
@@ -650,7 +660,7 @@ export function DataImportTab({ workspace: _workspace, onImportSuccess }: DataIm
           {/* Validation Status footer */}
           <div className="pt-2 flex items-center justify-between text-xs">
             {missingList.length === 0 ? (
-              <div className="text-emerald-400 flex items-center gap-1.5">
+              <div className="text-[var(--accent)] flex items-center gap-1.5">
                 <CheckCircle2 className="size-4" />
                 <span>All required fields are mapped and ready.</span>
               </div>
@@ -701,7 +711,7 @@ export function DataImportTab({ workspace: _workspace, onImportSuccess }: DataIm
               <Button
                 size="sm"
                 onClick={runBatchImport}
-                className="bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-bold h-8 px-4 shadow-sm"
+                className="bg-[var(--accent)] hover:bg-[var(--accent)] text-black text-xs font-bold h-8 px-4 shadow-sm"
               >
                 <span>Confirm &amp; Import ({rows.length} Rows)</span>
                 <ArrowRight className="size-3.5 ml-1.5" />
@@ -749,7 +759,7 @@ export function DataImportTab({ workspace: _workspace, onImportSuccess }: DataIm
             <Button
               size="sm"
               onClick={runBatchImport}
-              className="bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-bold h-8 px-5"
+              className="bg-[var(--accent)] hover:bg-[var(--accent)] text-black text-xs font-bold h-8 px-5"
             >
               <span>Execute Import</span>
             </Button>
@@ -763,7 +773,7 @@ export function DataImportTab({ workspace: _workspace, onImportSuccess }: DataIm
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/[0.06] pb-4">
             <div>
               <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                <CheckCircle2 className="size-4 text-emerald-400" />
+                <CheckCircle2 className="size-4 text-[var(--accent)]" />
                 <span>Import Operation Completed</span>
               </h3>
               <p className="text-xs text-zinc-400 mt-0.5">
@@ -790,7 +800,7 @@ export function DataImportTab({ workspace: _workspace, onImportSuccess }: DataIm
               >
                 {copiedJson ? (
                   <>
-                    <Check className="size-3.5 mr-1.5 text-emerald-400" />
+                    <Check className="size-3.5 mr-1.5 text-[var(--accent)]" />
                     <span>Copied!</span>
                   </>
                 ) : (
@@ -818,9 +828,9 @@ export function DataImportTab({ workspace: _workspace, onImportSuccess }: DataIm
               <div className="text-2xl font-bold text-white mt-1">{summary.total}</div>
             </div>
 
-            <div className="p-4 rounded-lg border border-emerald-500/30 bg-emerald-500/5">
-              <div className="text-[11px] text-emerald-400 font-mono font-semibold">SUCCESSFULLY IMPORTED</div>
-              <div className="text-2xl font-bold text-emerald-400 mt-1">{summary.imported}</div>
+            <div className="p-4 rounded-lg border border-[var(--accent-border)] bg-[var(--accent)]/5">
+              <div className="text-[11px] text-[var(--accent)] font-mono font-semibold">SUCCESSFULLY IMPORTED</div>
+              <div className="text-2xl font-bold text-[var(--accent)] mt-1">{summary.imported}</div>
             </div>
 
             <div className={`p-4 rounded-lg border ${summary.skipped > 0 ? 'border-amber-500/30 bg-amber-500/5' : 'border-white/[0.08] bg-[#070709]'}`}>
@@ -858,8 +868,8 @@ export function DataImportTab({ workspace: _workspace, onImportSuccess }: DataIm
           )}
 
           {summary.skipped === 0 && (
-            <div className="p-4 rounded-lg border border-emerald-500/20 bg-emerald-500/10 text-emerald-300 text-xs flex items-center gap-2.5">
-              <CheckCircle2 className="size-5 shrink-0 text-emerald-400" />
+            <div className="p-4 rounded-lg border border-[var(--accent-border)] bg-[var(--accent-soft)] text-emerald-300 text-xs flex items-center gap-2.5">
+              <CheckCircle2 className="size-5 shrink-0 text-[var(--accent)]" />
               <div>
                 <strong>Zero validation refusals!</strong> Every row in <span className="font-mono text-white">{fileName}</span> conformed strictly to the schema and has been staged into memory.
               </div>

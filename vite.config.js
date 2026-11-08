@@ -9,6 +9,7 @@ const __dirname = path.dirname(__filename)
 
 // https://vite.dev/config/
 export default defineConfig({
+  appType: 'spa',
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
@@ -19,6 +20,18 @@ export default defineConfig({
     port: 3000,
     strictPort: true,
     host: true,
+    allowedHosts: true,
+    watch: {
+      ignored: [
+        '**/web/**',
+        '**/data/**',
+        '**/*.json',
+        '**/*.db',
+        '**/*.log',
+        '**/scripts/**',
+        '**/.gemini/**',
+      ],
+    },
     proxy: {
       '/api': 'http://localhost:3001',
       '/auth': 'http://localhost:3001',

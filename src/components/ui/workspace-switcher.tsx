@@ -14,6 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { getInitials } from "@/lib/format"
+import { ServerIcon } from "@/components/ui/ServerIcon"
 
 export type Workspace = {
   id: string
@@ -39,34 +40,21 @@ export type WorkspaceMarkProps = {
   size?: "sm" | "default"
 }
 
-/** Clean Discord-style server mark: real icon image if available, else clean monogram */
+/** Clean Discord-style server mark using ServerIcon */
 function WorkspaceMark({ workspace, size = "default" }: WorkspaceMarkProps) {
-  const sizeClasses = size === "sm" ? "size-5 text-2xs" : "size-6 text-xs"
-
-  if (workspace.iconUrl) {
-    return (
-      <img
-        src={workspace.iconUrl}
-        alt={workspace.name}
-        className={cn(
-          "shrink-0 rounded-md object-cover border border-white/10",
-          sizeClasses
-        )}
-      />
-    )
-  }
+  const px = size === "sm" ? 20 : 24;
 
   return (
-    <span
-      data-slot="workspace-switcher-mark"
-      aria-hidden="true"
+    <ServerIcon
+      guildId={workspace.id}
+      iconUrl={workspace.iconUrl}
+      name={workspace.name}
+      size={px}
       className={cn(
-        "flex shrink-0 items-center justify-center rounded-md bg-[#5865F2] font-semibold text-white",
-        sizeClasses
+        "shrink-0 rounded-md object-cover border border-white/10",
+        size === "sm" ? "size-5" : "size-6"
       )}
-    >
-      {workspace.logo ?? getInitials(workspace.name)}
-    </span>
+    />
   )
 }
 

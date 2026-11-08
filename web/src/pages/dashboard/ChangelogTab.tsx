@@ -11,7 +11,7 @@ const ENTRIES: ChangelogEntry[] = [
     description: "Server bump counters and direct links, alongside dynamic Recharts member growth charts and directory pagination.",
     tags: ["new", "improved"],
     items: [
-      "Bump counter and mavely.us directory link on every server page",
+      "Bump counter and connectingerlc.com directory link on every server page",
       "Dynamic verified member growth trajectory line chart powered by Recharts",
       "Custom banner image upload in Promote Server Studio with real-time preview",
       "Complete Anti-Raid & Churn Security suite with live defense shield rating and 72h retention enforcement",
@@ -23,7 +23,7 @@ const ENTRIES: ChangelogEntry[] = [
   {
     version: "3.0.0",
     date: "2026-10-17T08:00:00.000Z",
-    title: "Mavely Community Growth & Discord Directory",
+    title: "ConnectingERLC Community Growth & Discord Directory",
     description: "Major release introducing the real-time Discord directory and 72-hour credit retention guarantees.",
     tags: ["new", "improved"],
     items: [
@@ -78,7 +78,7 @@ const ENTRIES: ChangelogEntry[] = [
   {
     version: "2.0.0",
     date: "2026-09-28T09:00:00.000Z",
-    title: "Initial Mavely Platform Launch",
+    title: "Initial ConnectingERLC Platform Launch",
     description: "The core platform engine connecting Discord communities with community growth tools.",
     tags: ["new"],
     items: [

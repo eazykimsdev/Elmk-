@@ -14,7 +14,7 @@ export interface ToastNotification {
 }
 
 const config: Record<NotificationVariant, { icon: typeof CircleCheck; accent: string }> = {
-  success: { icon: CircleCheck, accent: "text-emerald-400" },
+  success: { icon: CircleCheck, accent: "text-[var(--accent)]" },
   info: { icon: Info, accent: "text-blue-400" },
   warning: { icon: TriangleAlert, accent: "text-amber-400" },
   error: { icon: CircleAlert, accent: "text-rose-400" },

@@ -21,6 +21,13 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@/components/ui/select';
 import type { WorkspaceCustomizations } from '@/types';
 
 export interface RosterMember {
@@ -318,7 +325,7 @@ export function RosterImportSection({
               {members.length}
             </span>
           </div>
-          <Users className="size-5 text-emerald-400 shrink-0" />
+          <Users className="size-5 text-[var(--accent)] shrink-0" />
         </div>
 
         <div className="p-4 rounded-xl border border-white/10 bg-white/[0.02] flex items-center justify-between">
@@ -338,11 +345,11 @@ export function RosterImportSection({
             <span className="text-[11px] font-mono uppercase tracking-wider text-zinc-400 block font-semibold">
               Verified Records
             </span>
-            <span className="text-xl font-bold font-mono text-emerald-400 mt-0.5 block">
+            <span className="text-xl font-bold font-mono text-[var(--accent)] mt-0.5 block">
               {members.filter((m) => m.robloxId).length}
             </span>
           </div>
-          <CheckCircle2 className="size-5 text-emerald-400 shrink-0" />
+          <CheckCircle2 className="size-5 text-[var(--accent)] shrink-0" />
         </div>
       </div>
 
@@ -351,7 +358,7 @@ export function RosterImportSection({
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <h3 className="text-sm font-semibold text-white flex items-center gap-2">
-              <UploadCloud className="size-4 text-emerald-400" />
+              <UploadCloud className="size-4 text-[var(--accent)]" />
               <span>Import Community Roster</span>
             </h3>
             <p className="text-xs text-zinc-400 mt-0.5">
@@ -405,8 +412,8 @@ export function RosterImportSection({
             onClick={() => fileInputRef.current?.click()}
             className={`border-2 border-dashed rounded-xl p-8 sm:p-10 text-center cursor-pointer transition-all ${
               isDragging
-                ? 'border-emerald-400 bg-emerald-500/10'
-                : 'border-white/15 hover:border-emerald-500/40 bg-white/[0.01] hover:bg-white/[0.03]'
+                ? 'border-[var(--accent)] bg-[var(--accent-soft)]'
+                : 'border-white/15 hover:border-[var(--accent)]/40 bg-white/[0.01] hover:bg-white/[0.03]'
             }`}
           >
             <input
@@ -421,7 +428,7 @@ export function RosterImportSection({
               }}
             />
             <div className="size-11 rounded-2xl bg-white/[0.05] border border-white/10 flex items-center justify-center mx-auto mb-3 text-zinc-300">
-              <UploadCloud className="size-5 text-emerald-400" />
+              <UploadCloud className="size-5 text-[var(--accent)]" />
             </div>
             <span className="text-xs font-semibold text-white block">
               Click to browse or drop your CSV file here
@@ -443,7 +450,7 @@ export function RosterImportSection({
               }}
               rows={5}
               placeholder={`Paste roster rows (e.g. Username, RobloxID, Department, Rank):\nOfficerJohn, 4829103, Police, Sergeant\nDeputyVance, 3918201, Sheriff, Deputy`}
-              className="w-full text-xs font-mono bg-black/50 border border-white/15 rounded-xl p-3 text-white placeholder:text-zinc-600 focus:outline-none focus:border-emerald-500/50 resize-y"
+              className="w-full text-xs font-mono bg-black/50 border border-white/15 rounded-xl p-3 text-white placeholder:text-zinc-600 focus:outline-none focus:border-[var(--accent-border)] resize-y"
             />
             <span className="text-[11px] text-zinc-500 font-mono block">
               Tip: Copy any spreadsheet columns and paste directly above.
@@ -456,7 +463,7 @@ export function RosterImportSection({
           <div className="pt-3 border-t border-white/10 space-y-3 animate-in fade-in-50 duration-150">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <CheckCircle2 className="size-4 text-emerald-400" />
+                <CheckCircle2 className="size-4 text-[var(--accent)]" />
                 <span className="text-xs font-semibold text-white">
                   {parsedPreview.length} member{parsedPreview.length === 1 ? '' : 's'} ready to import
                 </span>
@@ -479,7 +486,7 @@ export function RosterImportSection({
                   type="button"
                   size="sm"
                   onClick={handleConfirmImport}
-                  className="h-8 px-4 text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg shadow-sm cursor-pointer transition-all active:scale-95"
+                  className="h-8 px-4 text-xs font-semibold bg-emerald-600 hover:bg-[var(--accent)] text-white rounded-lg shadow-sm cursor-pointer transition-all active:scale-95"
                 >
                   Import {parsedPreview.length} Members
                 </Button>
@@ -528,7 +535,7 @@ export function RosterImportSection({
       <div className="rounded-2xl border border-white/[0.08] bg-[#0f0f0f] p-5 sm:p-6 space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
-            <Users className="size-4 text-emerald-400" />
+            <Users className="size-4 text-[var(--accent)]" />
             <h3 className="text-sm font-semibold text-white">Active Community Roster</h3>
             <span className="text-[11px] font-mono px-2 py-0.5 rounded-md bg-white/[0.06] text-zinc-300">
               {filteredMembers.length} of {members.length}
@@ -543,7 +550,7 @@ export function RosterImportSection({
               onClick={() => setShowAddModal(true)}
               className="h-8 px-3 text-xs border-white/10 bg-white/[0.04] text-white hover:bg-white/[0.08] cursor-pointer rounded-lg flex items-center gap-1.5"
             >
-              <UserPlus className="size-3 text-emerald-400" />
+              <UserPlus className="size-3 text-[var(--accent)]" />
               <span>Add Member</span>
             </Button>
 
@@ -589,12 +596,12 @@ export function RosterImportSection({
                   onClick={() => setSelectedDept(dept)}
                   className={`text-xs px-2.5 py-1 rounded-lg border transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
                     isSelected
-                      ? 'border-emerald-500/40 bg-emerald-500/15 text-emerald-300 font-semibold'
+                      ? 'border-[var(--accent)]/40 bg-[var(--accent-soft)] text-emerald-300 font-semibold'
                       : 'border-white/5 bg-white/[0.02] text-zinc-400 hover:text-white hover:bg-white/[0.05]'
                   }`}
                 >
                   <span>{dept}</span>
-                  <span className={`text-[10px] font-mono px-1 rounded ${isSelected ? 'bg-emerald-500/20 text-emerald-200' : 'text-zinc-500'}`}>
+                  <span className={`text-[10px] font-mono px-1 rounded ${isSelected ? 'bg-[var(--accent-soft)] text-emerald-200' : 'text-zinc-500'}`}>
                     {count}
                   </span>
                 </button>
@@ -609,7 +616,7 @@ export function RosterImportSection({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search members or unit..."
-              className="h-8 pl-8 text-xs bg-black/40 border-white/10 text-white rounded-lg focus:border-emerald-500/50"
+              className="h-8 pl-8 text-xs bg-black/40 border-white/10 text-white rounded-lg focus:border-[var(--accent-border)]"
             />
           </div>
         </div>
@@ -673,8 +680,8 @@ export function RosterImportSection({
                       </td>
 
                       <td className="py-2.5 px-3.5">
-                        <span className="inline-flex items-center gap-1.5 text-[11px] text-emerald-400 font-medium">
-                          <span className="size-1.5 rounded-full bg-emerald-400" />
+                        <span className="inline-flex items-center gap-1.5 text-[11px] text-[var(--accent)] font-medium">
+                          <span className="size-1.5 rounded-full bg-[var(--accent)]" />
                           {member.status}
                         </span>
                       </td>
@@ -704,7 +711,7 @@ export function RosterImportSection({
           <div className="w-full max-w-md rounded-2xl border border-white/15 bg-[#161616] p-6 shadow-2xl space-y-4">
             <div className="flex items-center justify-between pb-2 border-b border-white/10">
               <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                <UserPlus className="size-4 text-emerald-400" />
+                <UserPlus className="size-4 text-[var(--accent)]" />
                 <span>Add Member to Roster</span>
               </h3>
               <button
@@ -743,17 +750,21 @@ export function RosterImportSection({
 
                 <div className="space-y-1">
                   <label className="text-zinc-300 font-medium block">Department</label>
-                  <select
+                  <Select
                     value={newDepartment}
-                    onChange={(e) => setNewDepartment(e.target.value)}
-                    className="w-full h-9 bg-black/40 border border-white/10 rounded-xl px-2.5 text-xs text-white focus:outline-none"
+                    onValueChange={setNewDepartment}
                   >
-                    {DEPARTMENTS.map((dept) => (
-                      <option key={dept} value={dept} className="bg-zinc-900 text-white">
-                        {dept}
-                      </option>
-                    ))}
-                  </select>
+                    <SelectTrigger className="w-full h-9 bg-[#0E0E11] border-[var(--border)] text-xs text-[#F4F4F5]">
+                      <SelectValue placeholder="Select department" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {DEPARTMENTS.map((dept) => (
+                        <SelectItem key={dept} value={dept}>
+                          {dept}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
@@ -800,7 +811,7 @@ export function RosterImportSection({
                 </Button>
                 <Button
                   type="submit"
-                  className="h-9 px-4 text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer rounded-xl"
+                  className="h-9 px-4 text-xs font-semibold bg-emerald-600 hover:bg-[var(--accent)] text-white cursor-pointer rounded-xl"
                 >
                   Add Member
                 </Button>

@@ -19,29 +19,10 @@ const AuthContext = createContext<AuthContextType>({
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<DiscordUser | null>(() => {
-    try {
-      const stored = localStorage.getItem('erlcus_user');
-      return stored ? JSON.parse(stored) : null;
-    } catch {
-      return null;
-    }
-  });
-  const [guilds, setGuilds] = useState<DiscordGuild[]>(() => {
-    try {
-      const stored = localStorage.getItem('erlcus_known_guilds');
-      return stored ? JSON.parse(stored) : [];
-    } catch {
-      return [];
-    }
-  });
-  const [loading, setLoading] = useState<boolean>(() => {
-    try {
-      return !localStorage.getItem('erlcus_user');
-    } catch {
-      return true;
-    }
-  });
+  // GET /api/auth/me is the ONLY source of truth (Section 1.3)
+  const [user, setUser] = useState<DiscordUser | null>(null);
+  const [guilds, setGuilds] = useState<DiscordGuild[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
 
   const refreshAuth = useCallback(async () => {
     try {
@@ -52,18 +33,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setGuilds(data.guilds);
           try { localStorage.setItem('erlcus_known_guilds', JSON.stringify(data.guilds)); } catch {}
         }
-        try { localStorage.setItem('erlcus_user', JSON.stringify(data.user)); } catch {}
       } else {
-        const cached = localStorage.getItem('erlcus_user');
-        if (cached) {
-          try { setUser(JSON.parse(cached)); } catch {}
-        }
+        setUser(null);
+        setGuilds([]);
+        try {
+          localStorage.removeItem('erlcus_user');
+          localStorage.removeItem('connectingerlc_user');
+          localStorage.removeItem('erlcus_known_guilds');
+          localStorage.removeItem('erlcus_default_guild');
+          localStorage.removeItem('connectingerlc_user_joins');
+          localStorage.removeItem('erlcus_credits_balance');
+          localStorage.removeItem('erlcus_current_user_ban');
+        } catch {}
       }
     } catch {
-      const cached = localStorage.getItem('erlcus_user');
-      if (cached) {
-        try { setUser(JSON.parse(cached)); } catch {}
-      }
+      setUser(null);
+      setGuilds([]);
+      try {
+        localStorage.removeItem('erlcus_user');
+        localStorage.removeItem('connectingerlc_user');
+        localStorage.removeItem('erlcus_known_guilds');
+        localStorage.removeItem('erlcus_default_guild');
+        localStorage.removeItem('connectingerlc_user_joins');
+        localStorage.removeItem('erlcus_credits_balance');
+        localStorage.removeItem('erlcus_current_user_ban');
+      } catch {}
     } finally {
       setLoading(false);
     }
@@ -71,16 +65,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     refreshAuth();
+
+    const handleUnauthorized = () => {
+      refreshAuth();
+    };
+    window.addEventListener('connectingerlc_auth_unauthorized', handleUnauthorized);
+    return () => {
+      window.removeEventListener('connectingerlc_auth_unauthorized', handleUnauthorized);
+    };
   }, [refreshAuth]);
 
   const handleLogout = async () => {
     try {
       await apiLogout();
     } catch {}
-    try { localStorage.removeItem('erlcus_user'); } catch {}
+
+    // Cleanly wipe all user session artifacts from storage
+    try {
+      localStorage.removeItem('erlcus_user');
+      localStorage.removeItem('connectingerlc_user');
+      localStorage.removeItem('erlcus_known_guilds');
+      localStorage.removeItem('erlcus_default_guild');
+      localStorage.removeItem('connectingerlc_user_joins');
+      localStorage.removeItem('erlcus_credits_balance');
+      localStorage.removeItem('erlcus_current_user_ban');
+      sessionStorage.clear();
+      document.cookie = 'connectingerlc_session=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+      document.cookie = 'erlcus_session=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+      document.cookie = 'erlc_session=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+    } catch {}
+
     setUser(null);
     setGuilds([]);
-    window.location.assign('/');
+    window.location.assign('/login');
   };
 
   return (

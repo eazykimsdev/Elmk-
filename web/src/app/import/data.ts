@@ -56,7 +56,7 @@ export function addLiveNotification(notif: {
   }
 }
 
-/** The person looking at the page: Mavely operator or authenticated Discord admin. */
+/** The person looking at the page: ConnectingERLC operator or authenticated Discord admin. */
 export function currentUser(customUser?: { username?: string; globalName?: string; id?: string; avatar?: string | null } | null) {
   if (customUser && customUser.username) {
     const avatarUrl = customUser.avatar
@@ -75,7 +75,7 @@ export function currentUser(customUser?: { username?: string; globalName?: strin
   }
 
   return {
-    name: "Mavely Operator",
+    name: "ConnectingERLC Operator",
     username: "operator",
     handle: "@operator",
     email: "@operator",

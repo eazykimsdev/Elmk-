@@ -21,7 +21,7 @@ export interface SiteSettingsModalProps {
 }
 
 const ACCENT_THEMES = [
-  { id: 'mint', name: 'Mavely Mint', color: '#2ecc71', oklch: '0.75 0.14 160' },
+  { id: 'mint', name: 'ConnectingERLC Mint', color: '#2ecc71', oklch: '0.75 0.14 160' },
   { id: 'cyan', name: 'Cyber Cyan', color: '#06b6d4', oklch: '0.78 0.14 210' },
   { id: 'purple', name: 'Neon Purple', color: '#8b5cf6', oklch: '0.68 0.18 290' },
   { id: 'amber', name: 'Tactical Amber', color: '#f59e0b', oklch: '0.75 0.16 75' },
@@ -155,43 +155,8 @@ export function SiteSettingsModal({ open, onOpenChange }: SiteSettingsModalProps
 
         {/* Content */}
         <div className="p-6 space-y-6 max-h-[75vh] overflow-y-auto">
-          {/* Section 1: Accent Colors */}
+          {/* Section 1: Audio & Feedback */}
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-semibold text-zinc-300 flex items-center gap-2">
-                <Palette className="size-3.5 text-zinc-400" />
-                <span>Ambient Theme Glow</span>
-              </label>
-              <span className="text-[10px] text-zinc-500 font-mono">Real-time accent</span>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2.5">
-              {ACCENT_THEMES.map((theme) => {
-                const isSelected = selectedAccent === theme.id;
-                return (
-                  <button
-                    key={theme.id}
-                    onClick={() => handleSelectAccent(theme.id)}
-                    className={`flex items-center gap-2.5 p-3 rounded-xl border text-xs font-medium transition-all text-left ${
-                      isSelected
-                        ? 'border-white/20 bg-white/[0.08] text-white shadow-sm'
-                        : 'border-white/[0.06] bg-white/[0.02] text-zinc-400 hover:bg-white/[0.05] hover:text-white'
-                    }`}
-                  >
-                    <span
-                      className="size-3.5 rounded-full shrink-0 ring-2 ring-white/10"
-                      style={{ backgroundColor: theme.color }}
-                    />
-                    <span className="flex-1 truncate">{theme.name}</span>
-                    {isSelected && <Check className="size-3.5 text-white shrink-0" />}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Section 2: Audio & Feedback */}
-          <div className="space-y-3 pt-2 border-t border-white/[0.06]">
             <div className="flex items-center justify-between py-1">
               <div className="space-y-0.5">
                 <div className="flex items-center gap-2 text-xs font-semibold text-zinc-300">
@@ -224,10 +189,10 @@ export function SiteSettingsModal({ open, onOpenChange }: SiteSettingsModalProps
           <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4 space-y-3 text-xs">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-mono uppercase tracking-wider text-zinc-500 font-bold flex items-center gap-1.5">
-                <Activity className="size-3 text-emerald-400" />
+                <Activity className="size-3 text-[var(--accent)]" />
                 <span>Runtime Diagnostics</span>
               </span>
-              <Badge variant="outline" className="border-emerald-500/30 bg-emerald-500/10 text-emerald-400 text-[10px]">
+              <Badge variant="outline" className="border-[var(--accent-border)] bg-[var(--accent-soft)] text-[var(--accent)] text-[10px]">
                 API Operational
               </Badge>
             </div>

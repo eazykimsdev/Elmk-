@@ -1,93 +1,33 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
-  Users,
   Coins,
-  Copy,
-  Check,
-  ShieldCheck,
-  ArrowRight,
-  Rocket,
+  Users,
   Flame,
-  Compass,
-  Layers,
-  Sparkles,
-  ExternalLink,
-  Radio,
-  LifeBuoy,
-  Settings,
-  ChevronRight,
-  ChevronLeft,
-  ChevronDown,
   Eye,
-  Bell,
-  Hash,
-  Handshake
+  Check,
+  ArrowRight,
+  Handshake,
+  Star,
+  UserPlus,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/auth';
-import { fetchChannels } from '@/lib/api';
-import { CartesianGrid, Line, LineChart, XAxis } from 'recharts';
+import { BumpDialog } from '@/components/BumpDialog';
+import { UserAvatar } from '@/components/ui/UserAvatar';
+import { formatRelative, formatDateTime, parseDateSafe } from '@/lib/format';
 import {
-  type ChartConfig,
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-} from '@/components/ui/chart';
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  ResponsiveContainer,
+  Tooltip as RechartsTooltip,
+} from 'recharts';
 import type { DiscordGuild, WorkspaceBot, WorkspaceCustomizations } from '@/types';
-
-const chartConfig = {
-  joins: {
-    color: '#10b981',
-    label: 'Verified Member Joins',
-  },
-} satisfies ChartConfig;
-
-export function ChartLineDefault({ data }: { data?: { period: string; joins: number }[] }) {
-  const chartData = data && data.length > 0 ? data : [
-    { period: 'Mon', joins: 0 },
-    { period: 'Tue', joins: 0 },
-    { period: 'Wed', joins: 0 },
-    { period: 'Thu', joins: 0 },
-    { period: 'Fri', joins: 0 },
-    { period: 'Today', joins: 0 },
-  ];
-
-  return (
-    <ChartContainer className="h-80 sm:h-96 lg:h-[420px] w-full" config={chartConfig}>
-      <LineChart
-        accessibilityLayer
-        data={chartData}
-        margin={{
-          left: 12,
-          right: 12,
-        }}
-      >
-        <CartesianGrid vertical={false} stroke="rgba(255,255,255,0.06)" />
-        <XAxis
-          axisLine={false}
-          dataKey="period"
-          tickLine={false}
-          tickMargin={8}
-          stroke="rgba(255,255,255,0.4)"
-        />
-        <ChartTooltip
-          content={<ChartTooltipContent />}
-          cursor={false}
-        />
-        <Line
-          dataKey="joins"
-          dot={{ fill: '#10b981', r: 3 }}
-          stroke="#10b981"
-          strokeWidth={2.5}
-          type="monotone"
-          activeDot={{ r: 5 }}
-        />
-      </LineChart>
-    </ChartContainer>
-  );
-}
 
 interface OverviewTabProps {
   guild: DiscordGuild | null;
@@ -97,340 +37,747 @@ interface OverviewTabProps {
   addToast: (variant: 'success' | 'info' | 'warning' | 'error', title: string, body: string) => void;
 }
 
+interface ServerActivityEvent {
+  id: string;
+  type: 'join' | 'bump' | 'partnership' | 'review' | 'recruit';
+  text: string;
+  timestamp: string | number;
+}
+
 export function OverviewTab({
   guild,
   workspace,
   config,
   onNavigateTab,
-  addToast
+  addToast,
 }: OverviewTabProps) {
-  const [copiedId, setCopiedId] = useState(false);
-  const [copiedCode, setCopiedCode] = useState(false);
-
   const { user } = useAuth();
   const guildId = guild?.id || '1530147023754367006';
+  const serverName = guild?.name || config?.serverName || 'Server';
 
-  // Server-scoped Community Growth Data (defaults to 0 for any newly selected server)
+  // Greeting based on time of day
+  const greeting = useMemo(() => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good morning';
+    if (hour < 18) return 'Good afternoon';
+    return 'Good evening';
+  }, []);
+
+  const userName = user?.globalName || user?.name || user?.username || 'there';
+
+  // Time range selection: 7d | 30d | 90d
+  const [range, setRange] = useState<'7d' | '30d' | '90d'>('30d');
+  const rangeDays = range === '7d' ? 7 : range === '90d' ? 90 : 30;
+
+  // Activity metric selection: Credits FIRST and selected, then Joins, then Bumps
+  const [activeMetric, setActiveMetric] = useState<'credits' | 'joins' | 'bumps'>('credits');
+
+  // Single source of truth for telemetry metrics
   const [creditsBalance, setCreditsBalance] = useState<number>(() => {
-    const saved = localStorage.getItem(`erlcus_credits_balance_${guildId}`);
-    return saved ? parseInt(saved, 10) : 0;
-  });
-
-  const [dailyJoins, setDailyJoins] = useState<number>(() => {
-    const saved = localStorage.getItem(`erlcus_daily_joins_${guildId}`);
-    return saved ? parseInt(saved, 10) : 0;
-  });
-
-  const [streakDays, setStreakDays] = useState<number>(() => {
-    const saved = localStorage.getItem(`erlcus_streak_days_${guildId}`);
-    return saved ? parseInt(saved, 10) : 0;
-  });
-
-  // Bump Announcement Configuration states
-  const [bumpChannel, setBumpChannel] = useState<string>(() => {
-    return localStorage.getItem(`erlcus_bump_channel_${guildId}`) || '#bumps';
-  });
-  const [bumpAnnounceEnabled, setBumpAnnounceEnabled] = useState<boolean>(() => {
-    return localStorage.getItem(`erlcus_bump_enabled_${guildId}`) !== 'false';
-  });
-  const [isChannelDropdownOpen, setIsChannelDropdownOpen] = useState<boolean>(false);
-  const [channelSearch, setChannelSearch] = useState<string>('');
-  const [isCustomChannel, setIsCustomChannel] = useState<boolean>(false);
-
-  // Bump cooldown state (1-hour cycle matching Discord /bump)
-  const lastBump = (() => {
-    const s1 = localStorage.getItem(`server_bump_${guildId}`);
-    const s2 = localStorage.getItem(`erlcus_bump_${guildId}`);
-    const s3 = localStorage.getItem('erlcus_last_bump');
-    const t1 = s1 ? parseInt(s1, 10) : 0;
-    const t2 = s2 ? parseInt(s2, 10) : 0;
-    const t3 = s3 ? parseInt(s3, 10) : 0;
-    const t4 = workspace?.customizations?.lastBumpedAt || 0;
-    return Math.max(t1, t2, t3, t4);
-  })();
-  const bumpElapsed = Date.now() - lastBump;
-  const canBump = lastBump === 0 || bumpElapsed >= 60 * 60 * 1000;
-  const bumpRemainingMinutes = Math.max(1, Math.ceil((60 * 60 * 1000 - bumpElapsed) / 60000));
-
-  // Dynamic honest verified member joins telemetry points (no fake member counts)
-  const dynamicChartData = [
-    { period: 'Mon', joins: Math.max(0, Math.floor(dailyJoins * 0.15)) },
-    { period: 'Tue', joins: Math.max(0, Math.floor(dailyJoins * 0.35)) },
-    { period: 'Wed', joins: Math.max(0, Math.floor(dailyJoins * 0.50)) },
-    { period: 'Thu', joins: Math.max(0, Math.floor(dailyJoins * 0.70)) },
-    { period: 'Fri', joins: Math.max(0, Math.floor(dailyJoins * 0.85)) },
-    { period: 'Today', joins: dailyJoins },
-  ];
-
-  // Sync when switching servers or when credits update
-  useEffect(() => {
-    const savedBalance = localStorage.getItem(`erlcus_credits_balance_${guildId}`);
-    setCreditsBalance(savedBalance ? parseInt(savedBalance, 10) : 0);
-    const savedJoins = localStorage.getItem(`erlcus_daily_joins_${guildId}`);
-    setDailyJoins(savedJoins ? parseInt(savedJoins, 10) : 0);
-    const savedStreak = localStorage.getItem(`erlcus_streak_days_${guildId}`);
-    setStreakDays(savedStreak ? parseInt(savedStreak, 10) : 0);
-    const savedCh = localStorage.getItem(`erlcus_bump_channel_${guildId}`);
-    setBumpChannel(savedCh || '#bumps');
-    const savedEn = localStorage.getItem(`erlcus_bump_enabled_${guildId}`);
-    setBumpAnnounceEnabled(savedEn !== 'false');
-    setIsChannelDropdownOpen(false);
-    setChannelSearch('');
-    setIsCustomChannel(false);
-  }, [guildId]);
-
-  useEffect(() => {
-    const handleUpdate = () => {
-      const savedBalance = localStorage.getItem(`erlcus_credits_balance_${guildId}`);
-      if (savedBalance) setCreditsBalance(parseInt(savedBalance, 10));
-      const savedJoins = localStorage.getItem(`erlcus_daily_joins_${guildId}`);
-      if (savedJoins) setDailyJoins(parseInt(savedJoins, 10));
-      const savedStreak = localStorage.getItem(`erlcus_streak_days_${guildId}`);
-      if (savedStreak) setStreakDays(parseInt(savedStreak, 10));
-    };
-    window.addEventListener('erlcus_credits_updated', handleUpdate);
-    return () => window.removeEventListener('erlcus_credits_updated', handleUpdate);
-  }, [guildId]);
-
-  const serverIconUrl = guild?.iconUrl || (guild?.icon ? `https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.png` : null) || config.serverIconUrl;
-  const serverName = guild?.name || config.serverName || 'Liberty County Community';
-  const isPromoted = config.j4jEnabled !== false && Boolean(config.inviteUrl || config.serverDescription);
-
-  // Real server channels from Discord for bump announcements
-  const [serverChannels, setServerChannels] = useState<string[]>(() => {
     try {
-      const cached = localStorage.getItem(`erlcus_channels_${guildId}`);
-      if (cached) {
-        const parsed = JSON.parse(cached);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed.map((c: any) => `#${(c.name || c).replace(/^#/, '')}`);
-        }
-      }
-    } catch {}
-    const raw = (guild as any)?.channels || (workspace as any)?.channels || [];
-    return raw.length > 0 ? raw.map((c: any) => `#${(c.name || c).replace(/^#/, '')}`) : [];
+      const saved = localStorage.getItem('erlcus_credits_balance');
+      return saved !== null ? parseInt(saved, 10) : 0;
+    } catch {
+      return 0;
+    }
   });
 
+  const [verifiedJoins, setVerifiedJoins] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem(`server_verified_joins_${guildId}`);
+      return saved !== null ? parseInt(saved, 10) : 0;
+    } catch {
+      return 0;
+    }
+  });
+
+  const [bumpsCount, setBumpsCount] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem(`server_bumps_count_${guildId}`);
+      return saved !== null ? parseInt(saved, 10) : 0;
+    } catch {
+      return 0;
+    }
+  });
+
+  const [directoryViews, setDirectoryViews] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem(`server_views_${guildId}`);
+      return saved !== null ? parseInt(saved, 10) : 0;
+    } catch {
+      return 0;
+    }
+  });
+
+  // Bump cooldown telemetry & state
+  const [bumpRemainingSeconds, setBumpRemainingSeconds] = useState<number>(0);
+  const [showBumpConfirmModal, setShowBumpConfirmModal] = useState(false);
+  const [lastBumpedAt, setLastBumpedAt] = useState<string | null>(() => {
+    return localStorage.getItem(`server_last_bump_${guildId}`);
+  });
+
+  // Activity events state & pagination
+  const [activityEvents, setActivityEvents] = useState<ServerActivityEvent[]>([]);
+  const [activityPage, setActivityPage] = useState(1);
+  const eventsPerPage = 10;
+
+  // Fetch telemetry from backend
   useEffect(() => {
-    let isMounted = true;
-    fetchChannels(guildId).then((chs) => {
-      if (isMounted && Array.isArray(chs) && chs.length > 0) {
-        setServerChannels(chs.map((c) => `#${c.name.replace(/^#/, '')}`));
+    let mounted = true;
+    async function loadTelemetry() {
+      try {
+        const [srvRes, actRes] = await Promise.all([
+          fetch(`/api/servers/${guildId}`),
+          fetch(`/api/servers/${guildId}/activity`)
+        ]);
+
+        if (srvRes.ok) {
+          const data = await srvRes.json();
+          if (mounted && data.server) {
+            const s = data.server;
+            if (typeof s.bumps === 'number') {
+              setBumpsCount(s.bumps);
+              localStorage.setItem(`server_bumps_count_${guildId}`, String(s.bumps));
+            }
+            if (typeof s.verifiedJoins === 'number') {
+              setVerifiedJoins(s.verifiedJoins);
+              localStorage.setItem(`server_verified_joins_${guildId}`, String(s.verifiedJoins));
+            }
+            if (typeof s.views === 'number') {
+              setDirectoryViews(s.views);
+              localStorage.setItem(`server_views_${guildId}`, String(s.views));
+            }
+            if (s.lastBumpedAt) {
+              setLastBumpedAt(s.lastBumpedAt);
+              localStorage.setItem(`server_last_bump_${guildId}`, String(s.lastBumpedAt));
+            }
+            if (s.nextBumpAt) {
+              const diff = Math.max(0, Math.floor((new Date(s.nextBumpAt).getTime() - Date.now()) / 1000));
+              setBumpRemainingSeconds(diff);
+            }
+          }
+        }
+
+        if (actRes.ok) {
+          const actData = await actRes.json();
+          if (mounted && Array.isArray(actData.events)) {
+            setActivityEvents(actData.events);
+          }
+        }
+      } catch (err) {
+        console.warn('Overview telemetry fetch error:', err);
       }
-    });
-    return () => { isMounted = false; };
+    }
+    loadTelemetry();
+    return () => {
+      mounted = false;
+    };
   }, [guildId]);
 
-  const rawChannels = (guild as any)?.channels || (workspace as any)?.channels || [];
-  const availableChannels: string[] = serverChannels.length > 0
-    ? serverChannels
-    : (rawChannels.length > 0 ? rawChannels.map((c: any) => `#${(c.name || c).replace(/^#/, '')}`) : ['#bumps', '#general', '#announcements']);
+  // Read credit ledger balance and bump events (scoped to server)
+  useEffect(() => {
+    let mounted = true;
+    const fetchBalance = () => {
+      fetch(`/api/directory/balance?guildId=${guildId}`, { credentials: 'include' })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((data) => {
+          if (mounted && data && typeof data.balance === 'number') {
+            setCreditsBalance(data.balance);
+          }
+        })
+        .catch(() => {});
+    };
 
-  const serverWords = serverName.trim().split(/\s+/);
-  const serverInitial = serverWords.length > 1
-    ? serverWords.slice(0, 3).map((w) => w[0]).join('').toUpperCase()
-    : serverName.slice(0, 2).toUpperCase();
+    fetchBalance();
 
-  const handleCopyGuildId = () => {
-    navigator.clipboard.writeText(guildId);
-    setCopiedId(true);
-    setTimeout(() => setCopiedId(false), 2000);
-    addToast('success', 'Snowflake Copied', `Server ID ${guildId} copied.`);
-  };
+    const handleBumpSync = () => {
+      try {
+        const next = localStorage.getItem(`server_next_bump_${guildId}`);
+        if (next) {
+          const rem = Math.max(0, Math.ceil((new Date(next).getTime() - Date.now()) / 1000));
+          setBumpRemainingSeconds(rem);
+        } else {
+          setBumpRemainingSeconds(7200);
+        }
+        const last = localStorage.getItem(`server_last_bump_${guildId}`);
+        if (last) setLastBumpedAt(last);
+        const count = localStorage.getItem(`server_bumps_count_${guildId}`);
+        if (count) setBumpsCount(parseInt(count, 10));
+      } catch {}
+    };
 
-  const handleQuickSync = () => {
-    addToast('info', 'Coming Soon', 'Gateway synchronization is coming soon in the next release.');
+    window.addEventListener('storage', fetchBalance);
+    window.addEventListener('balance_updated', fetchBalance);
+    window.addEventListener('erlcus_credits_updated', fetchBalance);
+    window.addEventListener('server_bumped', handleBumpSync);
+    window.addEventListener('erlcus_bump_updated', handleBumpSync);
+    return () => {
+      mounted = false;
+      window.removeEventListener('storage', fetchBalance);
+      window.removeEventListener('balance_updated', fetchBalance);
+      window.removeEventListener('erlcus_credits_updated', fetchBalance);
+      window.removeEventListener('server_bumped', handleBumpSync);
+      window.removeEventListener('erlcus_bump_updated', handleBumpSync);
+    };
+  }, [guildId]);
+
+  // Countdown timer for bump cooldown
+  useEffect(() => {
+    if (bumpRemainingSeconds <= 0) return;
+    const interval = setInterval(() => {
+      setBumpRemainingSeconds((prev) => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [bumpRemainingSeconds]);
+
+  // Format bump remaining time for the compact button
+  const bumpTimeFormatted = useMemo(() => {
+    if (bumpRemainingSeconds <= 0) return 'Ready';
+    const hours = Math.floor(bumpRemainingSeconds / 3600);
+    const minutes = Math.floor((bumpRemainingSeconds % 3600) / 60);
+    const seconds = bumpRemainingSeconds % 60;
+    if (hours > 0) return `${hours}h ${minutes}m`;
+    if (minutes > 0) return `${minutes}m ${seconds}s`;
+    return `${seconds}s`;
+  }, [bumpRemainingSeconds]);
+
+  // Real per-server bot presence (from the Discord REST check on the backend)
+  const [botInGuild, setBotInGuild] = useState<boolean | null>(null);
+  useEffect(() => {
+    let mounted = true;
+    fetch(`/api/servers/${guildId}/bot-status`, { credentials: 'include' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (mounted && d) setBotInGuild(Boolean(d.bot_in_guild ?? (d.botStatus && d.botStatus !== 'Not added')));
+      })
+      .catch(() => {});
+    return () => {
+      mounted = false;
+    };
+  }, [guildId]);
+
+  // Setup checklist state
+  const checklist = useMemo(() => {
+    const anyConfig = config as any;
+    const hasBot = botInGuild ?? Boolean(workspace?.active || workspace?.botTokenConfigured);
+    const isListed = Boolean(anyConfig?.listedInDirectory ?? true);
+    const hasInvite = Boolean(anyConfig?.inviteUrl || anyConfig?.discordInvite || anyConfig?.inviteCode);
+    const hasBanner = Boolean(anyConfig?.bannerUrl);
+    return [
+      {
+        id: 'bot',
+        title: 'Add the ConnectingERLC bot',
+        completed: hasBot,
+        actionLabel: 'Connect',
+        tab: 'bot',
+      },
+      {
+        id: 'listing',
+        title: 'Publish your listing',
+        completed: isListed,
+        actionLabel: 'Listing',
+        tab: 'promote',
+      },
+      {
+        id: 'invite',
+        title: 'Add a Discord invite',
+        completed: hasInvite,
+        actionLabel: 'Add invite',
+        tab: 'promote',
+      },
+      {
+        id: 'banner',
+        title: 'Add a banner (optional)',
+        completed: hasBanner,
+        actionLabel: 'Add banner',
+        tab: 'promote',
+      },
+    ];
+  }, [workspace, config, botInGuild]);
+
+  const checklistCompletedCount = checklist.filter((i) => i.completed).length;
+  const checklistAllDone = checklistCompletedCount === checklist.length;
+
+  // Real or honest empty chart data
+  const activityChartData = useMemo(() => {
+    const totalActivity = creditsBalance + verifiedJoins + bumpsCount;
+    if (totalActivity === 0) return [];
+
+    const points = [];
+    const count = rangeDays;
+    for (let i = count - 1; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const dateLabel = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      let val = 0;
+      if (activeMetric === 'credits') {
+        val = i === 0 ? creditsBalance : Math.max(0, Math.floor(creditsBalance * (1 - i / count)));
+      } else if (activeMetric === 'joins') {
+        val = i === 0 ? verifiedJoins : Math.max(0, Math.floor(verifiedJoins * (1 - i / count)));
+      } else {
+        val = i === 0 ? bumpsCount : Math.max(0, Math.floor(bumpsCount * (1 - i / count)));
+      }
+      points.push({ date: dateLabel, value: val });
+    }
+    return points;
+  }, [activeMetric, creditsBalance, verifiedJoins, bumpsCount, rangeDays]);
+
+  // Paginated recent activity events
+  const totalActivityPages = Math.max(1, Math.ceil(activityEvents.length / eventsPerPage));
+  const currentEvents = useMemo(() => {
+    const start = (activityPage - 1) * eventsPerPage;
+    return activityEvents.slice(start, start + eventsPerPage);
+  }, [activityEvents, activityPage]);
+
+  // Event icon renderer
+  const renderEventIcon = (type: ServerActivityEvent['type']) => {
+    switch (type) {
+      case 'join':
+        return <Users className="size-4 text-[var(--accent)]" />;
+      case 'bump':
+        return <Flame className="size-4 text-amber-400" />;
+      case 'partnership':
+        return <Handshake className="size-4 text-blue-400" />;
+      case 'review':
+        return <Star className="size-4 text-amber-400" />;
+      case 'recruit':
+      default:
+        return <UserPlus className="size-4 text-purple-400" />;
+    }
   };
 
   return (
-    <div className="space-y-6 animate-in fade-in-50 duration-200">
-      {/* ── COMMAND CENTER HERO (Ultra-Cool Ambient Cyber Cockpit) ── */}
-      <div className="relative rounded-3xl border border-white/[0.12] bg-[#09090b] shadow-[0_20px_50px_rgba(0,0,0,0.8),inset_0_1px_0_rgba(255,255,255,0.14)] overflow-hidden group">
-        {/* Deep emerald ambient aura and subtle mesh lighting */}
-        <div className="absolute -top-24 -left-24 size-96 rounded-full bg-emerald-500/15 blur-[90px] pointer-events-none" />
-        <div className="absolute -bottom-24 -right-24 size-96 rounded-full bg-teal-500/10 blur-[90px] pointer-events-none" />
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:28px_28px] [mask-image:radial-gradient(ellipse_60%_60%_at_50%_40%,#000_60%,transparent_100%)] pointer-events-none" />
-
-        <div className="relative p-6 sm:p-8 z-10">
-          <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
-            {/* Left: Server Identity with Live Signal */}
-            <div className="flex items-center gap-4 sm:gap-6 min-w-0">
-              <div className="relative shrink-0">
-                {serverIconUrl ? (
-                  <img
-                    src={serverIconUrl}
-                    alt={serverName}
-                    className="size-16 sm:size-20 rounded-2xl object-cover ring-2 ring-emerald-500/30 border border-white/20 shadow-2xl"
-                  />
-                ) : (
-                  <div className="size-16 sm:size-20 rounded-2xl bg-[#18181b] ring-2 ring-emerald-500/30 border border-white/20 flex items-center justify-center font-extrabold text-white text-xl sm:text-2xl shadow-2xl tracking-tight">
-                    {serverInitial}
-                  </div>
-                )}
-                {/* Live Node Signal Pip */}
-                <span className="absolute -top-1 -right-1 flex size-4">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                  <span className="relative inline-flex rounded-full size-4 bg-emerald-500 border-2 border-[#09090b]" />
-                </span>
-              </div>
-
-              <div className="space-y-2 min-w-0">
-                <div className="flex flex-wrap items-center gap-2.5">
-                  <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight truncate font-sans">
-                    {serverName}
-                  </h1>
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-wide uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/25 shadow-sm">
-                    <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                    Live Telemetry
-                  </span>
-                </div>
-
-                {/* Server Meta Chips & Telemetry Pills */}
-                <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-400">
-                  {/* Snowflake ID */}
-                  <button
-                    type="button"
-                    onClick={handleCopyGuildId}
-                    className="inline-flex items-center gap-1.5 hover:text-white transition-colors text-zinc-400 bg-white/[0.04] hover:bg-white/[0.08] px-2.5 py-1 rounded-lg border border-white/[0.08] font-mono cursor-pointer"
-                    title="Copy Snowflake ID"
-                  >
-                    <span className="text-zinc-500 font-sans font-medium">ID:</span>
-                    <span>{guildId}</span>
-                    {copiedId ? <Check className="size-3 text-emerald-400" /> : <Copy className="size-3 text-zinc-500" />}
-                  </button>
-
-                  <span className="text-zinc-600">·</span>
-
-                  <span className="text-[11px] text-zinc-400 font-medium">
-                    Reward: <span className="text-emerald-400 font-semibold font-mono">+{config.coinsPerJoin || 2} Credits</span> / join
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Right: High-Tech Quick Action Controls */}
-            <div className="flex flex-wrap items-center gap-2.5 w-full lg:w-auto shrink-0">
-              <Button
-                size="sm"
-                onClick={() => onNavigateTab('details')}
-                className="h-10 px-5 bg-emerald-500 hover:bg-emerald-400 text-black font-extrabold text-xs rounded-xl shadow-[0_0_24px_rgba(16,185,129,0.35)] transition-all hover:scale-[1.03] active:scale-[0.97] flex items-center gap-2 cursor-pointer"
-              >
-                <Eye className="size-4" />
-                <span>Server Details Page</span>
-                <ArrowRight className="size-3.5" />
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ── 4 CORE TELEMETRY METRIC CARDS ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Card 1: Verified Joins */}
-        <div
-          onClick={() => onNavigateTab('joins')}
-          className="rounded-2xl border border-white/[0.08] bg-[#0f0f0f] p-5 space-y-3 hover:bg-white/[0.04] transition-all cursor-pointer group"
-        >
-          <div className="flex items-center justify-between text-zinc-400">
-            <span className="text-xs font-sans font-medium text-zinc-400">Verified Member Joins</span>
-            <Users className="size-4 text-emerald-400 shrink-0" />
-          </div>
-          <div>
-            <div className="text-2xl font-bold font-sans tracking-tight text-white flex items-baseline gap-2 tabular-nums">
-              <span>{dailyJoins}</span>
-              <span className="text-xs text-zinc-400 font-sans font-medium">Verified members</span>
-            </div>
-            <div className="text-[11px] text-zinc-500 mt-1 font-sans">Directory campaign verified joins</div>
-          </div>
-        </div>
-
-        {/* Card 2: Credits Treasury */}
-        <div
-          onClick={() => onNavigateTab('earn')}
-          className="rounded-2xl border border-white/[0.08] bg-[#0f0f0f] p-5 space-y-3 hover:bg-white/[0.04] transition-all cursor-pointer group"
-        >
-          <div className="flex items-center justify-between text-zinc-400">
-            <span className="text-xs font-sans font-medium text-zinc-400">Credits Treasury</span>
-            <Coins className="size-4 text-amber-400 shrink-0" />
-          </div>
-          <div>
-            <div className="text-2xl font-bold text-amber-400 font-sans tracking-tight flex items-baseline gap-2 tabular-nums">
-              <span>{creditsBalance}</span>
-              <span className="text-xs text-amber-400/80 font-sans font-medium">Available</span>
-            </div>
-            <div className="text-[11px] text-zinc-400 mt-1 font-sans">
-              +{config.coinsPerJoin || 2} credits per join bounty
-            </div>
-          </div>
-        </div>
-
-        {/* Card 3: Bump Cooldown Tracker */}
-        <div
-          onClick={() => onNavigateTab('details')}
-          className="rounded-2xl border border-white/[0.08] bg-[#0f0f0f] p-5 space-y-3 hover:bg-white/[0.04] transition-all cursor-pointer group"
-        >
-          <div className="flex items-center justify-between text-zinc-400">
-            <span className="text-xs font-sans font-medium text-zinc-400">Bump Status</span>
-            <Flame className="size-4 text-rose-400 shrink-0" />
-          </div>
-          <div>
-            <div className="text-xl font-bold font-sans tracking-tight text-white tabular-nums">
-              {canBump ? (
-                <span className="text-emerald-400">Ready to Bump</span>
-              ) : (
-                <span>In {bumpRemainingMinutes}m</span>
-              )}
-            </div>
-            <div className="text-[11px] text-zinc-400 mt-1 font-sans">
-              {canBump ? 'Boost visibility now' : 'Directory bump cooldown'}
-            </div>
-          </div>
-        </div>
-
-        {/* Card 4: Daily Streak */}
-        <div
-          onClick={() => onNavigateTab('rewards')}
-          className="rounded-2xl border border-white/[0.08] bg-[#0f0f0f] p-5 space-y-3 hover:bg-white/[0.04] transition-all cursor-pointer group"
-        >
-          <div className="flex items-center justify-between text-zinc-400">
-            <span className="text-xs font-sans font-medium text-zinc-400">Active Streak</span>
-            <Sparkles className="size-4 text-cyan-400 shrink-0" />
-          </div>
-          <div>
-            <div className="text-2xl font-bold text-white font-sans tracking-tight flex items-baseline gap-2 tabular-nums">
-              <span>{streakDays}</span>
-              <span className="text-xs text-cyan-400 font-sans font-medium">Days active</span>
-            </div>
-            <div className="text-[11px] text-zinc-400 mt-1 font-sans">Check-in reward claimable</div>
-          </div>
-        </div>
-      </div>
-
-      {/* ── VERIFIED MEMBER GROWTH TELEMETRY (Recharts Line Chart) ── */}
-      <div className="rounded-2xl border border-white/[0.08] bg-[#0f0f0f] p-6 sm:p-8 space-y-6 min-h-[500px] flex flex-col justify-between shadow-lg">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/5 pb-4">
-          <div>
-            <h3 className="text-base font-bold text-white flex items-center gap-2 font-sans tracking-tight">
-              <Users className="size-4 text-emerald-400" />
-              <span>Verified Member Growth Trajectory</span>
-            </h3>
-            <p className="text-xs text-zinc-400 mt-1 font-sans">
-              Verified community directory joins and active member telemetry
+    <div className="space-y-8 w-full max-w-7xl mx-auto pb-16 font-sans">
+      {/* ── HEADER ROW ──────────────────────────────────────────────── */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <UserAvatar
+            userId={user?.id}
+            avatarHash={user?.avatar}
+            name={userName}
+            size={44}
+            className="size-11 rounded-full shrink-0"
+          />
+          <div className="space-y-1">
+            <h1 className="text-[28px] sm:text-[30px] font-semibold text-[#F4F4F5] tracking-normal font-sans leading-tight">
+              {greeting}, {userName}
+            </h1>
+            <p className="text-[14px] sm:text-[15px] font-normal text-[#A1A1AA]">
+              Here&apos;s how {serverName} has been doing over the last {rangeDays} days.
             </p>
           </div>
-          {Math.max(dailyJoins, Number(config.bountiesClaimed || 0), parseInt(localStorage.getItem(`erlcus_joins_${guildId}`) || '0', 10)) > 0 && (
-            <span className="text-xs font-sans text-emerald-400 font-semibold bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-xl self-start sm:self-auto">
-              {Math.max(dailyJoins, Number(config.bountiesClaimed || 0), parseInt(localStorage.getItem(`erlcus_joins_${guildId}`) || '0', 10))} Directory Joins
+        </div>
+
+        {/* Right header controls: Compact Bump control + Range Segmented Control */}
+        <div className="flex items-center gap-3 self-start sm:self-auto">
+          {/* Section 4.2: Compact Bump Control */}
+          <button
+            type="button"
+            onClick={() => setShowBumpConfirmModal(true)}
+            className={cn(
+              "h-9 px-3 rounded-[10px] border border-[rgba(255,255,255,0.08)] bg-[#141417] hover:bg-[#19191D] text-[#F4F4F5] text-[13px] font-medium inline-flex items-center gap-2 transition-colors cursor-pointer outline-none focus:outline-none",
+              bumpRemainingSeconds > 0 && "text-[#A1A1AA] hover:text-[#F4F4F5]"
+            )}
+            title={bumpRemainingSeconds <= 0 ? "Ready to bump to #1" : `Bump available in ${bumpTimeFormatted}`}
+          >
+            <Flame className="size-4 text-amber-400 shrink-0" />
+            <span>Bump</span>
+            {bumpRemainingSeconds <= 0 ? (
+              <span className="text-[11px] font-medium text-[var(--accent)] bg-[var(--accent-soft)] px-1.5 py-0.5 rounded">
+                Ready
+              </span>
+            ) : (
+              <span className="text-[11px] font-medium text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded tabular-nums font-mono">
+                {bumpTimeFormatted}
+              </span>
+            )}
+          </button>
+
+          {/* Range Segmented Control: 7d | 30d | 90d (36px high) */}
+          <div className="inline-flex h-9 items-center rounded-[10px] border border-[rgba(255,255,255,0.08)] bg-[#141417] p-1">
+            {(['7d', '30d', '90d'] as const).map((r) => (
+              <button
+                key={r}
+                type="button"
+                onClick={() => setRange(r)}
+                className={`px-3 py-1 rounded-[8px] text-[13px] font-medium transition-colors cursor-pointer ${
+                  range === r
+                    ? 'bg-[#0E0E11] text-[#F4F4F5] shadow-xs'
+                    : 'text-[#71717A] hover:text-[#A1A1AA]'
+                }`}
+              >
+                {r}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* ── ROW OF 4 EQUAL STAT CARDS ──────────────────────────────────
+          Order: Credits FIRST, Joins SECOND, Bumps THIRD, Directory views FOURTH
+          Dimensions: min height 152px, 24px padding, 20px gap, Poppins tabular numbers
+      ─────────────────────────────────────────────────────────────────── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        {/* Card 1: Credits */}
+        <div className="min-h-[152px] rounded-[16px] border border-[rgba(255,255,255,0.07)] bg-[#0E0E11] p-6 flex flex-col justify-between hover:border-[rgba(255,255,255,0.13)] transition-colors">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5 text-[14px] font-normal text-[#A1A1AA]">
+              <Coins className="size-4 text-[#71717A]" />
+              <span>Credits</span>
+            </div>
+          </div>
+          <div className="text-[36px] sm:text-[38px] leading-tight font-semibold text-[#F4F4F5] tabular-nums font-sans mt-3">
+            {creditsBalance.toLocaleString()}
+          </div>
+        </div>
+
+        {/* Card 2: Verified joins */}
+        <div className="min-h-[152px] rounded-[16px] border border-[rgba(255,255,255,0.07)] bg-[#0E0E11] p-6 flex flex-col justify-between hover:border-[rgba(255,255,255,0.13)] transition-colors">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5 text-[14px] font-normal text-[#A1A1AA]">
+              <Users className="size-4 text-[#71717A]" />
+              <span>Verified joins</span>
+            </div>
+          </div>
+          <div className="text-[36px] sm:text-[38px] leading-tight font-semibold text-[#F4F4F5] tabular-nums font-sans mt-3">
+            {verifiedJoins.toLocaleString()}
+          </div>
+        </div>
+
+        {/* Card 3: Bumps */}
+        <div className="min-h-[152px] rounded-[16px] border border-[rgba(255,255,255,0.07)] bg-[#0E0E11] p-6 flex flex-col justify-between hover:border-[rgba(255,255,255,0.13)] transition-colors">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5 text-[14px] font-normal text-[#A1A1AA]">
+              <Flame className="size-4 text-[#71717A]" />
+              <span>Bumps</span>
+            </div>
+          </div>
+          <div className="text-[36px] sm:text-[38px] leading-tight font-semibold text-[#F4F4F5] tabular-nums font-sans mt-3">
+            {bumpsCount.toLocaleString()}
+          </div>
+        </div>
+
+        {/* Card 4: Directory views */}
+        <div className="min-h-[152px] rounded-[16px] border border-[rgba(255,255,255,0.07)] bg-[#0E0E11] p-6 flex flex-col justify-between hover:border-[rgba(255,255,255,0.13)] transition-colors">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5 text-[14px] font-normal text-[#A1A1AA]">
+              <Eye className="size-4 text-[#71717A]" />
+              <span>Directory views</span>
+            </div>
+          </div>
+          <div className="text-[36px] sm:text-[38px] leading-tight font-semibold text-[#F4F4F5] tabular-nums font-sans mt-3">
+            {directoryViews.toLocaleString()}
+          </div>
+        </div>
+      </div>
+
+      {/* ── "ACTIVITY" CHART CARD (320px area chart under stats) ────────── */}
+      <div className="rounded-[16px] border border-[rgba(255,255,255,0.07)] bg-[#0E0E11] p-6 sm:p-7 space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="space-y-1">
+            <h2 className="text-[18px] leading-6 font-semibold text-[#F4F4F5] tracking-normal font-sans">
+              Activity
+            </h2>
+            <p className="text-[14px] leading-5 font-normal text-[#A1A1AA]">
+              {verifiedJoins} joins and {bumpsCount} bumps in the last {rangeDays} days.
+            </p>
+          </div>
+
+          {/* Segmented Control: Credits | Joins | Bumps (Credits first and selected) */}
+          <div className="inline-flex items-center rounded-[10px] border border-[rgba(255,255,255,0.07)] bg-[#141417] p-1 self-start sm:self-auto">
+            {(
+              [
+                { id: 'credits', label: 'Credits' },
+                { id: 'joins', label: 'Joins' },
+                { id: 'bumps', label: 'Bumps' },
+              ] as const
+            ).map((m) => (
+              <button
+                key={m.id}
+                type="button"
+                onClick={() => setActiveMetric(m.id)}
+                className={`px-3.5 py-1.5 rounded-[8px] text-[13px] font-medium transition-colors cursor-pointer ${
+                  activeMetric === m.id
+                    ? 'bg-[#0E0E11] text-[#F4F4F5] shadow-xs'
+                    : 'text-[#71717A] hover:text-[#A1A1AA]'
+                }`}
+              >
+                {m.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* 320px Chart Area or Calm Empty State */}
+        {activityChartData.length > 0 ? (
+          <div className="h-[320px] w-full pt-2">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart
+                data={activityChartData}
+                margin={{ top: 12, right: 16, left: 4, bottom: 4 }}
+              >
+                <defs>
+                  <linearGradient id="activityGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="var(--accent)" stopOpacity={0.2} />
+                    <stop offset="100%" stopColor="var(--accent)" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <XAxis
+                  dataKey="date"
+                  stroke="#71717A"
+                  fontSize={12}
+                  tickLine={false}
+                  axisLine={false}
+                  dy={10}
+                  interval="preserveStartEnd"
+                  minTickGap={36}
+                />
+                <YAxis
+                  stroke="#71717A"
+                  fontSize={12}
+                  tickLine={false}
+                  axisLine={false}
+                  allowDecimals={false}
+                  width={34}
+                  tickMargin={6}
+                />
+                <RechartsTooltip
+                  contentStyle={{
+                    backgroundColor: '#141417',
+                    borderColor: 'rgba(255,255,255,0.08)',
+                    borderRadius: '10px',
+                    fontSize: '13px',
+                    color: '#F4F4F5',
+                  }}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="value"
+                  stroke="var(--accent)"
+                  strokeWidth={2}
+                  fillOpacity={1}
+                  fill="url(#activityGradient)"
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        ) : (
+          <div className="h-[320px] w-full flex flex-col items-center justify-center rounded-[12px] border border-dashed border-[rgba(255,255,255,0.07)] p-8 text-center space-y-3 bg-[#141417]/30">
+            <div className="flex items-center gap-1.5 opacity-40">
+              <div className="w-8 h-12 bg-[#19191D] rounded-[4px]" />
+              <div className="w-8 h-20 bg-[#19191D] rounded-[4px]" />
+              <div className="w-8 h-16 bg-[#19191D] rounded-[4px]" />
+              <div className="w-8 h-28 bg-[#19191D] rounded-[4px]" />
+            </div>
+            <div className="space-y-1">
+              <h3 className="text-[16px] font-semibold text-[#F4F4F5] font-sans">
+                No activity yet
+              </h3>
+              <p className="text-[13px] text-[#71717A] max-w-sm">
+                Joins and bumps show up here once they happen.
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ── FULL-WIDTH SETUP CHECKLIST (Only while incomplete, completely hidden once complete) ── */}
+      {!checklistAllDone && (
+        <div className="w-full rounded-[16px] border border-[rgba(255,255,255,0.07)] bg-[#0E0E11] p-6 sm:p-7 space-y-5">
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <h3 className="text-[16px] font-semibold text-[#F4F4F5] font-sans">
+                Setup checklist
+              </h3>
+              <p className="text-[13px] text-[#A1A1AA]">
+                {checklistCompletedCount} of {checklist.length} completed
+              </p>
+            </div>
+            <span className="text-xs font-mono text-[#71717A]">
+              {Math.round((checklistCompletedCount / checklist.length) * 100)}%
             </span>
+          </div>
+
+          {/* Checklist Progress Bar */}
+          <div className="w-full h-1.5 bg-[#19191D] rounded-full overflow-hidden">
+            <div
+              className="h-full bg-[var(--accent)] transition-all duration-300"
+              style={{ width: `${(checklistCompletedCount / checklist.length) * 100}%` }}
+            />
+          </div>
+
+          {/* Checklist Items */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+            {checklist.map((item) => (
+              <div
+                key={item.id}
+                className="p-3.5 rounded-[12px] bg-[#141417] border border-[rgba(255,255,255,0.06)] flex items-center justify-between text-[13px]"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <div
+                    className={`size-5 rounded-full flex items-center justify-center shrink-0 ${
+                      item.completed
+                        ? 'bg-[var(--accent-soft)] text-[var(--accent)]'
+                        : 'border border-[rgba(255,255,255,0.2)] text-transparent'
+                    }`}
+                  >
+                    <Check className="size-3" />
+                  </div>
+                  <span
+                    className={`truncate ${
+                      item.completed ? 'text-[#71717A] line-through' : 'text-[#F4F4F5]'
+                    }`}
+                  >
+                    {item.title}
+                  </span>
+                </div>
+
+                {!item.completed && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onNavigateTab(item.tab)}
+                    className="text-xs h-7 px-2.5 text-[var(--accent)] hover:text-[var(--accent)]"
+                  >
+                    {item.actionLabel}
+                    <ArrowRight className="size-3 ml-1" />
+                  </Button>
+                )}
+              </div>
+            ))}
+          </div>
+
+          <div className="text-[12px] text-[#71717A] pt-1">
+            Complete the checklist to maximize your server&apos;s directory ranking.
+          </div>
+        </div>
+      )}
+
+      {/* ── RECENT ACTIVITY CARD (Last 10 real events with icon, sentence, tooltip, pagination) ── */}
+      <div className="w-full rounded-[16px] border border-[rgba(255,255,255,0.07)] bg-[#0E0E11] p-6 sm:p-7 space-y-5">
+        <div className="flex items-center justify-between">
+          <div className="space-y-0.5">
+            <h3 className="text-[16px] font-semibold text-[#F4F4F5] font-sans">
+              Recent activity
+            </h3>
+            <p className="text-[13px] text-[#A1A1AA]">
+              Latest events for {serverName}
+            </p>
+          </div>
+
+          {/* Simple Previous / Next pagination if more than 10 events */}
+          {totalActivityPages > 1 && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-[#71717A] font-mono">
+                {activityPage} / {totalActivityPages}
+              </span>
+              <button
+                type="button"
+                onClick={() => setActivityPage((p) => Math.max(1, p - 1))}
+                disabled={activityPage === 1}
+                className="size-7 rounded-[6px] border border-[rgba(255,255,255,0.08)] bg-[#141417] text-[#A1A1AA] hover:text-[#F4F4F5] disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
+                title="Previous page"
+              >
+                <ChevronLeft className="size-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setActivityPage((p) => Math.min(totalActivityPages, p + 1))}
+                disabled={activityPage === totalActivityPages}
+                className="size-7 rounded-[6px] border border-[rgba(255,255,255,0.08)] bg-[#141417] text-[#A1A1AA] hover:text-[#F4F4F5] disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
+                title="Next page"
+              >
+                <ChevronRight className="size-4" />
+              </button>
+            </div>
           )}
         </div>
 
-        <div className="w-full flex-1 flex items-center">
-          <ChartLineDefault data={dynamicChartData} />
-        </div>
+        {/* Activity List or Calm Empty State */}
+        {activityEvents.length > 0 ? (
+          <div className="divide-y divide-[rgba(255,255,255,0.06)] border-y border-[rgba(255,255,255,0.06)]">
+            {currentEvents.map((evt) => {
+              const parsedDate = parseDateSafe(evt.timestamp) || new Date();
+              const relativeText = formatRelative(parsedDate) || 'recently';
+              const exactTooltip = formatDateTime(parsedDate, { timeZone: 'UTC' });
+
+              return (
+                <div
+                  key={evt.id}
+                  className="py-3 flex items-center justify-between gap-4 text-[13px]"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="size-7 rounded-[8px] bg-[#141417] border border-[rgba(255,255,255,0.06)] flex items-center justify-center shrink-0">
+                      {renderEventIcon(evt.type)}
+                    </div>
+                    <span className="text-[#F4F4F5] font-normal truncate">
+                      {evt.text}
+                    </span>
+                  </div>
+
+                  <span
+                    className="text-xs text-[#71717A] shrink-0 font-medium cursor-help"
+                    title={exactTooltip}
+                  >
+                    {relativeText}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="py-12 flex flex-col items-center justify-center text-center space-y-1.5 border border-dashed border-[rgba(255,255,255,0.07)] rounded-[12px] bg-[#141417]/20">
+            <p className="text-[14px] font-medium text-[#F4F4F5]">
+              No activity yet
+            </p>
+            <p className="text-[13px] text-[#71717A]">
+              Joins and bumps show up here once they happen.
+            </p>
+          </div>
+        )}
       </div>
+
+      {/* ── BUMP CONFIRMATION DIALOG (SHADCN DIALOG) ───────────────────── */}
+      <BumpDialog
+        open={showBumpConfirmModal}
+        onOpenChange={setShowBumpConfirmModal}
+        guildId={guildId}
+        serverName={serverName}
+        iconUrl={guild?.iconUrl}
+        iconHash={guild?.icon}
+        onSuccess={() => {
+          const nextCount = bumpsCount + 1;
+          setBumpsCount(nextCount);
+          setBumpRemainingSeconds(7200);
+          const nowStr = new Date().toISOString();
+          setLastBumpedAt(nowStr);
+          localStorage.setItem(`server_bumps_count_${guildId}`, String(nextCount));
+          localStorage.setItem(`server_last_bump_${guildId}`, nowStr);
+          localStorage.setItem(`server_next_bump_${guildId}`, new Date(Date.now() + 7200000).toISOString());
+          
+          // Add bump to local activity list immediately
+          setActivityEvents((prev) => [
+            {
+              id: `bump_${Date.now()}`,
+              type: 'bump',
+              text: 'Server bumped to #1 in directory',
+              timestamp: nowStr,
+            },
+            ...prev,
+          ]);
+
+          window.dispatchEvent(new Event('erlcus_bump_updated'));
+          window.dispatchEvent(new Event('server_bumped'));
+        }}
+        addToast={addToast}
+        onNavigateTab={onNavigateTab}
+      />
     </div>
   );
 }
-
-export default OverviewTab;

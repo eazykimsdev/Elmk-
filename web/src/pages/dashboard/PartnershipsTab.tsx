@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   Handshake,
   Users,
@@ -6,28 +6,36 @@ import {
   Check,
   X,
   Clock,
-  Coins,
-  ShieldCheck,
   ExternalLink,
-  Flame,
-  Radio,
+  ShieldCheck,
+  Settings,
   Search,
-  Sparkles,
-  ArrowRight,
-  ChevronDown,
-  AtSign,
-  AlertCircle,
-  Activity,
-  History,
   Trophy,
   Award,
-  Server
+  AlertTriangle,
+  Pause,
+  Play,
+  Trash2,
+  Lock,
+  Unlock,
+  Radio,
+  Eye,
+  EyeOff,
+  Coins,
+  ChevronRight,
+  Info
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
-import { addLiveNotification } from '@/app/import/data';
+import { Input } from '@/components/ui/input';
+import { EmptyState } from '@/components/ui/empty-state';
+import { Pagination } from '@/components/ui/pagination';
+import { ServerIcon } from '@/components/ui/ServerIcon';
+import { DirectoryCard } from '@/components/ui/directory-card';
+import { openServerProfile } from '@/components/ServerProfileModal';
+import { cn } from '@/lib/utils';
+import { stripMarkdown } from '@/components/ui/markdown-renderer';
+import { TabErrorBoundary } from '@/components/TabErrorBoundary';
 
 interface PartnershipsTabProps {
   currentGuildId: string;
@@ -36,577 +44,982 @@ interface PartnershipsTabProps {
   onNavigateTab?: (tab: string) => void;
 }
 
-export function PartnershipsTab({
+export const CATEGORIES = [
+  'All',
+  'Design server',
+  'Roleplay server',
+  'Misc',
+  'COTS',
+  'Departments',
+  'Events',
+] as const;
+
+interface ActivePartner {
+  id: string;
+  partnerGuildId: string;
+  partnerGuildName: string;
+  partnerGuildIcon?: string | null;
+  partnerCategory?: string;
+  partnerMemberCount?: number;
+  partnerBannerUrl?: string;
+  partnerInviteUrl?: string;
+  status: 'active' | 'paused';
+  since: string;
+  lastBroadcast?: string;
+  totalAdsSent?: number;
+}
+
+interface PartnershipRequestItem {
+  id: string;
+  fromGuildId: string;
+  fromGuildName?: string;
+  fromGuildIcon?: string | null;
+  toGuildId: string;
+  toGuildName?: string;
+  toGuildIcon?: string | null;
+  status: 'pending' | 'accepted' | 'declined' | 'cancelled';
+  createdAt: number;
+  coinsPaid?: number;
+  includeMention?: boolean;
+  mentionType?: string;
+  adText?: string;
+  senderName?: string;
+  senderIcon?: string | null;
+  senderMemberCount?: number;
+  senderCategory?: string;
+  targetName?: string;
+  targetIcon?: string | null;
+  targetMemberCount?: number;
+  targetCategory?: string;
+  terms?: {
+    minMembers: number;
+    price: number;
+    allowedMentions: string;
+  };
+}
+
+interface MilestoneItem {
+  id: string;
+  title: string;
+  targetCount: number;
+  rewardCredits: number;
+  currentProgress: number;
+  claimed: boolean;
+  onCooldown: boolean;
+  cooldownLabel: string;
+  canClaim: boolean;
+}
+
+interface RealtimeToast {
+  id: string;
+  serverName: string;
+  serverIcon?: string | null;
+  termsText: string;
+  timer?: any;
+  remainingMs: number;
+  hovered: boolean;
+}
+
+function PartnershipsTabInner({
   currentGuildId,
   serverName = 'Community Server',
   addToast,
-  onNavigateTab
+  onNavigateTab,
 }: PartnershipsTabProps) {
-  // Put Browse Communities first by default
-  const [activeSubTab, setActiveSubTab] = useState<'browse' | 'active' | 'requests' | 'rewards'>('browse');
+  const [activeTab, setActiveTab] = useState<'browse' | 'active' | 'requests' | 'rewards'>('browse');
+  const [requestsSubTab, setRequestsSubTab] = useState<'incoming' | 'outgoing'>('incoming');
+  const [loading, setLoading] = useState(false);
 
-  const [loading, setLoading] = useState(true);
-
-  // Cache dashboard data to eliminate flickering numbers on page reload
-  const getInitialDashboardData = (guildId: string) => {
-    try {
-      const cached = localStorage.getItem(`erlcus_partnerships_cache_${guildId}`);
-      if (cached) return JSON.parse(cached);
-    } catch {}
-    return {
-      settings: {},
-      activePartnerships: [],
-      incomingRequests: [],
-      outgoingRequests: [],
-      analytics: {
-        totalPartnerships: 0,
-        adsDelivered: 0,
-        deliverySuccessRate: 100,
-        pageVisits: 0,
-        verifiedJoinsGenerated: 0
-      },
-      userCoins: 0,
-      transactions: [],
-      lastCheckin: 0,
-      dailyStreak: 0,
-      dailyClaimed: false
-    };
-  };
-
-  const [dashboardData, setDashboardData] = useState<any>(() => getInitialDashboardData(currentGuildId));
+  // Core Data States
+  const [dashboardData, setDashboardData] = useState<{
+    settings: any;
+    activePartnerships: ActivePartner[];
+    incomingRequests: PartnershipRequestItem[];
+    outgoingRequests: PartnershipRequestItem[];
+    summary: { activeCount: number; waitingCount: number; broadcastsSent: number };
+    milestones: MilestoneItem[];
+  } | null>(null);
 
   const [browseServers, setBrowseServers] = useState<any[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState('All');
 
-  // Request modal state - only allow 'none' | 'here'
-  const [requestModalServer, setRequestModalServer] = useState<any | null>(null);
-  const [mentionType, setMentionType] = useState<'none' | 'here'>('none');
-  const [submittingRequest, setSubmittingRequest] = useState(false);
+  // Search & Filters
+  const [search, setSearch] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('All');
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const pageSize = 8;
 
-  // Daily check-in / achievement state
-  const [claimingCheckin, setClaimingCheckin] = useState(false);
-  const [claimingAchievementId, setClaimingAchievementId] = useState<string | null>(null);
+  // Realtime notification toasts state (Section 8.3)
+  const [liveToasts, setLiveToasts] = useState<RealtimeToast[]>([]);
+  const seenRequestsRef = useRef<Set<string>>(new Set());
 
-  // Resolve realistic member count (no fake numbers, no 0 members when real members exist)
-  const getResolvedMemberCount = (server: any): number => {
-    if (!server) return 150;
-    const stored = localStorage.getItem(`server_members_${server.id}`);
-    if (stored) {
-      const parsed = parseInt(stored, 10);
-      if (parsed > 0) return parsed;
-    }
-    try {
-      const knownRaw = localStorage.getItem('erlcus_known_guilds');
-      if (knownRaw) {
-        const known = JSON.parse(knownRaw);
-        const match = known.find((g: any) => g.id === server.id);
-        if (match && typeof match.memberCount === 'number' && match.memberCount > 0) {
-          return match.memberCount;
-        }
-      }
-    } catch {}
-    if (typeof server.memberCount === 'number' && server.memberCount > 0) {
-      return server.memberCount;
-    }
-    return 150;
-  };
+  // Webhook Configuration Modal State (Section 8.4)
+  const [isWebhookModalOpen, setIsWebhookModalOpen] = useState(false);
+  const [webhookInfo, setWebhookInfo] = useState<{
+    hasWebhook: boolean;
+    maskedUrl: string;
+    fullUrl: string;
+    channelName: string;
+    connected: boolean;
+  }>({
+    hasWebhook: false,
+    maskedUrl: '',
+    fullUrl: '',
+    channelName: 'partnerships',
+    connected: false,
+  });
+  const [showFullWebhookUrl, setShowFullWebhookUrl] = useState(false);
+  const [isEditingWebhook, setIsEditingWebhook] = useState(false);
+  const [webhookInput, setWebhookInput] = useState('');
+  const [webhookChannelInput, setWebhookChannelInput] = useState('');
+  const [savingWebhook, setSavingWebhook] = useState(false);
+  const [testingWebhook, setTestingWebhook] = useState(false);
 
-  // Fetch complete partnerships state
-  const loadData = async () => {
+  // Propose Partnership Modal State
+  const [proposingServer, setProposingServer] = useState<any | null>(null);
+  const [proposingMention, setProposingMention] = useState<'none' | 'here' | 'everyone'>('none');
+  const [customAdText, setCustomAdText] = useState('');
+  const [sendingProposal, setSendingProposal] = useState(false);
+
+  // End Partnership Confirm Modal State
+  const [partnerToEnd, setPartnerToEnd] = useState<ActivePartner | null>(null);
+  const [endingPartner, setEndingPartner] = useState(false);
+
+  // Load complete partnership dashboard data
+  const loadDashboardData = async () => {
     try {
       const res = await fetch(`/api/partnerships/${currentGuildId}`);
       if (res.ok) {
         const data = await res.json();
         setDashboardData(data);
-        try {
-          localStorage.setItem(`erlcus_partnerships_cache_${currentGuildId}`, JSON.stringify(data));
-        } catch {}
-        if (Array.isArray(data.incomingRequests) && data.incomingRequests.length > 0) {
-          data.incomingRequests.forEach((req: any) => {
-            addLiveNotification({
-              title: `Partnership Proposal: ${req.fromGuildName}`,
-              description: `${req.fromGuildName} has requested an alliance. Review in Partnerships.`,
-              type: 'info',
-              avatar: req.fromGuildIcon ? { name: req.fromGuildName, src: req.fromGuildIcon } : undefined
-            });
+
+        // Check for new incoming requests for realtime toast (Section 8.3)
+        if (Array.isArray(data.incomingRequests)) {
+          data.incomingRequests.forEach((req: PartnershipRequestItem) => {
+            if (!seenRequestsRef.current.has(req.id)) {
+              seenRequestsRef.current.add(req.id);
+              // Trigger realtime toast if first time seeing this incoming request
+              const sName = req.senderName || req.fromGuildName || 'A community';
+              const termsStr = `Minimum ${req.terms?.minMembers || 5} members · Price ${req.terms?.price || 0} cr · @${req.terms?.allowedMentions || 'here'} allowed`;
+              triggerRequestToast(req.id, sName, req.senderIcon, termsStr);
+            }
           });
         }
       }
-    } catch {
-      // Graceful fallback
+    } catch (err) {
+      console.warn('[PARTNERSHIPS] Error loading dashboard:', err);
+    }
+  };
+
+  // Load browse eligible servers
+  const loadBrowseServers = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/partnerships/browse/${currentGuildId}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data.servers)) {
+          setBrowseServers(data.servers);
+        }
+      }
+    } catch (err) {
+      console.warn('[PARTNERSHIPS] Error loading browse servers:', err);
     } finally {
       setLoading(false);
     }
   };
 
-  const loadBrowseServers = async () => {
+  // Load webhook settings
+  const loadWebhookInfo = async () => {
     try {
-      const res = await fetch(`/api/partnerships/browse/${currentGuildId}`);
+      const res = await fetch(`/api/partnerships/${currentGuildId}/webhook`);
       if (res.ok) {
         const data = await res.json();
-        setBrowseServers(data.servers || []);
+        setWebhookInfo(data);
+        if (!data.hasWebhook) {
+          setIsEditingWebhook(true);
+        } else {
+          setIsEditingWebhook(false);
+          setWebhookInput('');
+        }
+        setWebhookChannelInput(data.channelName || 'partnerships');
       }
-    } catch {
-      // Graceful fallback
-    }
+    } catch {}
   };
 
-  // When active community switches, immediately load cached state & re-fetch
   useEffect(() => {
-    setDashboardData(getInitialDashboardData(currentGuildId));
-    loadData();
+    loadDashboardData();
     loadBrowseServers();
+    loadWebhookInfo();
+
+    // 30 second polling fallback for realtime requests (Section 8.3)
+    const pollInterval = setInterval(() => {
+      loadDashboardData();
+    }, 30000);
+
+    return () => clearInterval(pollInterval);
   }, [currentGuildId]);
 
-  // Smooth jump to subtabs when card buttons are clicked
-  const handleJump = (tab: 'browse' | 'active' | 'requests' | 'rewards') => {
-    setActiveSubTab(tab);
-    setTimeout(() => {
-      const el = document.getElementById('partnerships-subtabs');
-      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 50);
+  // Realtime Toast Management (Section 8.3: max 3 stacked, 8s auto-dismiss, pause on hover)
+  const triggerRequestToast = (id: string, sName: string, iconUrl?: string | null, termsText?: string) => {
+    setLiveToasts((prev) => {
+      if (prev.some((t) => t.id === id)) return prev;
+      const newToast: RealtimeToast = {
+        id,
+        serverName: sName,
+        serverIcon: iconUrl,
+        termsText: termsText || 'Wants to partner with your server',
+        remainingMs: 8000,
+        hovered: false,
+      };
+      // Keep max 3 stacked toasts
+      const nextList = [...prev.slice(-2), newToast];
+      return nextList;
+    });
   };
 
-  // Handle Accept or Decline Request
-  const handleRespond = async (requestId: string, action: 'accept' | 'decline') => {
+  const removeLiveToast = (id: string) => {
+    setLiveToasts((prev) => prev.filter((t) => t.id !== id));
+  };
+
+  // Toast countdown ticker
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setLiveToasts((prev) => {
+        const updated = prev
+          .map((t) => {
+            if (t.hovered) return t;
+            return { ...t, remainingMs: t.remainingMs - 200 };
+          })
+          .filter((t) => t.remainingMs > 0);
+        return updated;
+      });
+    }, 200);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  // Filtered browse list
+  const filteredBrowse = useMemo(() => {
+    if (!Array.isArray(browseServers)) return [];
+    return browseServers.filter((s) => {
+      if (!s) return false;
+      const sName = String(s.name || '').toLowerCase();
+      const sCat = String(s.category || '').toLowerCase();
+      const q = search.trim().toLowerCase();
+      const matchesSearch = !q || sName.includes(q) || sCat.includes(q);
+      const matchesCat = selectedCategory === 'All' || sCat === selectedCategory.toLowerCase();
+      return matchesSearch && matchesCat;
+    });
+  }, [browseServers, search, selectedCategory]);
+
+  const paginatedBrowse = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredBrowse.slice(start, start + pageSize);
+  }, [filteredBrowse, currentPage, pageSize]);
+
+  // Handle Mode Change (Closed, Selective, Open) (Section 8.5)
+  const handleSelectMode = async (mode: 'closed' | 'selective' | 'open') => {
     try {
-      const res = await fetch('/api/partnerships/respond', {
+      const res = await fetch(`/api/partnerships/${currentGuildId}/settings`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ requestId, action, guildId: currentGuildId })
+        body: JSON.stringify({ partnershipMode: mode }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to process request.');
-
-      if (action === 'accept') {
-        addToast('success', 'Alliance Established!', data.deliveryNotice || 'Partnership accepted and server advertisements dispatched.');
-      } else {
-        addToast('info', 'Request Declined', 'The partnership request has been rejected.');
+      if (res.ok) {
+        addToast(
+          'success',
+          'Mode updated',
+          mode === 'closed'
+            ? 'Partnership requests are now closed.'
+            : mode === 'open'
+            ? 'Open mode: Eligible incoming requests will be auto-accepted.'
+            : 'Selective mode: Incoming requests will be reviewed manually.'
+        );
+        loadDashboardData();
       }
-      loadData();
-    } catch (err: any) {
-      addToast('error', 'Action Failed', err.message);
+    } catch {
+      addToast('error', 'Error', 'Could not update partnership mode.');
     }
   };
 
-  // Handle Send Partnership Request
-  const handleSendRequest = async () => {
-    if (!requestModalServer) return;
-    setSubmittingRequest(true);
+  // Handle Send Partnership Proposal (Section 8.1 & 8.2)
+  const handleSendProposal = async () => {
+    if (!proposingServer) return;
+    setSendingProposal(true);
     try {
-      const includeMention = mentionType !== 'none';
       const res = await fetch('/api/partnerships/request', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           fromGuildId: currentGuildId,
           fromGuildName: serverName,
-          toGuildId: requestModalServer.id,
-          includeMention,
-          mentionType,
-          customAdText: dashboardData.settings?.partnershipAdText || ''
-        })
+          toGuildId: proposingServer.id,
+          includeMention: proposingMention !== 'none',
+          mentionType: proposingMention,
+          customAdText,
+        }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to send request.');
-
-      addToast('success', 'Partnership Request Sent', `Request submitted to ${requestModalServer.name}. You will be notified when they accept.`);
-      setRequestModalServer(null);
-      setMentionType('none');
-      loadData();
-      loadBrowseServers();
+      if (res.ok) {
+        addToast('success', 'Proposal sent', `Partnership proposal dispatched to ${proposingServer.name}.`);
+        setProposingServer(null);
+        setProposingMention('none');
+        setCustomAdText('');
+        loadDashboardData();
+        loadBrowseServers();
+      } else {
+        addToast('error', 'Could not send proposal', data.error || 'Server rejected proposal.');
+      }
     } catch (err: any) {
-      addToast('error', 'Request Denied', err.message);
+      addToast('error', 'Error', err.message || 'Failed to send proposal.');
     } finally {
-      setSubmittingRequest(false);
+      setSendingProposal(false);
     }
   };
 
-  // Handle Manual Ad Dispatch
-  const handleSendAd = async (partnershipId: string, partnerName: string) => {
+  // Handle Respond Request (Accept / Decline) (Section 8.2)
+  const handleRespondRequest = async (requestId: string, action: 'accept' | 'decline') => {
+    try {
+      const res = await fetch('/api/partnerships/respond', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          requestId,
+          action,
+          guildId: currentGuildId,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        if (action === 'accept') {
+          addToast('success', 'Partnership established', data.deliveryNotice || 'Partnership established and cross-promotions posted.');
+        } else {
+          addToast('info', 'Proposal declined', 'Partnership proposal removed and mention fees refunded.');
+        }
+        loadDashboardData();
+      } else {
+        addToast('error', 'Error', data.error || 'Could not process response.');
+      }
+    } catch (err: any) {
+      addToast('error', 'Error', err.message || 'Network error.');
+    }
+  };
+
+  // Handle Cancel Outgoing Request (Section 8.2)
+  const handleCancelRequest = async (requestId: string) => {
+    try {
+      const res = await fetch('/api/partnerships/cancel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          requestId,
+          guildId: currentGuildId,
+        }),
+      });
+      if (res.ok) {
+        addToast('info', 'Proposal cancelled', 'Your partnership proposal was cancelled.');
+        loadDashboardData();
+      }
+    } catch {
+      addToast('error', 'Error', 'Could not cancel proposal.');
+    }
+  };
+
+  // Handle Pause / Resume Active Partner (Section 8)
+  const handleTogglePause = async (partnershipId: string) => {
+    try {
+      const res = await fetch('/api/partnerships/active/toggle-pause', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ partnershipId, guildId: currentGuildId }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        addToast('info', 'Status updated', `Partnership is now ${data.status}.`);
+        loadDashboardData();
+      }
+    } catch {
+      addToast('error', 'Error', 'Could not update partnership status.');
+    }
+  };
+
+  // Handle End Active Partner (Section 8)
+  const handleConfirmEnd = async () => {
+    if (!partnerToEnd) return;
+    setEndingPartner(true);
+    try {
+      const res = await fetch('/api/partnerships/active/end', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ partnershipId: partnerToEnd.id, guildId: currentGuildId }),
+      });
+      if (res.ok) {
+        addToast('info', 'Partnership ended', `Mutual partnership with ${partnerToEnd.partnerGuildName} has been closed.`);
+        setPartnerToEnd(null);
+        loadDashboardData();
+      }
+    } catch {
+      addToast('error', 'Error', 'Could not end partnership.');
+    } finally {
+      setEndingPartner(false);
+    }
+  };
+
+  // Handle Dispatch Manual Ad Broadcast (Section 8)
+  const handleBroadcast = async (partner: ActivePartner) => {
     try {
       const res = await fetch('/api/partnerships/send-ad', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ partnershipId, guildId: currentGuildId })
+        body: JSON.stringify({ partnershipId: partner.id, guildId: currentGuildId }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to dispatch advertisement.');
-
-      addToast('success', 'Advertisement Delivered', `Your community advertisement was broadcast to ${partnerName}'s Discord channel.`);
-      loadData();
+      if (res.ok) {
+        addToast('success', 'Broadcast dispatched', `Advertisement dispatched to ${partner.partnerGuildName}'s webhook.`);
+        loadDashboardData();
+      } else {
+        addToast('warning', 'Broadcast issue', data.error || 'Failed to dispatch advertisement.');
+      }
     } catch (err: any) {
-      addToast('error', 'Dispatch Blocked', err.message);
+      addToast('error', 'Error', err.message || 'Network error.');
     }
   };
 
-  // Daily Check-in Claim
-  const canClaimDaily = !dashboardData.dailyClaimed;
-  const dailyCooldownHours = dashboardData.lastCheckin
-    ? Math.ceil((24 - (Date.now() - dashboardData.lastCheckin) / (3600 * 1000)))
-    : 0;
-  const handleClaimDaily = async () => {
-    if (dashboardData.dailyClaimed) return;
-    setClaimingCheckin(true);
+  // Handle Claim Milestone Reward (Section 8)
+  const handleClaimMilestone = async (milestoneId: string) => {
     try {
-      const res = await fetch('/api/user/daily-checkin', { method: 'POST' });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Daily reward claim failed.');
-
-      addToast('success', 'Daily Reward Claimed!', `+${data.amount} Credits credited. Streak: ${data.streak} Days!`);
-      loadData();
-    } catch (err: any) {
-      addToast('info', 'Check-In Notice', err.message);
-    } finally {
-      setClaimingCheckin(false);
-    }
-  };
-
-  // Claim Achievement
-  const handleClaimAchievement = async (achievementId: string, title: string) => {
-    setClaimingAchievementId(achievementId);
-    try {
-      const res = await fetch('/api/user/claim-achievement', {
+      const res = await fetch('/api/partnerships/milestones/claim', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ achievementId })
+        body: JSON.stringify({ milestoneId, guildId: currentGuildId }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Achievement claim failed.');
-
-      addToast('success', 'Milestone Unlocked!', `+${data.amount} Credits awarded for ${title}!`);
-      loadData();
+      if (res.ok) {
+        addToast('success', 'Reward claimed', `+${data.reward} credits credited to your server treasury!`);
+        loadDashboardData();
+      } else {
+        addToast('warning', 'Cannot claim', data.error || 'Milestone requirements not yet met.');
+      }
     } catch (err: any) {
-      addToast('warning', 'Notice', err.message);
-    } finally {
-      setClaimingAchievementId(null);
+      addToast('error', 'Error', err.message || 'Network error.');
     }
   };
 
-  // Handle query parameter ?propose=:targetId to automatically open proposal modal
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const proposeTarget = params.get('propose');
-    if (proposeTarget) {
-      const found = browseServers.find((s) => s.id === proposeTarget);
-      if (found) {
-        setRequestModalServer(found);
-        setActiveSubTab('browse');
+  // Handle Save Webhook (Section 8.4)
+  const handleSaveWebhook = async () => {
+    setSavingWebhook(true);
+    try {
+      const res = await fetch(`/api/partnerships/${currentGuildId}/webhook`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          webhookUrl: webhookInput.trim(),
+          channelName: webhookChannelInput.trim() || 'partnerships',
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        addToast('success', 'Webhook saved', 'Partnership broadcast webhook is connected.');
+        await loadWebhookInfo();
+        setIsEditingWebhook(false);
+        setWebhookInput('');
       } else {
-        try {
-          const raw = localStorage.getItem('erlcus_promoted_servers');
-          if (raw) {
-            const list = JSON.parse(raw);
-            const m = list.find((s: any) => s.id === proposeTarget);
-            if (m) {
-              setRequestModalServer({
-                id: m.id,
-                name: m.name,
-                iconUrl: m.icon || m.iconUrl,
-                category: m.category || 'Design Server',
-                memberCount: m.memberCount || 0,
-                allowPartnerMentions: m.allowPartnerMentions !== false,
-                partnershipHerePrice: m.partnershipHerePrice ?? 15,
-                partnershipEveryonePrice: m.partnershipEveryonePrice ?? 25
-              });
-              setActiveSubTab('browse');
-            }
-          }
-        } catch {}
+        addToast('error', 'Validation error', data.error || 'Invalid Discord Webhook URL.');
       }
+    } catch (err: any) {
+      addToast('error', 'Error', err.message || 'Could not save webhook.');
+    } finally {
+      setSavingWebhook(false);
     }
-  }, [browseServers]);
+  };
 
-  const filteredServers = browseServers.filter((s) => {
-    const matchesSearch = s.name.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = categoryFilter === 'All' || s.category === categoryFilter;
-    return matchesSearch && matchesCategory;
-  });
+  // Handle Remove Webhook (Section 8.4)
+  const handleRemoveWebhook = async () => {
+    try {
+      const res = await fetch(`/api/partnerships/${currentGuildId}/webhook`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'remove' }),
+      });
+      if (res.ok) {
+        addToast('info', 'Webhook removed', 'Partnership broadcast webhook has been disconnected.');
+        await loadWebhookInfo();
+        setIsEditingWebhook(true);
+        setWebhookInput('');
+      }
+    } catch {
+      addToast('error', 'Error', 'Could not remove webhook.');
+    }
+  };
 
-  const categories = ['All', 'Design Server', 'Roleplay Server', 'Misc', 'COTS', 'Departments', 'Events'];
+  // Handle Test Webhook (Section 8.4)
+  const handleTestWebhook = async () => {
+    setTestingWebhook(true);
+    try {
+      const targetUrl = webhookInfo.fullUrl || webhookInput.trim();
+      const res = await fetch('/api/partnerships/test-webhook', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          webhookUrl: targetUrl,
+          guildName: serverName,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        addToast('success', 'Test dispatched', 'A test partnership announcement was sent to your Discord channel.');
+      } else {
+        addToast('error', 'Webhook delivery failed', data.error || 'Check Discord webhook permissions.');
+      }
+    } catch (err: any) {
+      addToast('error', 'Error', err.message || 'Delivery failed.');
+    } finally {
+      setTestingWebhook(false);
+    }
+  };
+
+  const currentSettings = dashboardData?.settings || {};
+  const activePartners = dashboardData?.activePartnerships || [];
+  const incomingRequests = dashboardData?.incomingRequests || [];
+  const outgoingRequests = dashboardData?.outgoingRequests || [];
+  const milestones = dashboardData?.milestones || [];
+  const summary = dashboardData?.summary || {
+    activeCount: activePartners.length,
+    waitingCount: incomingRequests.length,
+    broadcastsSent: 0,
+  };
+
+  const currentMode: 'closed' | 'selective' | 'open' = currentSettings.partnershipMode || 'selective';
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto pb-16 animate-in fade-in-50 duration-150">
-      {/* ── TOP HEADER & TELEMETRY (FLUSH & BLENDED) ── */}
-      <div className="space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="space-y-1">
-            <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight font-sans">
-              Server Partnerships
-            </h2>
-            <p className="text-xs text-zinc-400 max-w-xl font-sans">
-              Connect {serverName} with active ER:LC roleplay communities. Mutual webhook broadcasts deliver real member joins and engagement.
-            </p>
-          </div>
+    <div className="flex flex-col min-h-[calc(100dvh-12rem)] space-y-6 w-full max-w-7xl mx-auto pb-8 font-sans">
+      {/* ── HEADER ROW ──────────────────────────────────────────────── */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="space-y-1">
+          <h1 className="text-[28px] font-semibold text-[#F4F4F5] tracking-normal font-sans">
+            Server partnerships
+          </h1>
+          <p className="text-[14px] text-[#A1A1AA] font-sans">
+            Set up mutual cross-promotion with other Discord servers.
+          </p>
+        </div>
 
+        <div className="flex items-center gap-3">
+          <Button
+            variant="ghost"
+            size="md"
+            onClick={() => {
+              loadWebhookInfo();
+              setIsWebhookModalOpen(true);
+            }}
+            className="text-[#A1A1AA] hover:text-[#F4F4F5] border border-[rgba(255,255,255,0.07)] gap-2"
+          >
+            <Settings className="size-4" />
+            <span>Configure webhook</span>
+            {webhookInfo.connected && (
+              <span className="size-2 rounded-full bg-[var(--accent)] shrink-0" title="Webhook connected" />
+            )}
+          </Button>
+        </div>
+      </div>
+
+      {/* ── PARTNERSHIP SETUP INCOMPLETE BANNER ── */}
+      {!(Boolean(webhookInfo?.hasWebhook || currentSettings?.partnershipChannelId || (currentSettings as any)?.partnershipBroadcastChannel) && currentMode !== 'closed') && (
+        <div className="rounded-[12px] border border-amber-500/20 bg-amber-500/10 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-2.5">
+            <AlertTriangle className="size-4 text-amber-400 shrink-0" />
+            <div>
+              <p className="font-semibold text-white">Partnership setup required</p>
+              <p className="text-zinc-400">Complete your partnership settings and broadcast channel in Promote Server before sending or receiving alliance proposals.</p>
+            </div>
+          </div>
           {onNavigateTab && (
             <Button
               size="sm"
-              variant="outline"
               onClick={() => onNavigateTab('promote')}
-              className="h-8 px-3 rounded-xl border-white/10 bg-white/[0.02] hover:bg-white/[0.06] text-xs font-sans text-zinc-200"
+              className="h-7 text-xs bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 shrink-0 font-medium cursor-pointer"
             >
-              Configure Webhook
+              Configure in Promote Server
             </Button>
           )}
         </div>
-
-        {/* 4 Telemetry Metrics - Sleek Compact Cockpit Cards (Buttons Removed, Sublabels Mini) */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-2">
-          {/* Card 1: Connected Communities */}
-          <div
-            onClick={() => handleJump('active')}
-            className="group relative overflow-hidden rounded-2xl border border-white/[0.08] bg-gradient-to-br from-[#0c0c0e] to-[#141417] p-5 transition-all duration-200 hover:border-emerald-500/30 hover:bg-[#151518] shadow-md hover:shadow-xl cursor-pointer"
-          >
-            <div className="absolute top-0 right-0 p-3.5 opacity-0 group-hover:opacity-100 transition-opacity">
-              <Handshake className="size-6 text-emerald-400/20" />
-            </div>
-            <div className="space-y-3">
-              <div className="flex items-center gap-2.5">
-                <Handshake className="size-4 text-emerald-400 shrink-0" />
-                <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider truncate">
-                  Connected Communities
-                </span>
-              </div>
-              <div>
-                <div className="text-3xl font-extrabold text-white tabular-nums tracking-tight flex items-baseline gap-2">
-                  <span>{dashboardData.activePartnerships?.length || 0}</span>
-                  <span className="text-xs font-bold text-emerald-400">Active</span>
-                </div>
-                <div className="text-[11px] text-zinc-500 font-medium pt-1">
-                  Partnered Servers
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Card 2: Pending Inbound */}
-          <div
-            onClick={() => handleJump('requests')}
-            className="group relative overflow-hidden rounded-2xl border border-white/[0.08] bg-gradient-to-br from-[#0c0c0e] to-[#141417] p-5 transition-all duration-200 hover:border-cyan-500/30 hover:bg-[#151518] shadow-md hover:shadow-xl cursor-pointer"
-          >
-            <div className="absolute top-0 right-0 p-3.5 opacity-0 group-hover:opacity-100 transition-opacity">
-              <Users className="size-6 text-cyan-400/20" />
-            </div>
-            <div className="space-y-3">
-              <div className="flex items-center gap-2.5">
-                <Users className="size-4 text-cyan-400 shrink-0" />
-                <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider truncate">
-                  Pending Inbound
-                </span>
-              </div>
-              <div>
-                <div className="text-3xl font-extrabold text-white tabular-nums tracking-tight flex items-baseline gap-2">
-                  <span>{dashboardData.incomingRequests?.length || 0}</span>
-                  <span className="text-xs font-bold text-cyan-400">Requests</span>
-                </div>
-                <div className="text-[11px] text-zinc-500 font-medium pt-1">
-                  Awaiting Review
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Card 3: Ads Sent */}
-          <div
-            onClick={() => handleJump('active')}
-            className="group relative overflow-hidden rounded-2xl border border-white/[0.08] bg-gradient-to-br from-[#0c0c0e] to-[#141417] p-5 transition-all duration-200 hover:border-indigo-500/30 hover:bg-[#151518] shadow-md hover:shadow-xl cursor-pointer"
-          >
-            <div className="absolute top-0 right-0 p-3.5 opacity-0 group-hover:opacity-100 transition-opacity">
-              <Server className="size-6 text-indigo-400/20" />
-            </div>
-            <div className="space-y-3">
-              <div className="flex items-center gap-2.5">
-                <Server className="size-4 text-indigo-400 shrink-0" />
-                <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider truncate">
-                  Ads Sent
-                </span>
-              </div>
-              <div>
-                <div className="text-3xl font-extrabold text-white tabular-nums tracking-tight flex items-baseline gap-2">
-                  <span>{dashboardData.analytics?.adsDelivered || dashboardData.settings?.totalAdsSent || 0}</span>
-                  <span className="text-xs font-bold text-indigo-400">Delivered</span>
-                </div>
-                <div className="text-[11px] text-zinc-500 font-medium pt-1">
-                  Delivery Success
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Card 4: Players Joined */}
-          <div
-            onClick={() => handleJump('browse')}
-            className="group relative overflow-hidden rounded-2xl border border-white/[0.08] bg-gradient-to-br from-[#0c0c0e] to-[#141417] p-5 transition-all duration-200 hover:border-amber-500/30 hover:bg-[#151518] shadow-md hover:shadow-xl cursor-pointer"
-          >
-            <div className="absolute top-0 right-0 p-3.5 opacity-0 group-hover:opacity-100 transition-opacity">
-              <Coins className="size-6 text-amber-400/20" />
-            </div>
-            <div className="space-y-3">
-              <div className="flex items-center gap-2.5">
-                <Coins className="size-4 text-amber-400 shrink-0" />
-                <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider truncate">
-                  Players Joined
-                </span>
-              </div>
-              <div>
-                <div className="text-3xl font-extrabold text-white tabular-nums tracking-tight flex items-baseline gap-2">
-                  <span>{dashboardData.analytics?.verifiedJoinsGenerated || dashboardData.campaignJoins || 0}</span>
-                  <span className="text-xs font-bold text-amber-400">Joined</span>
-                </div>
-                <div className="text-[11px] text-zinc-500 font-medium pt-1">
-                  Campaign Joins
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-      </div>
-
-      {/* ── NOTIFICATION DISPLAY (if any) ── */}
-      {dashboardData.partnershipStatus && (
-        <div className="flex items-center px-1 mb-2">
-          <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/[0.04] border border-white/10 text-xs font-sans">
-            <Check className="size-3.5 text-emerald-400" />
-            <span className="text-zinc-200 font-sans">Partnership {dashboardData.partnershipStatus}</span>
-          </div>
-        </div>
       )}
 
-      {/* ── TABS NAVIGATION (BROWSE COMMUNITIES FIRST) ── */}
-      <div id="partnerships-subtabs" className="flex items-center gap-2 border-b border-white/[0.08] pb-3 overflow-x-auto scroll-mt-6">
-        {[
-          { key: 'browse', label: 'Browse Communities', icon: Search },
-          { key: 'active', label: `Active Partnerships (${dashboardData.activePartnerships?.length || 0})`, icon: Handshake },
-          { key: 'requests', label: `Requests (${(dashboardData.incomingRequests?.length || 0) + (dashboardData.outgoingRequests?.length || 0)})`, icon: Users },
-          { key: 'rewards', label: 'Coin Rewards & Milestones', icon: Trophy }
-        ].map((tab) => {
-          const isActive = activeSubTab === tab.key;
-          const Icon = tab.icon;
+      {/* ── SECTION 8.5: PARTNERSHIP MODE CARD (Closed, Selective, Open) ── */}
+      <div className="rounded-[16px] border border-[rgba(255,255,255,0.07)] bg-[#0E0E11] p-5 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <h3 className="text-[15px] font-semibold text-[#F4F4F5] font-sans">Partnership mode</h3>
+            <p className="text-[13px] text-[#A1A1AA] font-sans">
+              {currentMode === 'closed' && 'Closed: Your server is not accepting any new partnership proposals.'}
+              {currentMode === 'selective' && 'Selective: You review each incoming partnership proposal manually.'}
+              {currentMode === 'open' && 'Open: Requests that meet your requirements are accepted automatically.'}
+            </p>
+          </div>
+
+          {/* "What is on" Row of Small Badges */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[11px] px-2.5 py-1 rounded-[6px] bg-[#141417] text-[#A1A1AA] border border-[rgba(255,255,255,0.06)] font-sans">
+              Min {currentSettings.partnershipMinMembers || 5} members
+            </span>
+            <span className="text-[11px] px-2.5 py-1 rounded-[6px] bg-[#141417] text-[#A1A1AA] border border-[rgba(255,255,255,0.06)] font-sans">
+              Price {currentSettings.partnershipPrice || 0} credits
+            </span>
+            <span className="text-[11px] px-2.5 py-1 rounded-[6px] bg-[#141417] text-[var(--accent)] border border-[rgba(255,255,255,0.06)] font-sans">
+              @{currentSettings.partnershipAllowedMentions || 'here'} allowed
+            </span>
+            <span className="text-[11px] px-2.5 py-1 rounded-[6px] bg-[#141417] text-[#A1A1AA] border border-[rgba(255,255,255,0.06)] font-sans">
+              {currentSettings.partnershipDailyLimit || 3} broadcasts / day
+            </span>
+          </div>
+        </div>
+
+        {/* 3 Selectable Mode Tiles in a Row */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {/* Tile 1: Closed */}
+          <button
+            type="button"
+            onClick={() => handleSelectMode('closed')}
+            className={cn(
+              'p-4 rounded-[12px] border text-left transition-all cursor-pointer flex flex-col justify-between space-y-2',
+              currentMode === 'closed'
+                ? 'bg-[#141417] border-[var(--accent)] shadow-xs'
+                : 'bg-[#09090B] border-[rgba(255,255,255,0.07)] hover:border-white/20'
+            )}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Lock className={cn('size-4', currentMode === 'closed' ? 'text-[var(--accent)]' : 'text-[#71717A]')} />
+                <span className="text-[14px] font-semibold text-[#F4F4F5] font-sans">Closed</span>
+              </div>
+              {currentMode === 'closed' && (
+                <Check className="size-4 text-[var(--accent)] stroke-[2.5]" />
+              )}
+            </div>
+            <p className="text-[12px] text-[#71717A] leading-relaxed font-sans">
+              No new requests can be submitted by other communities.
+            </p>
+          </button>
+
+          {/* Tile 2: Selective */}
+          <button
+            type="button"
+            onClick={() => handleSelectMode('selective')}
+            className={cn(
+              'p-4 rounded-[12px] border text-left transition-all cursor-pointer flex flex-col justify-between space-y-2',
+              currentMode === 'selective'
+                ? 'bg-[#141417] border-[var(--accent)] shadow-xs'
+                : 'bg-[#09090B] border-[rgba(255,255,255,0.07)] hover:border-white/20'
+            )}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <ShieldCheck className={cn('size-4', currentMode === 'selective' ? 'text-[var(--accent)]' : 'text-[#71717A]')} />
+                <span className="text-[14px] font-semibold text-[#F4F4F5] font-sans">Selective</span>
+              </div>
+              {currentMode === 'selective' && (
+                <Check className="size-4 text-[var(--accent)] stroke-[2.5]" />
+              )}
+            </div>
+            <p className="text-[12px] text-[#71717A] leading-relaxed font-sans">
+              You manually review and accept or decline every incoming request.
+            </p>
+          </button>
+
+          {/* Tile 3: Open */}
+          <button
+            type="button"
+            onClick={() => handleSelectMode('open')}
+            className={cn(
+              'p-4 rounded-[12px] border text-left transition-all cursor-pointer flex flex-col justify-between space-y-2',
+              currentMode === 'open'
+                ? 'bg-[#141417] border-[var(--accent)] shadow-xs'
+                : 'bg-[#09090B] border-[rgba(255,255,255,0.07)] hover:border-white/20'
+            )}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Unlock className={cn('size-4', currentMode === 'open' ? 'text-[var(--accent)]' : 'text-[#71717A]')} />
+                <span className="text-[14px] font-semibold text-[#F4F4F5] font-sans">Open</span>
+              </div>
+              {currentMode === 'open' && (
+                <Check className="size-4 text-[var(--accent)] stroke-[2.5]" />
+              )}
+            </div>
+            <p className="text-[12px] text-[#71717A] leading-relaxed font-sans">
+              Requests meeting your member count and category terms are accepted automatically.
+            </p>
+          </button>
+        </div>
+      </div>
+
+      {/* ── SLIM SUMMARY LINE (ONE Source of Truth) ───────────────────── */}
+      <div className="py-2.5 px-4 rounded-[12px] bg-[#0E0E11] border border-[rgba(255,255,255,0.07)] text-[13px] text-[#A1A1AA] flex items-center gap-2 flex-wrap font-sans">
+        <button
+          type="button"
+          onClick={() => setActiveTab('active')}
+          className="hover:text-[#F4F4F5] hover:underline cursor-pointer"
+        >
+          <strong className="text-[#F4F4F5] font-semibold">{summary.activeCount}</strong> active {summary.activeCount === 1 ? 'partnership' : 'partnerships'}
+        </button>
+        <span className="text-[#71717A]">·</span>
+        <button
+          type="button"
+          onClick={() => setActiveTab('requests')}
+          className="hover:text-[#F4F4F5] hover:underline cursor-pointer"
+        >
+          <strong className="text-[#F4F4F5] font-semibold">{summary.waitingCount}</strong> {summary.waitingCount === 1 ? 'request' : 'requests'} waiting
+        </button>
+        <span className="text-[#71717A]">·</span>
+        <button
+          type="button"
+          onClick={() => setActiveTab('active')}
+          className="hover:text-[#F4F4F5] hover:underline cursor-pointer"
+        >
+          <strong className="text-[#F4F4F5] font-semibold">{summary.broadcastsSent}</strong> broadcasts sent
+        </button>
+      </div>
+
+      {/* ── TABS: Browse | Active | Requests | Rewards ───────────────── */}
+      <div className="inline-flex items-center rounded-[10px] border border-[rgba(255,255,255,0.07)] bg-[#141417] p-1">
+        {(
+          [
+            { id: 'browse', label: 'Browse', count: filteredBrowse.length },
+            { id: 'active', label: 'Active', count: summary.activeCount },
+            { id: 'requests', label: 'Requests', count: summary.waitingCount },
+            { id: 'rewards', label: 'Rewards', count: milestones.length },
+          ] as const
+        ).map((t) => {
+          const isActive = activeTab === t.id;
           return (
             <button
-              key={tab.key}
+              key={t.id}
               type="button"
-              onClick={() => setActiveSubTab(tab.key as any)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold font-sans transition-all cursor-pointer whitespace-nowrap ${
+              onClick={() => setActiveTab(t.id)}
+              className={cn(
+                'flex items-center gap-2 px-4 py-2 rounded-[8px] text-[13px] font-medium transition-colors cursor-pointer font-sans',
                 isActive
-                  ? 'bg-white text-black shadow-md'
-                  : 'text-zinc-400 hover:text-white hover:bg-white/[0.04]'
-              }`}
-            >
-              <Icon className="size-3.5" />
-              <span>{tab.label}</span>
-              {tab.key === 'requests' && dashboardData.incomingRequests?.length > 0 && (
-                <span className="size-2 rounded-full bg-emerald-400 animate-pulse" />
+                  ? 'bg-[#0E0E11] text-[#F4F4F5] shadow-xs'
+                  : 'text-[#71717A] hover:text-[#A1A1AA]'
               )}
+            >
+              <span>{t.label}</span>
+              <span
+                className={cn(
+                  'text-[10px] min-w-[18px] h-[18px] px-1.5 rounded-full inline-flex items-center justify-center leading-none tabular-nums font-sans font-medium',
+                  isActive
+                    ? 'bg-[#141417] text-[var(--accent)] border border-white/10'
+                    : t.id === 'requests' && t.count > 0
+                    ? 'bg-[var(--accent-soft)] text-[var(--accent)] border border-[var(--accent-border)]'
+                    : 'bg-[#0E0E11] text-[#71717A] border border-white/5'
+                )}
+              >
+                {t.count}
+              </span>
             </button>
           );
         })}
       </div>
 
-      {/* ── TAB 1: ACTIVE PARTNERSHIPS ── */}
-      {activeSubTab === 'active' && (
+      {/* ── TAB 1: BROWSE (COMPACT 2-COLUMN GRID - Section 8.1) ────────── */}
+      {activeTab === 'browse' && (
         <div className="space-y-4">
-          {dashboardData.activePartnerships?.length === 0 ? (
-            <div className="p-12 text-center rounded-2xl border border-white/[0.06] bg-white/[0.01] space-y-3">
-              <Handshake className="size-9 text-zinc-500 mx-auto stroke-[1.5]" />
-              <h3 className="text-base font-bold text-white font-sans">No Active Partnerships Yet</h3>
-              <p className="text-xs text-zinc-400 max-w-md mx-auto font-sans leading-relaxed">
-                Connect your server with fellow ER:LC communities to exchange automated Discord advertisements and boost player growth.
-              </p>
-              <div className="pt-2 flex items-center justify-center gap-3">
-                <Button
-                  size="sm"
-                  onClick={() => setActiveSubTab('browse')}
-                  className="bg-white hover:bg-zinc-200 text-black font-semibold text-xs h-9 px-4 rounded-xl cursor-pointer"
-                >
-                  Browse Partner Communities
-                </Button>
-                {onNavigateTab && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => onNavigateTab('promote')}
-                    className="border-white/10 bg-transparent hover:bg-white/[0.05] text-xs h-9 px-4 rounded-xl text-zinc-300"
-                  >
-                    Setup Discord Webhook
-                  </Button>
-                )}
-              </div>
+          {/* Toolbar: Search & Category Chips */}
+          <div className="flex flex-col gap-4">
+            <div className="relative max-w-md w-full">
+              <Search className="size-4 text-[#71717A] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <Input
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setCurrentPage(1);
+                }}
+                placeholder="Search partner communities…"
+                className="pl-9 h-10 text-[13px] bg-[#0E0E11] border-[rgba(255,255,255,0.07)] font-sans"
+              />
             </div>
+
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+              {CATEGORIES.map((cat) => {
+                const isSelected = selectedCategory === cat;
+                return (
+                  <button
+                    key={cat}
+                    type="button"
+                    onClick={() => {
+                      setSelectedCategory(cat);
+                      setCurrentPage(1);
+                    }}
+                    className={cn(
+                      'px-3 py-1.5 rounded-[8px] text-[13px] font-medium whitespace-nowrap transition-all cursor-pointer font-sans',
+                      isSelected
+                        ? 'bg-[#141417] text-[#F4F4F5] border border-[rgba(255,255,255,0.14)]'
+                        : 'text-[#71717A] hover:text-[#A1A1AA] hover:bg-[#141417]/50'
+                    )}
+                  >
+                    {cat}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Compact 2-Column Grid (Section 5) */}
+          {loading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {[...Array(6)].map((_, i) => (
+                <div key={i} className="h-[120px] rounded-[16px] bg-[#0E0E11] border border-[#19191D] animate-pulse" />
+              ))}
+            </div>
+          ) : paginatedBrowse.length === 0 ? (
+            <EmptyState
+              icon={<Handshake className="size-8 text-[#71717A]" />}
+              title="No partner communities found"
+              description="Try adjusting your search query or selecting a different category."
+            />
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {dashboardData.activePartnerships.map((p: any) => (
+              {paginatedBrowse.map((srv) => {
+                const minMem = srv.minMembersRequired || srv.partnershipMinMembers || 5;
+                const price = srv.partnershipPrice || 0;
+                const allowMention = (srv.allowPartnerMentions && srv.partnershipAllowedMentions && srv.partnershipAllowedMentions !== 'none')
+                  ? (srv.partnershipAllowedMentions === 'everyone' ? '@everyone allowed' : '@here allowed')
+                  : 'No mentions';
+                const isPartnered = srv.partnershipStatus === 'partnered';
+                const isPending = srv.partnershipStatus === 'outgoing_pending';
+
+                return (
+                  <DirectoryCard
+                    key={srv.id}
+                    variant="partnership"
+                    server={srv}
+                    minMembers={minMem}
+                    partnershipPrice={price}
+                    allowedMentions={allowMention}
+                    partnershipStatus={isPartnered ? 'active' : isPending ? 'pending' : null}
+                    isOwnServer={String(srv.id) === String(currentGuildId)}
+                    onClick={() => openServerProfile(srv.id, srv)}
+                    onRequestPartnership={() => {
+                      const isComplete = Boolean(webhookInfo?.hasWebhook || currentSettings?.partnershipChannelId || (currentSettings as any)?.partnershipBroadcastChannel) && currentMode !== 'closed';
+                      if (!isComplete) {
+                        addToast('warning', 'Partnership setup required', 'Please complete your server partnership settings in Promote Server before sending proposals.');
+                        if (onNavigateTab) onNavigateTab('promote');
+                        return;
+                      }
+                      setProposingServer(srv);
+                      setProposingMention('none');
+                      setCustomAdText('');
+                    }}
+                  />
+                );
+              })}
+            </div>
+          )}
+
+          {/* Pagination */}
+          {filteredBrowse.length > pageSize && (
+            <div className="pt-2 flex justify-center">
+              <Pagination
+                currentPage={currentPage}
+                totalCount={filteredBrowse.length}
+                pageSize={pageSize}
+                onPageChange={setCurrentPage}
+              />
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── TAB 2: ACTIVE (TABLE WITH PAUSE, BROADCAST, END) ───────────── */}
+      {activeTab === 'active' && (
+        <div className="space-y-4">
+          {activePartners.length === 0 ? (
+            <EmptyState
+              icon={<Handshake className="size-8 text-[#71717A]" />}
+              title="No active partnerships yet"
+              description="Browse public servers in the Browse tab to establish mutual cross-promotion alliances."
+              action={
+                <Button variant="primary" size="sm" onClick={() => setActiveTab('browse')}>
+                  Browse partner communities
+                </Button>
+              }
+            />
+          ) : (
+            <div className="space-y-3">
+              {activePartners.map((partner) => (
                 <div
-                  key={p.id}
-                  className="rounded-2xl border border-white/[0.08] bg-[#111113] p-5 space-y-4 hover:border-white/20 transition-all shadow-lg"
+                  key={partner.id}
+                  className="rounded-[16px] border border-[#19191D] bg-[#0E0E11] p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-colors hover:border-white/20"
                 >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                      {p.partnerGuildIcon ? (
-                        <img
-                          src={p.partnerGuildIcon}
-                          alt={p.partnerGuildName}
-                          className="size-12 rounded-xl object-cover border border-white/10"
-                        />
-                      ) : (
-                        <div className="size-12 rounded-xl bg-zinc-900 border border-white/10 flex items-center justify-center font-bold text-white text-sm">
-                          {p.partnerGuildName?.slice(0, 2).toUpperCase()}
-                        </div>
-                      )}
-                      <div>
-                        <div className="flex items-center gap-1.5">
-                          <h4 className="text-sm font-bold text-white font-sans truncate">{p.partnerGuildName}</h4>
-                          <Badge className="bg-emerald-500/15 text-emerald-400 border-emerald-500/30 text-[9px] px-1.5 py-0 font-sans">
-                            PARTNERED
-                          </Badge>
-                        </div>
-                        <span className="text-[11px] text-zinc-400 font-sans block">{p.partnerCategory}</span>
+                  <div className="flex items-center gap-3.5 min-w-0">
+                    <ServerIcon
+                      guildId={partner.partnerGuildId}
+                      iconUrl={partner.partnerGuildIcon}
+                      name={partner.partnerGuildName}
+                      size={48}
+                      className="size-12 rounded-[12px] object-cover shrink-0"
+                    />
+                    <div className="min-w-0 space-y-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-semibold text-white truncate text-[15px] font-sans">
+                          {partner.partnerGuildName}
+                        </span>
+                        {partner.status === 'active' ? (
+                          <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-[var(--accent)] bg-[var(--accent-soft)] px-2 py-0.5 rounded-[6px] border border-[var(--accent-border)] font-sans">
+                            <span className="size-1.5 rounded-full bg-[var(--accent)]" />
+                            Active
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-zinc-400 bg-[#141417] px-2 py-0.5 rounded-[6px] border border-white/10 font-sans">
+                            <Pause className="size-3" />
+                            Paused
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 text-xs text-zinc-400 flex-wrap font-sans">
+                        <span>{partner.partnerCategory || 'Roleplay Server'}</span>
+                        <span>·</span>
+                        <span>{(partner.partnerMemberCount || 0).toLocaleString()} members</span>
+                        <span>·</span>
+                        <span>Since {partner.since}</span>
+                        <span>·</span>
+                        <span>Last broadcast: {partner.lastBroadcast || 'None yet'}</span>
                       </div>
                     </div>
-
-                    {p.partnerInviteUrl && (
-                      <a
-                        href={p.partnerInviteUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-zinc-400 hover:text-white p-2 rounded-lg bg-white/[0.03] border border-white/10 transition-colors"
-                      >
-                        <ExternalLink className="size-3.5" />
-                      </a>
-                    )}
                   </div>
 
-                  <div className="grid grid-cols-3 gap-2 py-2 border-y border-white/[0.06] text-center text-xs font-sans">
-                    <div>
-                      <div className="text-zinc-400 text-[10px]">Members</div>
-                      <div className="font-bold text-white tabular-nums">{p.partnerMemberCount}</div>
-                    </div>
-                    <div>
-                      <div className="text-zinc-400 text-[10px]">Total Ads</div>
-                      <div className="font-bold text-white tabular-nums">{p.totalAdsSent}</div>
-                    </div>
-                    <div>
-                      <div className="text-zinc-400 text-[10px]">Connection</div>
-                      <div className="font-bold text-emerald-400">● Live</div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between pt-1">
-                    <div className="text-[11px] text-zinc-500 font-sans flex items-center gap-1">
-                      <Clock className="size-3" />
-                      <span>Last Ad: {p.lastAdSentAt ? new Date(p.lastAdSentAt).toLocaleDateString() : 'Active'}</span>
-                    </div>
+                  <div className="flex items-center gap-2 shrink-0 self-end sm:self-center border-t sm:border-t-0 pt-2 sm:pt-0 border-white/[0.06] w-full sm:w-auto justify-end">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleTogglePause(partner.id)}
+                      className="h-8 px-2.5 text-xs text-zinc-300 hover:text-white"
+                      title={partner.status === 'active' ? 'Pause partnership' : 'Resume partnership'}
+                    >
+                      {partner.status === 'active' ? <Pause className="size-3.5 mr-1" /> : <Play className="size-3.5 mr-1" />}
+                      <span>{partner.status === 'active' ? 'Pause' : 'Resume'}</span>
+                    </Button>
 
                     <Button
+                      variant="outline"
                       size="sm"
-                      onClick={() => handleSendAd(p.id, p.partnerGuildName)}
-                      className="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs h-8 px-3 rounded-xl cursor-pointer flex items-center gap-1.5"
+                      onClick={() => handleBroadcast(partner)}
+                      className="h-8 px-2.5 text-xs text-white border-white/10"
+                      title="Send advertisement broadcast now"
                     >
-                      <Send className="size-3" />
-                      <span>Dispatch Ad</span>
+                      <Radio className="size-3.5 mr-1 text-[var(--accent)]" />
+                      <span>Broadcast</span>
+                    </Button>
+
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setPartnerToEnd(partner)}
+                      className="h-8 px-2.5 text-xs text-rose-400 hover:text-rose-300 hover:bg-rose-500/10"
+                      title="End partnership agreement"
+                    >
+                      <Trash2 className="size-3.5 mr-1" />
+                      <span>End</span>
                     </Button>
                   </div>
                 </div>
@@ -616,457 +1029,648 @@ export function PartnershipsTab({
         </div>
       )}
 
-      {/* ── TAB 2: REQUESTS (INBOX & OUTBOX) ── */}
-      {activeSubTab === 'requests' && (
-        <div className="space-y-6">
-          {/* Inbound Requests */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold text-white font-sans flex items-center gap-2">
-                <Users className="size-4 text-cyan-400" />
-                <span>Inbound Partnership Requests ({dashboardData.incomingRequests?.length || 0})</span>
-              </h3>
-            </div>
+      {/* ── TAB 3: REQUESTS (INCOMING & OUTGOING SUB-TABS - Section 8.2) ── */}
+      {activeTab === 'requests' && (
+        <div className="space-y-4">
+          {/* Sub-Tabs: Incoming vs Outgoing */}
+          <div className="flex items-center gap-2 border-b border-[#19191D] pb-3">
+            <button
+              type="button"
+              onClick={() => setRequestsSubTab('incoming')}
+              className={cn(
+                'px-4 py-2 rounded-[8px] text-[13px] font-medium transition-colors cursor-pointer font-sans',
+                requestsSubTab === 'incoming'
+                  ? 'bg-[#141417] text-[#F4F4F5] border border-white/10 shadow-xs'
+                  : 'text-[#71717A] hover:text-[#A1A1AA]'
+              )}
+            >
+              Incoming ({incomingRequests.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setRequestsSubTab('outgoing')}
+              className={cn(
+                'px-4 py-2 rounded-[8px] text-[13px] font-medium transition-colors cursor-pointer font-sans',
+                requestsSubTab === 'outgoing'
+                  ? 'bg-[#141417] text-[#F4F4F5] border border-white/10 shadow-xs'
+                  : 'text-[#71717A] hover:text-[#A1A1AA]'
+              )}
+            >
+              Outgoing ({outgoingRequests.length})
+            </button>
+          </div>
 
-            {dashboardData.incomingRequests?.length === 0 ? (
-              <div className="p-8 text-center rounded-2xl border border-white/[0.08] bg-[#111113] text-xs text-zinc-500 font-sans">
-                No inbound partnership requests currently awaiting review.
-              </div>
+          {/* Sub-Tab 1: Incoming Requests */}
+          {requestsSubTab === 'incoming' && (
+            incomingRequests.length === 0 ? (
+              <EmptyState
+                icon={<Handshake className="size-8 text-[#71717A]" />}
+                title="No incoming requests waiting"
+                description="When another community proposes a partnership with your server, it will show up here."
+              />
             ) : (
               <div className="space-y-3">
-                {dashboardData.incomingRequests.map((req: any) => (
+                {incomingRequests.map((req) => (
                   <div
                     key={req.id}
-                    className="p-5 rounded-2xl border border-white/[0.08] bg-[#111113] space-y-4 shadow-lg"
+                    className="p-4 rounded-[14px] border border-[#19191D] bg-[#0E0E11] flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-colors hover:border-white/20"
                   >
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                      <div className="flex items-center gap-3">
-                        {req.fromGuildIcon ? (
-                          <img
-                            src={req.fromGuildIcon}
-                            alt={req.fromGuildName}
-                            className="size-12 rounded-xl object-cover border border-white/10"
-                          />
-                        ) : (
-                          <div className="size-12 rounded-xl bg-zinc-900 border border-white/10 flex items-center justify-center font-bold text-white text-sm">
-                            {req.fromGuildName?.slice(0, 2).toUpperCase()}
-                          </div>
-                        )}
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <h4 className="text-sm font-bold text-white font-sans">{req.fromGuildName}</h4>
-                            <Badge className="bg-white/[0.06] text-zinc-300 border-white/10 text-[10px] font-sans">
-                              {req.senderCategory}
-                            </Badge>
-                            {req.includeMention && (
-                              <Badge className="bg-amber-500/20 text-amber-300 border-amber-500/30 text-[10px] font-sans flex items-center gap-1">
-                                <AtSign className="size-3" />
-                                <span>@{req.mentionType} Mention Paid</span>
-                              </Badge>
-                            )}
-                          </div>
-                          <span className="text-[11px] text-zinc-400 font-sans block">
-                            Size: {req.senderMemberCount} Members • Requested: {new Date(req.createdAt).toLocaleDateString()}
+                    <div className="flex items-start sm:items-center gap-3.5 min-w-0">
+                      <ServerIcon
+                        guildId={req.fromGuildId}
+                        iconUrl={req.senderIcon || req.fromGuildIcon}
+                        name={req.senderName || req.fromGuildName || 'Partner Server'}
+                        size={44}
+                        className="size-11 rounded-[10px] object-cover shrink-0"
+                      />
+
+                      <div className="space-y-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <h4 className="text-[14px] font-semibold text-[#F4F4F5] truncate font-sans">
+                            {req.senderName || req.fromGuildName || 'Partner Server'}
+                          </h4>
+                          <span className="text-[11px] text-[#A1A1AA] bg-[#141417] px-2 py-0.5 rounded-[6px] border border-white/[0.06] font-sans">
+                            {req.senderCategory || 'Roleplay Server'}
                           </span>
                         </div>
-                      </div>
 
-                      <div className="flex items-center gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleRespond(req.id, 'decline')}
-                          className="h-8 px-3 rounded-xl border-white/10 hover:bg-rose-500/10 hover:text-rose-300 text-xs cursor-pointer font-sans"
-                        >
-                          Decline
-                        </Button>
-                        <Button
-                          size="sm"
-                          onClick={() => handleRespond(req.id, 'accept')}
-                          className="h-8 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs cursor-pointer font-sans shadow-md"
-                        >
-                          <Check className="size-3.5 mr-1" />
-                          <span>Accept & Broadcast</span>
-                        </Button>
-                      </div>
-                    </div>
-
-                    {req.adText && (
-                      <div className="p-4 rounded-xl border border-white/[0.06] bg-[#111113]/80 space-y-2">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Send className="size-3.5 text-indigo-400" />
-                          <span className="text-[10px] text-zinc-500 uppercase font-semibold font-sans">Advertisement Preview</span>
+                        <div className="flex items-center gap-2 text-[12px] text-[#71717A] font-sans">
+                          <span>{(req.senderMemberCount || 0).toLocaleString()} members</span>
+                          <span>·</span>
+                          <span>{req.terms ? `Min ${req.terms.minMembers} members` : 'Standard terms'}</span>
+                          {req.includeMention && (
+                            <>
+                              <span>·</span>
+                              <span className="text-[var(--accent)] font-medium">@{req.mentionType} mention</span>
+                            </>
+                          )}
                         </div>
-                        <p className="text-xs text-zinc-200 font-sans leading-relaxed">{req.adText}</p>
-                        <div className="flex items-center justify-end gap-2 pt-2">
-                          <Badge className="bg-emerald-500/15 text-emerald-400 border-emerald-500/30 text-[10px] font-sans">
-                            <Check className="size-3 mr-1" />
-                            Ready
-                          </Badge>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
 
-          {/* Outbound Requests */}
-          <div className="space-y-3 pt-4">
-            <h3 className="text-sm font-bold text-white font-sans flex items-center gap-2">
-              <Server className="size-4 text-indigo-400" />
-              <span>Outbound Requests Sent ({dashboardData.outgoingRequests?.length || 0})</span>
-            </h3>
-
-            {dashboardData.outgoingRequests?.length === 0 ? (
-              <div className="p-8 text-center rounded-2xl border border-white/[0.08] bg-[#111113] text-xs text-zinc-500 font-sans">
-                No outgoing partnership proposals sent yet.
-              </div>
-            ) : (
-              <div className="divide-y divide-white/[0.06] rounded-2xl border border-white/[0.08] bg-[#111113] overflow-hidden">
-                {dashboardData.outgoingRequests.map((r: any) => (
-                  <div key={r.id} className="p-4 flex items-center justify-between hover:bg-white/[0.02] text-xs font-sans">
-                    <div className="space-y-0.5">
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-white">{r.toGuildName}</span>
-                        <Badge
-                          className={`text-[10px] font-sans px-1.5 py-0 ${
-                            r.status === 'accepted'
-                              ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
-                              : r.status === 'declined'
-                              ? 'bg-rose-500/20 text-rose-400 border-rose-500/30'
-                              : 'bg-amber-500/20 text-amber-300 border-amber-500/30'
-                          }`}
-                        >
-                          {r.status === 'accepted' ? 'Accepted' : r.status === 'declined' ? 'Declined' : 'Pending Approval'}
-                        </Badge>
-                        {r.includeMention && (
-                          <span className="text-[10px] text-zinc-400">(@{r.mentionType} upgrade)</span>
+                        {req.adText && (
+                          <p className="text-[12px] text-[#A1A1AA] line-clamp-1 italic font-sans">
+                            &quot;{req.adText}&quot;
+                          </p>
                         )}
                       </div>
-                      <span className="text-zinc-500 text-[11px] block">
-                        Submitted: {new Date(r.createdAt).toLocaleDateString()}
-                      </span>
                     </div>
 
-                    <div className="text-zinc-400 text-xs">
-                      {r.status === 'pending' ? 'Awaiting target response' : r.status === 'accepted' ? 'Alliance active' : 'Request closed'}
+                    {/* Accept / Decline Action Buttons (Section 8.2) */}
+                    <div className="flex items-center gap-2.5 shrink-0 self-end sm:self-center">
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        onClick={() => handleRespondRequest(req.id, 'accept')}
+                        className="h-8 px-4 text-xs font-semibold gap-1.5"
+                      >
+                        <Check className="size-3.5" />
+                        <span>Accept</span>
+                      </Button>
+
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleRespondRequest(req.id, 'decline')}
+                        className="h-8 px-3 text-xs text-[#A1A1AA] hover:text-red-400 hover:bg-red-500/10 gap-1.5"
+                      >
+                        <X className="size-3.5" />
+                        <span>Decline</span>
+                      </Button>
                     </div>
                   </div>
                 ))}
               </div>
-            )}
-          </div>
-        </div>
-      )}
+            )
+          )}
 
-      {/* ── TAB 3: BROWSE COMMUNITIES ── */}
-      {activeSubTab === 'browse' && (
-        <div className="space-y-5">
-          {/* Search & Category Filter */}
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-            <div className="relative w-full sm:w-72">
-              <Search className="size-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
-              <Input
-                placeholder="Search ER:LC community..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 bg-[#111113] border-white/10 text-xs h-9 text-white rounded-xl"
+          {/* Sub-Tab 2: Outgoing Requests */}
+          {requestsSubTab === 'outgoing' && (
+            outgoingRequests.length === 0 ? (
+              <EmptyState
+                icon={<Send className="size-8 text-[#71717A]" />}
+                title="No outgoing requests"
+                description="Explore the Browse tab to discover communities and submit partnership proposals."
               />
-            </div>
+            ) : (
+              <div className="space-y-3">
+                {outgoingRequests.map((req) => (
+                  <div
+                    key={req.id}
+                    className="p-4 rounded-[14px] border border-[#19191D] bg-[#0E0E11] flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-colors hover:border-white/20"
+                  >
+                    <div className="flex items-start sm:items-center gap-3.5 min-w-0">
+                      <ServerIcon
+                        guildId={req.toGuildId}
+                        iconUrl={req.targetIcon || req.toGuildIcon}
+                        name={req.targetName || req.toGuildName || 'Target Server'}
+                        size={44}
+                        className="size-11 rounded-[10px] object-cover shrink-0"
+                      />
 
-            <div className="flex items-center gap-1.5 overflow-x-auto w-full sm:w-auto pb-1 sm:pb-0">
-              {categories.map((cat) => (
-                <button
-                  key={cat}
-                  type="button"
-                  onClick={() => setCategoryFilter(cat)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-sans transition-all cursor-pointer whitespace-nowrap ${
-                    categoryFilter === cat
-                      ? 'bg-white text-black font-semibold'
-                      : 'bg-white/[0.03] text-zinc-400 hover:text-white border border-white/10'
-                  }`}
-                >
-                  {cat}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Grid of Browse Servers */}
-          {filteredServers.length === 0 ? (
-            <div className="p-12 text-center rounded-2xl border border-white/[0.08] bg-[#111113] text-xs text-zinc-500 font-sans">
-              No matching communities open to partnerships right now.
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredServers.map((s) => (
-                <div
-                  key={s.id}
-                  className="rounded-2xl border border-white/[0.08] bg-[#0c0c0e] overflow-hidden flex flex-col justify-between hover:border-emerald-500/30 hover:bg-[#111114] transition-all duration-300 shadow-lg hover:shadow-2xl group"
-                >
-                  <div>
-                    {/* Banner preview */}
-                    {s.bannerUrl ? (
-                      <div className="relative w-full h-32 overflow-hidden bg-zinc-950">
-                        <img
-                          src={s.bannerUrl}
-                          alt={s.name}
-                          className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-[#0c0c0e] via-transparent to-black/30" />
-                      </div>
-                    ) : (
-                      <div className="relative w-full h-20 bg-gradient-to-br from-white/[0.04] to-transparent border-b border-white/[0.04]" />
-                    )}
-
-                    {/* Overlapping Avatar & Identity Block */}
-                    <div className="px-4.5 pt-1 space-y-3">
-                      <div className="flex items-end justify-between -mt-7 relative z-10">
-                        {s.iconUrl || s.icon ? (
-                          <img
-                            src={s.iconUrl || s.icon}
-                            alt={s.name}
-                            className="size-14 rounded-2xl object-cover ring-4 ring-[#0c0c0e] border border-white/10 shadow-xl bg-zinc-900 shrink-0 group-hover:border-emerald-500/40 transition-colors"
-                          />
-                        ) : (
-                          <div className="size-14 rounded-2xl bg-zinc-900 ring-4 ring-[#0c0c0e] border border-white/10 flex items-center justify-center font-bold text-white text-base shadow-xl shrink-0">
-                            {s.name.slice(0, 2).toUpperCase()}
-                          </div>
-                        )}
-
-                        <span className="text-[10px] font-semibold text-zinc-300 font-sans uppercase tracking-wider bg-white/[0.04] border border-white/[0.08] px-2.5 py-1 rounded-full">
-                          {s.category || 'Roleplay Server'}
-                        </span>
-                      </div>
-
-                      <div className="space-y-1">
-                        <h4 className="text-sm sm:text-base font-bold text-white truncate font-sans tracking-tight group-hover:text-emerald-400 transition-colors">
-                          {s.name}
-                        </h4>
-                        <p className="text-xs text-zinc-400 line-clamp-2 leading-relaxed font-sans min-h-[32px]">
-                          {s.description || 'Verified ER:LC roleplay community with active sessions.'}
-                        </p>
-                      </div>
-
-                      <div className="flex items-center justify-between text-xs font-sans pt-2 border-t border-white/[0.06]">
-                        <div className="flex items-center gap-1.5 text-white font-bold tabular-nums">
-                          <Users className="size-3.5 text-zinc-400" />
-                          <span>{getResolvedMemberCount(s).toLocaleString()} Members</span>
-                        </div>
-                        {s.allowPartnerMentions ? (
-                          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">
-                            <span className="size-1.5 rounded-full bg-emerald-400" />
-                            @mentions allowed
+                      <div className="space-y-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <h4 className="text-[14px] font-semibold text-[#F4F4F5] truncate font-sans">
+                            {req.targetName || req.toGuildName || 'Target Server'}
+                          </h4>
+                          <span className="text-[11px] text-[#A1A1AA] bg-[#141417] px-2 py-0.5 rounded-[6px] border border-white/[0.06] font-sans">
+                            {req.targetCategory || 'Roleplay Server'}
                           </span>
-                        ) : (
-                          <span className="text-[11px] text-zinc-400 font-medium">Mentions disabled</span>
-                        )}
+                        </div>
+
+                        <div className="flex items-center gap-2 text-[12px] text-[#71717A] font-sans">
+                          <span>{(req.targetMemberCount || 0).toLocaleString()} members</span>
+                          <span>·</span>
+                          <span>Submitted {new Date(req.createdAt).toISOString().split('T')[0]}</span>
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  <div className="p-4.5 pt-3">
-                    {s.partnershipStatus === 'partnered' ? (
-                      <Button
-                        size="sm"
-                        disabled
-                        className="w-full bg-emerald-950/40 text-emerald-400 border border-emerald-500/25 text-xs h-9.5 rounded-xl font-sans font-semibold flex items-center justify-center gap-2 cursor-default"
-                      >
-                        <Check className="size-4 text-emerald-400" />
-                        <span>Already Partnered</span>
-                      </Button>
-                    ) : s.partnershipStatus === 'outgoing_pending' ? (
-                      <Button
-                        size="sm"
-                        disabled
-                        className="w-full bg-amber-950/40 text-amber-300 border border-amber-500/25 text-xs h-9.5 rounded-xl font-sans font-semibold flex items-center justify-center gap-2 cursor-default"
-                      >
-                        <Clock className="size-4 text-amber-400" />
-                        <span>Request Pending</span>
-                      </Button>
-                    ) : (
-                      <Button
-                        size="sm"
-                        onClick={() => {
-                          setRequestModalServer(s);
-                          setMentionType('none');
-                        }}
-                        className="w-full bg-white hover:bg-zinc-200 text-black font-bold text-xs h-9.5 rounded-xl cursor-pointer font-sans shadow-md hover:shadow-lg transition-all active:scale-[0.99] flex items-center justify-center gap-2"
-                      >
-                        <Handshake className="size-4" />
-                        <span>Request Partnership</span>
-                      </Button>
-                    )}
+                    <div className="flex items-center gap-3 shrink-0 self-end sm:self-center">
+                      {req.status === 'pending' && (
+                        <>
+                          <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-amber-400 bg-[#141417] px-2.5 py-1 rounded-[6px] border border-white/10 font-sans">
+                            <Clock className="size-3" />
+                            Awaiting response
+                          </span>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleCancelRequest(req.id)}
+                            className="h-8 px-3 text-xs text-[#A1A1AA] hover:text-red-400 hover:bg-red-500/10"
+                          >
+                            Cancel
+                          </Button>
+                        </>
+                      )}
+
+                      {req.status === 'accepted' && (
+                        <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-[var(--accent)] bg-[#141417] px-2.5 py-1 rounded-[6px] border border-white/10 font-sans">
+                          <Check className="size-3" />
+                          Accepted
+                        </span>
+                      )}
+
+                      {req.status === 'declined' && (
+                        <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-zinc-400 bg-[#141417] px-2.5 py-1 rounded-[6px] border border-white/10 font-sans">
+                          <X className="size-3" />
+                          Declined
+                        </span>
+                      )}
+
+                      {req.status === 'cancelled' && (
+                        <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-zinc-500 bg-[#141417] px-2.5 py-1 rounded-[6px] border border-white/10 font-sans">
+                          Cancelled
+                        </span>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )
           )}
         </div>
       )}
 
-      {/* ── TAB 4: COIN REWARDS & MILESTONES ── */}
-      {activeSubTab === 'rewards' && (
-        <div className="space-y-6">
-          {/* Daily Check-In Banner */}
-          <div className="rounded-2xl border border-white/[0.08] bg-[#111113] p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <Flame className="size-5 text-amber-400" />
-                <h3 className="text-base font-bold text-white font-sans">Daily Alliance Allowance</h3>
-              </div>
-              <p className="text-xs text-zinc-400 font-sans max-w-md">
-                Claim your daily check-in bounty to unlock @everyone and @here mention upgrades for partnership broadcasts.
-              </p>
-            </div>
-
-            <Button
-              onClick={handleClaimDaily}
-              disabled={claimingCheckin || !canClaimDaily}
-              className="bg-amber-500 hover:bg-amber-400 text-black font-semibold text-xs h-10 px-5 rounded-xl cursor-pointer font-sans shadow-md"
-            >
-              <Coins className="size-4 mr-2" />
-              <span>{claimingCheckin ? 'Claiming...' : !canClaimDaily ? `Claimed! ${dailyCooldownHours}h cooldown` : `Claim Daily +${5 + Math.min(dashboardData.dailyStreak || 0, 5)} Credits`}</span>
-            </Button>
+      {/* ── TAB 4: REWARDS (MILESTONES WITH PROGRESS BAR & COOLDOWNS) ── */}
+      {activeTab === 'rewards' && (
+        <div className="space-y-4">
+          <div className="space-y-1">
+            <h3 className="text-[16px] font-semibold text-[#F4F4F5] font-sans">Partnership milestones</h3>
+            <p className="text-[13px] text-[#A1A1AA] font-sans">
+              Expand your alliance network to unlock seasonal credit bounty milestones for your server treasury.
+            </p>
           </div>
 
-          {/* User Transaction History */}
-          <div className="space-y-3">
-            <h4 className="text-sm font-bold text-white font-sans flex items-center gap-2">
-              <History className="size-4 text-zinc-400" />
-              <span>Credits Transaction Ledger</span>
-            </h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {milestones.map((m) => {
+              const progressPct = Math.min(100, Math.round((m.currentProgress / m.targetCount) * 100));
 
-            <div className="rounded-2xl border border-white/[0.08] bg-[#111113] overflow-hidden">
-              {dashboardData.transactions?.length === 0 ? (
-                <div className="p-8 text-center text-xs text-zinc-500 font-sans">
-                  No credit transactions recorded yet. Join servers or claim daily allowances to build your balance.
-                </div>
-              ) : (
-                <div className="divide-y divide-white/[0.06]">
-                  {dashboardData.transactions.map((tx: any) => (
-                    <div key={tx.id} className="p-3.5 flex items-center justify-between text-xs font-sans hover:bg-white/[0.02]">
-                      <div className="space-y-0.5">
-                        <div className="text-zinc-200 font-medium">{tx.description}</div>
-                        <div className="text-[10px] text-zinc-500">{new Date(tx.timestamp).toLocaleString()}</div>
+              return (
+                <div
+                  key={m.id}
+                  className="rounded-[14px] border border-[#19191D] bg-[#0E0E11] p-5 space-y-3.5 transition-colors hover:border-white/20"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <Trophy className="size-4 text-[var(--accent)] shrink-0" />
+                        <h4 className="text-[15px] font-semibold text-[#F4F4F5] font-sans">{m.title}</h4>
                       </div>
-                      <div className={`font-bold tabular-nums ${tx.amount > 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                        {tx.amount > 0 ? `+${tx.amount}` : tx.amount} Credits
-                      </div>
+                      <p className="text-[12px] text-[#71717A] font-sans">
+                        Target: {m.targetCount} active {m.targetCount === 1 ? 'partner' : 'partners'}
+                      </p>
                     </div>
-                  ))}
+
+                    <div className="flex items-center gap-1 text-[13px] font-semibold text-[var(--accent)] bg-[#141417] px-2.5 py-1 rounded-[8px] border border-white/10 font-sans shrink-0">
+                      <Coins className="size-3.5" />
+                      +{m.rewardCredits} cr
+                    </div>
+                  </div>
+
+                  {/* Progress Bar */}
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between text-[11px] text-[#A1A1AA] font-sans">
+                      <span>Progress</span>
+                      <span className="font-semibold text-[#F4F4F5]">{m.currentProgress} / {m.targetCount}</span>
+                    </div>
+                    <div className="h-2 rounded-full bg-[#141417] overflow-hidden">
+                      <div
+                        className="h-full bg-[var(--accent)] rounded-full transition-all duration-300"
+                        style={{ width: `${progressPct}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Claim Button / Real Cooldown Format (Section 8) */}
+                  <div className="pt-1 flex items-center justify-end">
+                    {m.claimed ? (
+                      <span className="inline-flex items-center gap-1.5 text-xs text-[#71717A] font-medium font-sans">
+                        <Check className="size-3.5 text-[var(--accent)]" />
+                        Claimed
+                      </span>
+                    ) : m.onCooldown ? (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        disabled
+                        className="h-8 px-3 text-xs text-[#71717A] bg-[#141417] border border-white/10 cursor-not-allowed font-sans"
+                      >
+                        <Clock className="size-3 mr-1.5 text-amber-400" />
+                        <span>{m.cooldownLabel || 'Cooldown active'}</span>
+                      </Button>
+                    ) : m.canClaim ? (
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        onClick={() => handleClaimMilestone(m.id)}
+                        className="h-8 px-4 text-xs font-semibold"
+                      >
+                        Claim +{m.rewardCredits} credits
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        disabled
+                        className="h-8 px-3 text-xs text-[#71717A] bg-[#141417] border border-white/[0.06] cursor-not-allowed font-sans"
+                      >
+                        In progress
+                      </Button>
+                    )}
+                  </div>
                 </div>
-              )}
-            </div>
+              );
+            })}
           </div>
         </div>
       )}
 
-      {/* ── PARTNERSHIP REQUEST CONFIRMATION MODAL ── */}
-      {requestModalServer && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-lg bg-[#111113] border border-white/10 rounded-2xl p-6 shadow-2xl space-y-5 animate-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between border-b border-white/[0.08] pb-3">
-              <div className="flex items-center gap-2">
-                <Handshake className="size-5 text-emerald-400" />
-                <h3 className="text-base font-bold text-white font-sans">Propose Server Partnership</h3>
+      {/* ── SECTION 8.3: REALTIME NOTIFICATION TOAST CARDS ───────────── */}
+      {liveToasts.length > 0 && (
+        <div className="fixed bottom-6 right-6 z-[100] flex flex-col gap-2.5 max-w-sm w-full pointer-events-none">
+          {liveToasts.map((toast) => (
+            <div
+              key={toast.id}
+              onMouseEnter={() => {
+                setLiveToasts((prev) =>
+                  prev.map((t) => (t.id === toast.id ? { ...t, hovered: true } : t))
+                );
+              }}
+              onMouseLeave={() => {
+                setLiveToasts((prev) =>
+                  prev.map((t) => (t.id === toast.id ? { ...t, hovered: false } : t))
+                );
+              }}
+              className="pointer-events-auto rounded-[14px] border border-[var(--border-strong)] bg-[#0E0E11] p-3.5 shadow-2xl space-y-2.5 animate-in fade-in slide-in-from-bottom-2 duration-150 font-sans"
+            >
+              <div className="flex items-start gap-3">
+                <ServerIcon
+                  guildId={toast.id}
+                  iconUrl={toast.serverIcon}
+                  name={toast.serverName}
+                  size={36}
+                  className="size-9 rounded-[8px] object-cover shrink-0"
+                />
+
+                <div className="flex-1 min-w-0">
+                  <h4 className="text-[13px] font-semibold text-[#F4F4F5] truncate font-sans">
+                    {toast.serverName} wants to partner with you
+                  </h4>
+                  <p className="text-[11px] text-[#A1A1AA] truncate font-sans">
+                    {toast.termsText}
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => removeLiveToast(toast.id)}
+                  className="text-[#71717A] hover:text-[#F4F4F5] cursor-pointer p-0.5"
+                >
+                  <X className="size-3.5" />
+                </button>
               </div>
+
+              <div className="flex items-center justify-end gap-2 pt-1 border-t border-[rgba(255,255,255,0.06)]">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => removeLiveToast(toast.id)}
+                  className="h-7 px-2.5 text-[11px] text-[#71717A] hover:text-[#F4F4F5]"
+                >
+                  Dismiss
+                </Button>
+
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() => {
+                    removeLiveToast(toast.id);
+                    setActiveTab('requests');
+                    setRequestsSubTab('incoming');
+                  }}
+                  className="h-7 px-3 text-[11px] font-semibold"
+                >
+                  Review
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ── SECTION 8.4: CONFIGURE WEBHOOK MODAL (MASKED, SHOW URL, TEST) ─ */}
+      {isWebhookModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-xs p-4">
+          <div className="w-full max-w-lg rounded-[16px] border border-[rgba(255,255,255,0.13)] bg-[#0E0E11] p-6 shadow-2xl space-y-5 font-sans">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <h3 className="text-[18px] font-semibold text-[#F4F4F5] font-sans">
+                  Partnership webhook settings
+                </h3>
+                {webhookInfo.connected && (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-[var(--accent)] bg-[#141417] px-2 py-0.5 rounded-[6px] border border-white/10 font-sans">
+                    <span className="size-1.5 rounded-full bg-[var(--accent)]" />
+                    Connected
+                  </span>
+                )}
+              </div>
+
               <button
                 type="button"
-                onClick={() => setRequestModalServer(null)}
-                className="text-zinc-400 hover:text-white p-1 rounded-lg"
+                aria-label="Close modal"
+                onClick={() => setIsWebhookModalOpen(false)}
+                className="text-[#71717A] hover:text-[#F4F4F5] cursor-pointer p-1 rounded-md hover:bg-white/10"
               >
                 <X className="size-4" />
               </button>
             </div>
 
-            <div className="space-y-3 text-xs font-sans">
-              <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.06] flex items-center gap-3">
-                {requestModalServer.iconUrl || requestModalServer.icon ? (
-                  <img
-                    src={requestModalServer.iconUrl || requestModalServer.icon}
-                    alt={requestModalServer.name}
-                    className="size-10 rounded-xl object-cover"
+            {/* Display Saved Masked Webhook (Section 8.4) */}
+            {webhookInfo.hasWebhook && !isEditingWebhook ? (
+              <div className="space-y-4">
+                <div className="p-4 rounded-[12px] bg-[#141417] border border-[rgba(255,255,255,0.07)] space-y-3 font-sans">
+                  <div className="flex items-center justify-between text-[12px] text-[#A1A1AA]">
+                    <span>Channel: <strong className="text-[#F4F4F5]">#{webhookInfo.channelName}</strong></span>
+                    <button
+                      type="button"
+                      onClick={() => setShowFullWebhookUrl((prev) => !prev)}
+                      className="text-[var(--accent)] hover:underline inline-flex items-center gap-1 cursor-pointer font-medium"
+                    >
+                      {showFullWebhookUrl ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
+                      <span>{showFullWebhookUrl ? 'Hide URL' : 'Show URL'}</span>
+                    </button>
+                  </div>
+
+                  <div className="p-2.5 rounded-[8px] bg-[#09090B] border border-white/10 font-mono text-[12px] text-[#F4F4F5] truncate select-all">
+                    {showFullWebhookUrl ? webhookInfo.fullUrl : webhookInfo.maskedUrl}
+                  </div>
+                </div>
+
+                {/* Webhook Action Buttons: Send test, Change, Remove (Section 8.4) */}
+                <div className="flex items-center justify-between gap-2.5 pt-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleRemoveWebhook}
+                    className="text-red-400 hover:text-red-300 hover:bg-red-500/10 text-xs"
+                  >
+                    Remove
+                  </Button>
+
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleTestWebhook}
+                      disabled={testingWebhook}
+                      className="text-xs border-white/10 text-[#F4F4F5]"
+                    >
+                      {testingWebhook ? 'Sending…' : 'Send test'}
+                    </Button>
+
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setIsEditingWebhook(true);
+                        setWebhookInput('');
+                      }}
+                      className="text-xs text-[#A1A1AA] hover:text-[#F4F4F5]"
+                    >
+                      Change
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              /* Input Form for New / Modified Webhook */
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-[13px] font-medium text-[#F4F4F5] font-sans">
+                    Discord webhook URL
+                  </label>
+                  <Input
+                    value={webhookInput}
+                    onChange={(e) => setWebhookInput(e.target.value)}
+                    placeholder="https://discord.com/api/webhooks/..."
+                    className="h-10 text-[13px] bg-[#141417] border-[rgba(255,255,255,0.07)] font-sans"
                   />
-                ) : (
-                  <div className="size-10 rounded-xl bg-zinc-900 flex items-center justify-center font-bold text-white text-xs">
-                    {requestModalServer.name.slice(0, 2).toUpperCase()}
-                  </div>
-                )}
-                <div>
-                  <div className="font-bold text-white font-sans">{requestModalServer.name}</div>
-                  <div className="text-[11px] text-zinc-400 font-sans">
-                    {requestModalServer.category} • {getResolvedMemberCount(requestModalServer)} Members
-                  </div>
+                  <p className="text-[12px] text-[#71717A] font-sans">
+                    Create a webhook in your server&apos;s #partnerships channel and paste the URL here.
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[13px] font-medium text-[#F4F4F5] font-sans">
+                    Channel name (optional)
+                  </label>
+                  <Input
+                    value={webhookChannelInput}
+                    onChange={(e) => setWebhookChannelInput(e.target.value)}
+                    placeholder="partnerships"
+                    className="h-10 text-[13px] bg-[#141417] border-[rgba(255,255,255,0.07)] font-sans"
+                  />
+                </div>
+
+                <div className="flex items-center justify-end gap-2.5 pt-2">
+                  {webhookInfo.hasWebhook && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setIsEditingWebhook(false)}
+                      className="text-xs text-[#A1A1AA]"
+                    >
+                      Cancel
+                    </Button>
+                  )}
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={handleSaveWebhook}
+                    disabled={savingWebhook || !webhookInput.trim()}
+                    className="text-xs font-semibold"
+                  >
+                    {savingWebhook ? 'Saving…' : 'Save webhook'}
+                  </Button>
                 </div>
               </div>
+            )}
+          </div>
+        </div>
+      )}
 
-              {/* Mention Upgrade Option with Dynamic Server Pricing - @here Only */}
-              <div className="space-y-2 pt-1">
-                <label className="font-semibold text-white font-sans">Announcement Mention Tier</label>
-                <div className="grid grid-cols-2 gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setMentionType('none')}
-                    className={`p-3 rounded-xl border text-left cursor-pointer transition-all ${
-                      mentionType === 'none'
-                        ? 'bg-white/10 border-white/30 text-white font-bold'
-                        : 'bg-white/[0.02] border-white/10 text-zinc-400'
-                    }`}
-                  >
-                    <div className="text-xs font-semibold font-sans">Standard Cross-Post</div>
-                    <div className="text-[10px] text-zinc-500 font-sans">Free (0 Coins)</div>
-                  </button>
-
-                  <button
-                    type="button"
-                    disabled={!requestModalServer.allowPartnerMentions}
-                    onClick={() => setMentionType('here')}
-                    className={`p-3 rounded-xl border text-left cursor-pointer transition-all ${
-                      !requestModalServer.allowPartnerMentions
-                        ? 'opacity-40 cursor-not-allowed bg-zinc-900 border-white/5'
-                        : mentionType === 'here'
-                        ? 'bg-cyan-500/15 border-cyan-500/40 text-cyan-300 font-bold'
-                        : 'bg-white/[0.02] border-white/10 text-zinc-400'
-                    }`}
-                  >
-                    <div className="text-xs font-semibold font-sans">@here Mention</div>
-                    <div className="text-[10px] text-cyan-400 font-medium font-sans">
-                      {requestModalServer.partnershipHerePrice ?? 15} Coins
-                    </div>
-                  </button>
-                </div>
-                {!requestModalServer.allowPartnerMentions && (
-                  <p className="text-[10px] text-zinc-500 font-sans">Target server has role mentions disabled.</p>
-                )}
-              </div>
-
-              <div className="p-3 bg-[#18181b] rounded-xl border border-white/[0.06] space-y-1">
-                <div className="text-[10px] text-zinc-500 font-semibold uppercase">Mutual Webhook Guarantee:</div>
-                <p className="text-[11px] text-zinc-400 leading-normal">
-                  Advertisements will ONLY be posted once both server owners accept the partnership request.
+      {/* ── PROPOSE PARTNERSHIP CONFIRM MODAL (Section 8.1) ─────────── */}
+      {proposingServer && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-xs p-4">
+          <div className="w-full max-w-lg rounded-[16px] border border-[rgba(255,255,255,0.13)] bg-[#0E0E11] p-6 shadow-2xl space-y-4 font-sans">
+            <div className="flex items-start justify-between">
+              <div>
+                <h3 className="text-[18px] font-semibold text-[#F4F4F5] font-sans">
+                  Request partnership
+                </h3>
+                <p className="text-[13px] text-[#A1A1AA] font-sans">
+                  Propose cross-promotion with <strong className="text-[#F4F4F5]">{proposingServer.name}</strong>
                 </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setProposingServer(null)}
+                className="text-[#71717A] hover:text-[#F4F4F5] cursor-pointer"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+
+            {/* Terms Summary */}
+            <div className="p-3.5 rounded-[10px] bg-[#141417] border border-[rgba(255,255,255,0.07)] space-y-2 text-[12px] font-sans">
+              <div className="flex justify-between text-[#A1A1AA]">
+                <span>Required community size:</span>
+                <span className="text-[#F4F4F5] font-medium">{proposingServer.minMembersRequired || 5} members</span>
+              </div>
+              <div className="flex justify-between text-[#A1A1AA]">
+                <span>Base proposal fee:</span>
+                <span className="text-[#F4F4F5] font-medium">{proposingServer.partnershipPrice || 0} credits</span>
+              </div>
+              <div className="flex justify-between text-[#A1A1AA]">
+                <span>Allowed mention tiers:</span>
+                <span className="text-[var(--accent)] font-medium">@{proposingServer.partnershipAllowedMentions || 'here'}</span>
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-2 pt-2 border-t border-white/[0.08]">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setRequestModalServer(null)}
-                className="h-9 px-4 rounded-xl border-white/10 text-xs font-sans text-zinc-300"
-              >
+            {/* Mention Tier Selection */}
+            {proposingServer.allowPartnerMentions && proposingServer.partnershipAllowedMentions && proposingServer.partnershipAllowedMentions !== 'none' && (
+              <div className="space-y-1.5 font-sans">
+                <label className="text-[12px] font-medium text-[#F4F4F5]">
+                  Select broadcast announcement mention
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setProposingMention('none')}
+                    className={cn(
+                      'p-2 rounded-[8px] text-[12px] font-medium border text-center transition-colors cursor-pointer',
+                      proposingMention === 'none'
+                        ? 'bg-[#19191D] border-[var(--accent)] text-[#F4F4F5]'
+                        : 'bg-[#141417] border-[rgba(255,255,255,0.07)] text-[#71717A]'
+                    )}
+                  >
+                    No mention (+0 cr)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setProposingMention('here')}
+                    className={cn(
+                      'p-2 rounded-[8px] text-[12px] font-medium border text-center transition-colors cursor-pointer',
+                      proposingMention === 'here'
+                        ? 'bg-[#19191D] border-[var(--accent)] text-[#F4F4F5]'
+                        : 'bg-[#141417] border-[rgba(255,255,255,0.07)] text-[#71717A]'
+                    )}
+                  >
+                    @here (+{proposingServer.partnershipHerePrice || 15} cr)
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Total Cost Breakdown */}
+            {(() => {
+              const baseCost = proposingServer.partnershipPrice || 0;
+              const mentionCost = proposingMention === 'here'
+                ? (proposingServer.partnershipHerePrice || 15)
+                : 0;
+              const totalCost = baseCost + mentionCost;
+
+              return (
+                <div className="p-3.5 rounded-[10px] bg-[#141417] border border-[rgba(255,255,255,0.07)] space-y-1 font-sans">
+                  <div className="flex justify-between items-center text-[13px]">
+                    <span className="text-[#A1A1AA]">Total cost to propose:</span>
+                    <span className="font-semibold text-[var(--accent)]">{totalCost} credits</span>
+                  </div>
+                  <p className="text-[11px] text-[#71717A] leading-relaxed">
+                    Credits are held securely and deducted only if the partnership is accepted.
+                  </p>
+                </div>
+              );
+            })()}
+
+            <div className="flex items-center justify-end gap-2.5 pt-2">
+              <Button variant="ghost" size="sm" onClick={() => setProposingServer(null)}>
                 Cancel
               </Button>
               <Button
+                variant="primary"
                 size="sm"
-                onClick={handleSendRequest}
-                disabled={submittingRequest}
-                className="h-9 px-5 rounded-xl bg-white hover:bg-zinc-200 text-black font-semibold text-xs font-sans cursor-pointer shadow-md"
+                onClick={handleSendProposal}
+                disabled={sendingProposal}
+                className="font-semibold"
               >
-                {submittingRequest ? 'Sending...' : 'Confirm & Propose Alliance'}
+                {sendingProposal ? 'Sending…' : 'Send proposal'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── END PARTNERSHIP CONFIRM MODAL ────────────────────────────── */}
+      {partnerToEnd && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-xs p-4">
+          <div className="w-full max-w-md rounded-[16px] border border-[rgba(255,255,255,0.13)] bg-[#0E0E11] p-6 shadow-2xl space-y-4 font-sans">
+            <h3 className="text-[18px] font-semibold text-[#F4F4F5] font-sans">
+              End partnership agreement?
+            </h3>
+            <p className="text-[13px] text-[#A1A1AA] leading-relaxed font-sans">
+              Are you sure you want to end your mutual partnership with <strong className="text-[#F4F4F5]">{partnerToEnd.partnerGuildName}</strong>? Webhook broadcasts and cross-promotions will immediately cease.
+            </p>
+            <div className="flex items-center justify-end gap-2.5 pt-2">
+              <Button variant="ghost" size="sm" onClick={() => setPartnerToEnd(null)}>
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={handleConfirmEnd}
+                disabled={endingPartner}
+              >
+                {endingPartner ? 'Ending…' : 'End partnership'}
               </Button>
             </div>
           </div>
@@ -1076,4 +1680,10 @@ export function PartnershipsTab({
   );
 }
 
-export default PartnershipsTab;
+export function PartnershipsTab(props: PartnershipsTabProps) {
+  return (
+    <TabErrorBoundary tabTitle="Partnerships">
+      <PartnershipsTabInner {...props} />
+    </TabErrorBoundary>
+  );
+}

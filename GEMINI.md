@@ -7,7 +7,9 @@
    - Never use fake review authors copied from other sites (e.g. `craftente`, `Deputy_Vance`, `OfficerK9`, etc.).
    - Only display real user/guild telemetry. If data is not yet available, show clean, elegant empty states or real zero counts.
    - Never use tacky glowing AI gradients, purple/neon halos, or buzzwords. Keep designs clean, minimal, flush, and elegant (like Claude, Linear, or Vercel).
-   - In System Uptime & Status, never invent fake 90-day history or fake outages ("Scheduled gateway shard roll", etc.). Display live, honest process metrics from `/api/status`.
+   - In System Uptime & Status, never invent fake 90-day history or fake outages ("Scheduled gateway shard roll", etc.). Real timeline starts from Day 1 / live uptime.
+   - For metric specifications (API Endpoint, PRC Status Check, Sync Protocol), use clean modern sans-serif typography (`font-sans`), NEVER harsh monospace card boxes.
+   - Maintenance status must be editable from the hidden Admin Portal (`/admin-portal`) to toggle operational/maintenance states and custom maintenance notices.
 
 2. **Reference Images & Competitor Differentiations**:
    - When the user shares reference images, screenshots, or competitor mockups (e.g., CADLY or other dashboards): **NEVER** copy the text, names, labels, or layout verbatim.
@@ -75,6 +77,14 @@
    - Account Suspended / Banned page must follow the same aesthetic: massive bold `403` on pitch black, `Account Suspended`, clear administrative notice, and support pill buttons.
 
 14. **Hidden Admin Portal (`/admin-portal`)**:
-   - Located strictly at `/admin-portal` without being exposed in public navigation or sidebars.
+   - Located strictly at `/admin-portal` and `/admin-panel` without being exposed in public navigation or sidebars.
    - Full portal capabilities: User moderation (ban/unban user accounts), Treasury management (gift credits/coins to user IDs), Changelog manager (add/remove/edit changelog items), Directory listing moderation, and live diagnostic telemetry.
+
+15. **Builder Sans Strictly Forbidden**:
+   - NEVER use, import, reference, or emulate the Roblox "Builder Sans" font (especially in Bold, Extra Bold, or Black styles). It is annoying and completely forbidden.
+   - Always use standard, clean, modern sans-serif typography (`font-sans`, Inter, system sans-serif).
+
+16. **Server Authorization & 404 Validation**:
+   - Never invent fake servers (e.g., `Server (153114)`) if a user types an invalid or arbitrary server ID in the URL like `/dashboard/:guildId/...`.
+   - If `:guildId` is invalid (not 17-20 digit snowflake) or not accessible by the logged-in user, display the clean 404 Page (`NotFoundPage`). Do not leak or allow access to other Discord servers.
 

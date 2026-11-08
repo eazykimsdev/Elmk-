@@ -124,52 +124,104 @@ function dateTimeFormat(locale: string, options: Intl.DateTimeFormatOptions): In
   return formatter
 }
 
-/** Formats a date, e.g. medium: "Sep 4, 2026". Accepts a `Date`, ISO string, or epoch number, and a locale string or `{ locale, timeZone }`. */
+/**
+ * Safely parses any date input (Date object, ISO string, seconds timestamp, milliseconds timestamp, or null/undefined).
+ * Always returns a valid Date or null. Never throws or returns an invalid Date.
+ */
+export function parseDateSafe(input: Date | string | number | null | undefined): Date | null {
+  if (input === null || input === undefined || input === '') return null;
+  if (input instanceof Date) {
+    return isNaN(input.getTime()) ? null : input;
+  }
+  if (typeof input === 'number') {
+    if (isNaN(input) || input <= 0) return null;
+    // Seconds vs milliseconds heuristic: timestamps before ~2286 in seconds are < 10,000,000,000
+    const ms = input < 10_000_000_000 ? input * 1000 : input;
+    const d = new Date(ms);
+    return isNaN(d.getTime()) ? null : d;
+  }
+  if (typeof input === 'string') {
+    const trimmed = input.trim();
+    if (!trimmed || trimmed === 'null' || trimmed === 'undefined' || trimmed.toLowerCase() === 'never') return null;
+    // Pure numeric string
+    if (/^\d+$/.test(trimmed)) {
+      const num = parseInt(trimmed, 10);
+      const ms = num < 10_000_000_000 ? num * 1000 : num;
+      const d = new Date(ms);
+      return isNaN(d.getTime()) ? null : d;
+    }
+    const d = new Date(trimmed);
+    return isNaN(d.getTime()) ? null : d;
+  }
+  return null;
+}
+
+/** Formats a date safely, returning "Never" if null/invalid. */
 export function formatDate(
-  date: Date | string | number,
+  date: Date | string | number | null | undefined,
   style: "short" | "medium" | "long" = "medium",
   options: string | DateFormatOptions = {}
 ): string {
+  const parsed = parseDateSafe(date);
+  if (!parsed) return "Never";
   const { locale = DEFAULT_LOCALE, timeZone } =
-    typeof options === "string" ? { locale: options, timeZone: undefined } : options
-  const value = date instanceof Date ? date : new Date(date)
-  return dateTimeFormat(locale, { dateStyle: style, timeZone }).format(value)
+    typeof options === "string" ? { locale: options, timeZone: undefined } : options;
+  return dateTimeFormat(locale, { dateStyle: style, timeZone }).format(parsed);
 }
 
-/** Formats a date and the time on it, e.g. "Sep 4, 2026, 3:30 PM". Same zone rule as `formatDate`: pass `timeZone: "UTC"` for a stored instant. */
+/** Formats a date and time safely, returning "Never" if null/invalid. */
 export function formatDateTime(
-  date: Date | string | number,
+  date: Date | string | number | null | undefined,
   options: DateFormatOptions & {
     dateStyle?: "short" | "medium" | "long"
     timeStyle?: "short" | "medium"
   } = {}
 ): string {
-  const { locale = DEFAULT_LOCALE, timeZone, dateStyle = "medium", timeStyle = "short" } = options
-  const value = date instanceof Date ? date : new Date(date)
-  return dateTimeFormat(locale, { dateStyle, timeStyle, timeZone }).format(value)
+  const parsed = parseDateSafe(date);
+  if (!parsed) return "Never";
+  const { locale = DEFAULT_LOCALE, timeZone, dateStyle = "medium", timeStyle = "short" } = options;
+  return dateTimeFormat(locale, { dateStyle, timeStyle, timeZone }).format(parsed);
 }
 
 /**
- * Formats a date relative to `now` (default: current time): "just now" under
- * 45s, then "3m ago"/"in 2h", falling back to `formatDate(date, "short")` at
- * 7+ days; returns "" for an invalid date. The fallback is a calendar date of
- * a stored instant, so it is read in UTC unless `options.timeZone` says
- * otherwise: in the reader's own zone an instant after midnight UTC printed the
- * day before west of Greenwich, and the server's page and the browser's
- * disagreed.
+ * Formats a date relative to `now`, returning "Never" if null/invalid.
  */
-export function formatRelative(date: Date | string | number, now: Date = new Date(), options: DateFormatOptions = {}): string {
-  const target = date instanceof Date ? date : new Date(date)
-  if (Number.isNaN(target.getTime()) || Number.isNaN(now.getTime())) return ""
+export function formatRelative(
+  date: Date | string | number | null | undefined,
+  now: Date = new Date(),
+  options: DateFormatOptions = {}
+): string {
+  const target = parseDateSafe(date);
+  if (!target || Number.isNaN(now.getTime())) return "Never";
 
-  const diff = target.getTime() - now.getTime()
-  const abs = Math.abs(diff)
+  const diff = target.getTime() - now.getTime();
+  const abs = Math.abs(diff);
 
-  if (abs < 45_000) return "just now"
-  if (abs >= 7 * DAY) return formatDate(target, "short", { timeZone: "UTC", ...options })
+  if (abs < 45_000) return "just now";
+  if (abs >= 7 * DAY) return formatDate(target, "short", { timeZone: "UTC", ...options });
 
-  const magnitude = abs < HOUR ? `${Math.round(abs / MINUTE)}m` : abs < DAY ? `${Math.round(abs / HOUR)}h` : `${Math.round(abs / DAY)}d`
-  return diff < 0 ? `${magnitude} ago` : `in ${magnitude}`
+  const magnitude = abs < HOUR ? `${Math.round(abs / MINUTE)}m` : abs < DAY ? `${Math.round(abs / HOUR)}h` : `${Math.round(abs / DAY)}d`;
+  return diff < 0 ? `${magnitude} ago` : `in ${magnitude}`;
+}
+
+/**
+ * Helper specifically for last bump formatting:
+ * Returns { relative, exact } with "Never" fallback and formatted relative time.
+ */
+export function formatLastBump(
+  date: Date | string | number | null | undefined,
+  now: Date = new Date()
+): { relative: string; exact: string } {
+  const parsed = parseDateSafe(date);
+  if (!parsed) {
+    return { relative: 'Never', exact: 'Never' };
+  }
+  const exact = formatDateTime(parsed, { timeZone: 'UTC' });
+  const relative = formatRelative(parsed, now);
+  return {
+    relative: relative || 'just now',
+    exact
+  };
 }
 
 /**
@@ -198,11 +250,24 @@ export function percentOf(part: number, total: number): number {
   return (part / total) * 100
 }
 
-/** Extracts up to `max` (default 2) uppercase initials from a name, e.g. "Ada Lovelace" → "AL". */
+/** Extracts a single alphanumeric character initial for a server, skipping symbols (e.g. "@ConnectingERLC" -> "C"). */
+export function getServerInitial(name?: string | null): string {
+  if (!name) return 'S';
+  const cleaned = name.trim().replace(/^[^a-zA-Z0-9]+/, '');
+  const char = cleaned.charAt(0);
+  return char ? char.toUpperCase() : 'S';
+}
+
+/** Extracts up to `max` (default 2) uppercase alphanumeric initials from a name, skipping leading symbols. */
 export function getInitials(name: string, max = 2): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean)
-  return parts
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  const initials = parts
     .slice(0, max)
-    .map((part) => part[0]?.toUpperCase() ?? "")
-    .join("")
+    .map((part) => {
+      const cleaned = part.replace(/^[^a-zA-Z0-9]+/, '');
+      return cleaned.charAt(0)?.toUpperCase() ?? '';
+    })
+    .filter(Boolean)
+    .join("");
+  return initials || 'S';
 }

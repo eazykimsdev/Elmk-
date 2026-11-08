@@ -1,42 +1,40 @@
 'use client';
 
+import * as React from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
-  Check,
-  Ellipsis,
   LayoutDashboard,
   Megaphone,
   Coins,
-  Flame,
+  CalendarCheck,
   Trophy,
   Users,
+  Handshake,
   Activity,
-  FileSpreadsheet,
   GitBranch,
-  TrendingUp,
-  Home,
-  LogOut,
-  ChevronDown,
-  ChevronUp,
+  Settings,
   Eye,
   Search,
-  X,
-  Sparkles,
-  ExternalLink,
+  ChevronDown,
+  MoreHorizontal,
+  Flame,
+  Check,
+  Server,
+  UserRound,
   Bot,
-  Key,
-  Settings,
-  Handshake
+  Receipt,
+  BookOpen,
+  HelpCircle,
+  Moon,
+  Sun,
+  Laptop,
+  LogOut,
+  Sparkles,
+  UserPlus,
+  Palette,
 } from 'lucide-react';
-import { useRef, useState, useMemo, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
 
-import { Logo } from '@/components/library/logo';
-
-import {
-  ArrowDown01Icon,
-  HelpIcon,
-} from '@/components/library/icons';
-import { Button, buttonVariants } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -51,59 +49,35 @@ import {
   SidebarContent,
   SidebarFooter,
   SidebarHeader,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarMenuSub,
-  SidebarMenuSubButton,
-  SidebarMenuSubItem,
   useSidebar,
 } from '@/components/ui/sidebar';
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from '@/components/ui/sheet';
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { ServerIcon } from '@/components/ui/ServerIcon';
+import { UserAvatar } from '@/components/ui/UserAvatar';
+import { useTheme } from '@/components/library/theme-provider';
 import type { NavConfig } from '@/lib/nav-config';
-import type { AppShellUser, AppShellWorkspace } from './index';
-
-const menuButtonBaseClassName =
-  'h-11 gap-3 rounded-2xl border border-transparent px-3.5 font-semibold text-slate-300 transition-colors hover:bg-white/[0.04] hover:text-white active:bg-transparent data-active:border-transparent data-active:bg-transparent data-active:text-white [&_svg]:size-5 [&_svg]:text-slate-400 data-active:[&_svg]:text-emerald-400';
-
-const sidebarMenuButtonClassName = cn(
-  menuButtonBaseClassName,
-  'group-data-[collapsible=icon]:size-11 group-data-[collapsible=icon]:!size-11 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:!justify-center group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:!p-0',
-);
-
-const sidebarMenuSubButtonClassName = cn(
-  'h-10 gap-3 rounded-xl border border-transparent px-3 text-xs font-medium text-zinc-400 transition-colors hover:bg-white/[0.04] hover:text-white active:bg-transparent data-active:border-transparent data-active:bg-transparent data-active:text-emerald-400 data-active:font-semibold [&_svg]:size-4 [&_svg]:text-zinc-400 data-active:[&_svg]:text-emerald-400',
-);
-
-const subItemsMenuContentClassName = 'z-100 w-52 p-1.5 shadow-lg';
-
-const bottomNavItemClassName = cn(
-  buttonVariants({ variant: 'ghost' }),
-  'text-foreground hover:text-primary h-full flex-1 px-0 hover:bg-transparent rounded-none',
-);
-
-const moreNavItemClassName = cn(
-  menuButtonBaseClassName,
-  'flex items-center text-sm',
-);
+import type { AppShellUser, AppShellWorkspace } from '@/components/ui/app-shell';
 
 export type NavigationItem = {
-  section: string;
   label: string;
   href: string;
-  icon: React.ComponentType<{ className?: string }>;
-  subItems?: {
-    label: string;
-    href: string;
-    icon: React.ComponentType<{ className?: string }>;
-  }[];
+  icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
+  exact?: boolean;
+  badge?: React.ReactNode;
+  chevron?: React.ReactNode;
+  isChild?: boolean;
+};
+
+export type NavigationGroup = {
+  label?: string;
+  items: NavigationItem[];
 };
 
 export type AppShellSidebarProps = {
@@ -118,87 +92,30 @@ export type AppShellSidebarProps = {
   onSignOut?: () => void;
 };
 
-// Deterministic vibrant gradient generator for servers with no custom icon
-function getGradientForName(str: string = 'Server') {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
-  const gradients = [
-    'from-blue-600 via-indigo-600 to-purple-700',
-    'from-emerald-500 via-teal-600 to-cyan-700',
-    'from-violet-600 via-purple-700 to-pink-600',
-    'from-amber-500 via-orange-600 to-rose-600',
-    'from-cyan-500 via-blue-600 to-indigo-700'
-  ];
-  return gradients[Math.abs(hash) % gradients.length];
-}
-
 export function ServerAvatar({
   name,
   iconUrl,
   size = 'md',
-  className
+  className,
 }: {
   name?: string;
   iconUrl?: string | null;
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'sm' | 'md' | 'lg' | 'xl';
   className?: string;
 }) {
-  const [imgError, setImgError] = useState(false);
-
-  useEffect(() => {
-    setImgError(false);
-  }, [iconUrl]);
-
-  const serverName = name || 'Server';
-  const words = serverName.trim().split(/\s+/);
-  const initial = words.length > 1
-    ? words.slice(0, 3).map((w) => w[0]).join('').toUpperCase()
-    : serverName.slice(0, 2).toUpperCase();
-
-  const sizeClass =
-    size === 'sm'
-      ? 'size-6 text-[10px] rounded-md'
-      : size === 'lg'
-      ? 'size-10 text-sm rounded-xl'
-      : 'size-8 text-xs rounded-xl';
-
-  const validIcon = Boolean(
-    iconUrl &&
-    typeof iconUrl === 'string' &&
-    iconUrl.startsWith('http') &&
-    iconUrl !== 'null' &&
-    iconUrl !== 'undefined'
-  );
-
-  if (validIcon && !imgError) {
-    return (
-      <img
-        src={iconUrl}
-        alt={serverName}
-        className={cn(sizeClass, 'object-cover shrink-0 select-none', className)}
-        onError={() => setImgError(true)}
-      />
-    );
-  }
-
-  // Authentic Discord default server icon: gray background with crisp white text
   return (
-    <div
-      className={cn(
-        sizeClass,
-        'bg-[#313338] text-white font-bold flex items-center justify-center shrink-0 select-none tracking-tight',
-        className
-      )}
-      title={serverName}
-    >
-      <span>{initial}</span>
-    </div>
+    <ServerIcon
+      name={name}
+      iconUrl={iconUrl}
+      size={size}
+      className={className}
+    />
   );
 }
 
 export function DashboardSidebar({
-  nav,
   activeHref,
+  onSearch,
   workspaces,
   workspaceId,
   onWorkspaceChange,
@@ -206,161 +123,522 @@ export function DashboardSidebar({
   user,
   onSignOut,
 }: AppShellSidebarProps) {
-  const { state } = useSidebar();
-  const collapsed = state === 'collapsed';
+  const { state, isMobile, setOpenMobile, setOpen } = useSidebar();
+  const collapsed = state === 'collapsed' && !isMobile;
   const navigate = useNavigate();
   const location = useLocation();
 
   const [searchServerQuery, setSearchServerQuery] = useState('');
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
 
-  const currentGuildId = workspaceId || (workspaces && workspaces[0]?.id) || '1530147023754367006';
-  const currentWorkspace = workspaces?.find((w) => w.id === currentGuildId) || workspaces?.[0];
+  const currentGuildId =
+    workspaceId || (workspaces && workspaces[0]?.id) || '';
+  const currentWorkspace =
+    workspaces?.find((w) => w.id === currentGuildId) || workspaces?.[0];
 
-  // Derive active section & subsection from activeHref or location.pathname
-  const path = activeHref || location.pathname;
-  const { activeSection, activeSubsection } = useMemo(() => {
-    if (path.includes('/details')) return { activeSection: 'growth', activeSubsection: 'details' };
-    if (path.includes('/promote')) return { activeSection: 'growth', activeSubsection: 'promote' };
-    if (path.includes('/earn')) return { activeSection: 'growth', activeSubsection: 'earn' };
-    if (path.includes('/rewards')) return { activeSection: 'growth', activeSubsection: 'rewards' };
-    if (path.includes('/leaderboard')) return { activeSection: 'growth', activeSubsection: 'leaderboard' };
-    if (path.includes('/joins')) return { activeSection: 'growth', activeSubsection: 'joins' };
-    if (path.includes('/partnerships')) return { activeSection: 'growth', activeSubsection: 'partnerships' };
-    if (path.includes('/uptime')) return { activeSection: 'system', activeSubsection: 'uptime' };
-    if (path.includes('/bot')) return { activeSection: 'system', activeSubsection: 'bot' };
-    if (path.includes('/settings') || path.includes('/credentials')) return { activeSection: 'system', activeSubsection: 'settings' };
-    if (path.includes('/changelog')) return { activeSection: 'system', activeSubsection: 'changelog' };
-    return { activeSection: 'overview', activeSubsection: undefined };
-  }, [path]);
+  // Save collapsed state to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('connectingerlc_sidebar_collapsed', String(collapsed));
+    } catch {}
+  }, [collapsed]);
 
-  // Primary navigation items containing full routes
-  const primaryNavigation: NavigationItem[] = useMemo(() => [
-    {
-      section: 'overview',
-      label: 'Overview',
-      href: `/dashboard/${currentGuildId}`,
-      icon: LayoutDashboard,
-    },
-    {
-      section: 'growth',
-      label: 'Community Growth',
-      href: `/dashboard/${currentGuildId}/details`,
-      icon: TrendingUp,
-      subItems: [
-        { label: 'Server Details', href: `/dashboard/${currentGuildId}/details`, icon: Eye },
-        { label: 'Promote Server', href: `/dashboard/${currentGuildId}/promote`, icon: Megaphone },
-        { label: 'Earn Credits', href: `/dashboard/${currentGuildId}/earn`, icon: Coins },
-        { label: 'Daily Check-In', href: `/dashboard/${currentGuildId}/rewards`, icon: Flame },
-        { label: 'Leaderboard', href: `/dashboard/${currentGuildId}/leaderboard`, icon: Trophy },
-        { label: 'My Joins', href: `/dashboard/${currentGuildId}/joins`, icon: Users },
-        { label: 'Partnerships', href: `/dashboard/${currentGuildId}/partnerships`, icon: Handshake },
-      ],
-    },
-    {
-      section: 'system',
-      label: 'System & Status',
-      href: `/dashboard/${currentGuildId}/uptime`,
-      icon: Activity,
-      subItems: [
-        { label: 'System Telemetry', href: `/dashboard/${currentGuildId}/uptime`, icon: Activity },
-        { label: 'Changelog', href: `/dashboard/${currentGuildId}/changelog`, icon: GitBranch },
-        { label: 'Settings', href: `/dashboard/${currentGuildId}/settings`, icon: Settings },
-      ],
-    },
-  ], [currentGuildId]);
+  // Real member count from workspace or cached value
+  const realMemberCount = useMemo(() => {
+    if (typeof currentWorkspace?.memberCount === 'number' && currentWorkspace.memberCount >= 0) {
+      return currentWorkspace.memberCount;
+    }
+    try {
+      const cached = localStorage.getItem(`server_members_${currentGuildId}`);
+      if (cached) {
+        const parsed = parseInt(cached, 10);
+        if (!isNaN(parsed)) return parsed;
+      }
+    } catch {}
+    return 0;
+  }, [currentWorkspace, currentGuildId]);
 
-  // Mobile navigation lists
-  const mobilePrimaryNavigation = primaryNavigation.slice(0, 2);
-  const mobileMoreNavigation = useMemo(() => [
-    { label: 'Overview', href: `/dashboard/${currentGuildId}`, icon: LayoutDashboard },
-    { label: 'Server Details', href: `/dashboard/${currentGuildId}/details`, icon: Eye },
-    { label: 'Promote Server', href: `/dashboard/${currentGuildId}/promote`, icon: Megaphone },
-    { label: 'Earn Credits', href: `/dashboard/${currentGuildId}/earn`, icon: Coins },
-    { label: 'Daily Check-In', href: `/dashboard/${currentGuildId}/rewards`, icon: Flame },
-    { label: 'Leaderboard', href: `/dashboard/${currentGuildId}/leaderboard`, icon: Trophy },
-    { label: 'My Joins', href: `/dashboard/${currentGuildId}/joins`, icon: Users },
-    { label: 'Partnerships', href: `/dashboard/${currentGuildId}/partnerships`, icon: Handshake },
-    { label: 'System Telemetry', href: `/dashboard/${currentGuildId}/uptime`, icon: Activity },
-    { label: 'Changelog', href: `/dashboard/${currentGuildId}/changelog`, icon: GitBranch },
-    { label: 'Settings', href: `/dashboard/${currentGuildId}/settings`, icon: Settings },
-  ], [currentGuildId]);
+  // Server banner if configured
+  const serverBannerUrl = useMemo(() => {
+    try {
+      const storedBanner = localStorage.getItem(`server_banner_${currentGuildId}`);
+      if (storedBanner) return storedBanner;
+      const raw = localStorage.getItem('erlcus_promoted_servers');
+      if (raw) {
+        const list = JSON.parse(raw);
+        const match = list.find((s: any) => String(s.id) === String(currentGuildId));
+        if (match?.bannerUrl) return match.bannerUrl;
+      }
+    } catch {}
+    return null;
+  }, [currentGuildId]);
 
-  // Filtered workspaces for search
+  // Bump cooldown state (shared source of truth with Overview)
+  const [bumpRemainingSeconds, setBumpRemainingSeconds] = useState<number>(0);
+  const [bumping, setBumping] = useState<boolean>(false);
+
+  const checkBumpStatus = () => {
+    try {
+      const savedNext = localStorage.getItem(`server_next_bump_${currentGuildId}`);
+      if (savedNext) {
+        const nextTime = parseInt(savedNext, 10);
+        const rem = Math.max(0, Math.ceil((nextTime - Date.now()) / 1000));
+        setBumpRemainingSeconds(rem);
+        return;
+      }
+    } catch {}
+
+    try {
+      const s1 = localStorage.getItem(`server_bump_${currentGuildId}`);
+      const s2 = localStorage.getItem(`erlcus_bump_${currentGuildId}`);
+      const t1 = s1 ? parseInt(s1, 10) : 0;
+      const t2 = s2 ? parseInt(s2, 10) : 0;
+      const last = Math.max(t1, t2);
+      if (last === 0) {
+        setBumpRemainingSeconds(0);
+      } else {
+        const elapsed = Date.now() - last;
+        const rem = Math.max(0, Math.ceil((60 * 60 * 1000 - elapsed) / 1000));
+        setBumpRemainingSeconds(rem);
+      }
+    } catch {
+      setBumpRemainingSeconds(0);
+    }
+  };
+
+  useEffect(() => {
+    checkBumpStatus();
+    const timer = setInterval(checkBumpStatus, 1000);
+    const onBumpEvent = () => checkBumpStatus();
+    window.addEventListener('server_bumped', onBumpEvent);
+    window.addEventListener('erlcus_bump_updated', onBumpEvent);
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener('server_bumped', onBumpEvent);
+      window.removeEventListener('erlcus_bump_updated', onBumpEvent);
+    };
+  }, [currentGuildId]);
+
+  const canBump = bumpRemainingSeconds === 0;
+
+  const formatRemainingTime = (seconds: number) => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    if (hours > 0) return `${hours}h ${minutes}m`;
+    return `${Math.max(1, minutes)}m`;
+  };
+
+  // Perform quick bump
+  const handleQuickBump = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!canBump || bumping) return;
+    setBumping(true);
+    try {
+      const nextTime = Date.now() + 60 * 60 * 1000;
+      localStorage.setItem(`server_next_bump_${currentGuildId}`, String(nextTime));
+      localStorage.setItem(`server_bump_${currentGuildId}`, String(Date.now()));
+
+      // Increment bumps count
+      const currentBumps = parseInt(localStorage.getItem(`server_bumps_count_${currentGuildId}`) || '0', 10);
+      localStorage.setItem(`server_bumps_count_${currentGuildId}`, String(currentBumps + 1));
+
+      window.dispatchEvent(new Event('server_bumped'));
+      window.dispatchEvent(new Event('erlcus_bump_updated'));
+      setBumpRemainingSeconds(3600);
+    } catch {}
+    finally {
+      setBumping(false);
+    }
+  };
+
+  // Count incoming partnership requests (Section 8.2 & 8.3)
+  const [pendingRequestsCount, setPendingRequestsCount] = useState<number>(0);
+
+  useEffect(() => {
+    let mounted = true;
+    const fetchPendingCount = async () => {
+      try {
+        const res = await fetch(`/api/partnerships/${currentGuildId}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (mounted && data?.summary?.waitingCount !== undefined) {
+            setPendingRequestsCount(Number(data.summary.waitingCount) || 0);
+          }
+        }
+      } catch {}
+    };
+
+    fetchPendingCount();
+    const interval = setInterval(fetchPendingCount, 15000);
+    const onUpdate = () => fetchPendingCount();
+    window.addEventListener('mavely_partnerships_updated', onUpdate);
+
+    return () => {
+      mounted = false;
+      clearInterval(interval);
+      window.removeEventListener('mavely_partnerships_updated', onUpdate);
+    };
+  }, [currentGuildId]);
+
+  const currentPath = location.pathname + location.search;
+
+  // Recruiter role check (Section 7.6)
+  const isRecruiter = (user as any)?.role === 'Recruiter';
+
+  // Collapsible My Joins / Recruit Hub state (Section 7.1)
+  const isRecruitOrJoinRoute =
+    location.pathname.includes('/joins') ||
+    location.pathname.includes('/recruits') ||
+    location.pathname.includes('/recruit');
+
+  const [myJoinsExpanded, setMyJoinsExpanded] = useState<boolean>(() => isRecruitOrJoinRoute);
+
+  useEffect(() => {
+    if (isRecruitOrJoinRoute) {
+      setMyJoinsExpanded(true);
+    }
+  }, [isRecruitOrJoinRoute]);
+
+  // Flat navigation structure
+  const navigationGroups: NavigationGroup[] = useMemo(() => {
+    if (isRecruiter) {
+      return [
+        {
+          label: 'Recruiting',
+          items: [
+            {
+              label: 'My joins',
+              href: `/dashboard/${currentGuildId}/joins`,
+              icon: Users,
+              chevron: (
+                <span
+                  role="button"
+                  tabIndex={0}
+                  aria-label="Toggle recruit hub"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setMyJoinsExpanded((prev) => !prev);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.stopPropagation();
+                      setMyJoinsExpanded((prev) => !prev);
+                    }
+                  }}
+                  className="size-5 rounded flex items-center justify-center hover:bg-white/10 text-zinc-400 hover:text-white cursor-pointer"
+                >
+                  <ChevronDown className={cn('size-3.5 transition-transform duration-150', !myJoinsExpanded && '-rotate-90')} />
+                </span>
+              ),
+            },
+            ...(myJoinsExpanded
+              ? [
+                  {
+                    label: 'Recruit hub',
+                    href: `/dashboard/${currentGuildId}/recruits`,
+                    icon: UserPlus,
+                    isChild: true,
+                  },
+                ]
+              : []),
+          ],
+        },
+        {
+          label: 'Resources',
+          items: [
+            {
+              label: 'Docs',
+              href: `/docs`,
+              icon: BookOpen,
+            },
+          ],
+        },
+      ];
+    }
+
+    return [
+      {
+        items: [
+          {
+            label: 'Overview',
+            href: `/dashboard/${currentGuildId}`,
+            icon: LayoutDashboard,
+            exact: true,
+            badge: canBump ? (
+              <span className="size-2 rounded-full bg-[var(--accent)] shrink-0" title="Bump ready" />
+            ) : null,
+          },
+        ],
+      },
+      {
+        label: 'Growth',
+        items: [
+          {
+            label: 'Server page',
+            href: `/dashboard/${currentGuildId}/details`,
+            icon: Eye,
+          },
+          {
+            label: 'Promote server',
+            href: `/dashboard/${currentGuildId}/promote`,
+            icon: Megaphone,
+          },
+          {
+            label: 'Earn credits',
+            href: `/dashboard/${currentGuildId}/earn`,
+            icon: Coins,
+          },
+          {
+            label: 'Daily check-in',
+            href: `/dashboard/${currentGuildId}/rewards`,
+            icon: CalendarCheck,
+          },
+          {
+            label: 'Leaderboard',
+            href: `/dashboard/${currentGuildId}/leaderboard`,
+            icon: Trophy,
+          },
+          {
+            label: 'My joins',
+            href: `/dashboard/${currentGuildId}/joins`,
+            icon: Users,
+            chevron: (
+              <span
+                role="button"
+                tabIndex={0}
+                aria-label="Toggle recruit hub"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setMyJoinsExpanded((prev) => !prev);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.stopPropagation();
+                    setMyJoinsExpanded((prev) => !prev);
+                  }
+                }}
+                className="size-5 rounded flex items-center justify-center hover:bg-white/10 text-zinc-400 hover:text-white cursor-pointer"
+              >
+                <ChevronDown className={cn('size-3.5 transition-transform duration-150', !myJoinsExpanded && '-rotate-90')} />
+              </span>
+            ),
+          },
+          ...(myJoinsExpanded
+            ? [
+                {
+                  label: 'Recruit hub',
+                  href: `/dashboard/${currentGuildId}/recruits`,
+                  icon: UserPlus,
+                  isChild: true,
+                },
+              ]
+            : []),
+          {
+            label: 'Partnerships',
+            href: `/dashboard/${currentGuildId}/partnerships`,
+            icon: Handshake,
+            badge:
+              pendingRequestsCount > 0 ? (
+                <span
+                  className={cn(
+                    'inline-flex items-center justify-center rounded-full text-[10px] font-semibold leading-none tabular-nums shrink-0 select-none font-sans',
+                    'bg-[var(--accent-soft)] text-[var(--accent)] border border-[var(--accent-border)] shadow-[0_0_8px_var(--accent)]',
+                    pendingRequestsCount > 9
+                      ? 'min-w-[22px] h-[18px] px-1.5'
+                      : 'size-[18px] aspect-square'
+                  )}
+                >
+                  {pendingRequestsCount}
+                </span>
+              ) : null,
+          },
+        ],
+      },
+      {
+        label: 'System',
+        items: [
+          {
+            label: 'System status',
+            href: `/dashboard/${currentGuildId}/uptime`,
+            icon: Activity,
+          },
+          {
+            label: 'Changelog',
+            href: `/dashboard/${currentGuildId}/changelog`,
+            icon: GitBranch,
+          },
+          {
+            label: 'Settings',
+            href: `/dashboard/${currentGuildId}/settings`,
+            icon: Settings,
+          },
+        ],
+      },
+    ];
+  }, [currentGuildId, canBump, pendingRequestsCount, myJoinsExpanded, isRecruiter]);
+
+  const isItemActive = (item: NavigationItem) => {
+    if (item.href.includes('?')) {
+      return currentPath === item.href;
+    }
+    if (item.exact) {
+      return location.pathname === item.href && !location.search;
+    }
+    const target = activeHref || location.pathname;
+    return target === item.href || location.pathname === item.href;
+  };
+
+  const handleNavClick = (href: string) => {
+    navigate(href);
+    if (isMobile) {
+      setOpenMobile(false);
+    }
+  };
+
+  const showServerSearch = Boolean(workspaces && workspaces.length > 8);
+
   const filteredWorkspaces = useMemo(() => {
     if (!workspaces) return [];
-    if (!searchServerQuery.trim()) return workspaces;
+    if (!showServerSearch || !searchServerQuery.trim()) return workspaces;
     const q = searchServerQuery.toLowerCase().trim();
-    return workspaces.filter((ws) => ws.name.toLowerCase().includes(q) || ws.id.includes(q));
-  }, [workspaces, searchServerQuery]);
+    return workspaces.filter((ws) => ws.name.toLowerCase().includes(q));
+  }, [workspaces, showServerSearch, searchServerQuery]);
 
   return (
-    <>
-      <Sidebar collapsible="offcanvas" className="w-64 shrink-0 bg-[#161616] border-r border-white/[0.08]" side={side}>
-        {/* Top Header: Claude-Level Discord Server Switcher */}
-        <SidebarHeader className="p-3 border-b border-white/[0.08] bg-[#161616]">
+    <TooltipProvider delay={150}>
+      <Sidebar
+        collapsible="icon"
+        side={side}
+        sheetTitle={currentWorkspace?.name || 'ConnectingERLC navigation'}
+        className="bg-[#09090B] border-r border-[var(--border)] text-[#A1A1AA] transition-[width] duration-200 ease-in-out select-none"
+      >
+        {/* Blurred Banner Backdrop behind top 120px of sidebar */}
+        {!collapsed && serverBannerUrl && (
+          <div
+            className="absolute top-0 left-0 right-0 h-[120px] pointer-events-none overflow-hidden z-0"
+            style={{
+              maskImage: 'linear-gradient(to bottom, black 0%, black 40%, transparent 100%)',
+              WebkitMaskImage: 'linear-gradient(to bottom, black 0%, black 40%, transparent 100%)',
+            }}
+          >
+            <img
+              src={serverBannerUrl}
+              alt=""
+              className="w-full h-full object-cover"
+              style={{
+                filter: 'blur(18px) saturate(1.1)',
+                transform: 'scale(1.15)',
+                opacity: 0.35,
+              }}
+            />
+          </div>
+        )}
+
+        {/* ── HEADER: SERVER CARD + SEARCH ─────────────────────────────── */}
+        <SidebarHeader className="relative z-10 p-4 pb-0 space-y-0 bg-transparent border-0 shadow-none outline-none shrink-0">
           <DropdownMenu>
             <DropdownMenuTrigger
-              className="h-auto w-full justify-start p-2 rounded-xl bg-transparent hover:bg-white/[0.04] border border-transparent transition-all cursor-pointer min-w-0 text-left group overflow-hidden max-w-full select-none outline-none focus:outline-none focus:ring-0 focus-visible:ring-0 ring-0 focus-visible:outline-none"
+              className={cn(
+                'transition-all duration-150 cursor-pointer select-none outline-none focus-visible:ring-1 focus-visible:ring-[var(--accent)] bg-transparent border-0 shadow-none',
+                collapsed
+                  ? 'mx-auto size-11 flex items-center justify-center rounded-[12px] hover:bg-[#141417]'
+                  : 'w-full h-[72px] flex items-center justify-between gap-3 text-left group'
+              )}
             >
-              <div className="flex min-w-0 items-center gap-2.5 w-full overflow-hidden">
+              {collapsed ? (
                 <ServerAvatar
                   name={currentWorkspace?.name}
-                  iconUrl={currentWorkspace?.iconUrl || (currentWorkspace?.id ? localStorage.getItem(`server_icon_${currentWorkspace.id}`) : null)}
-                  size="md"
+                  iconUrl={
+                    currentWorkspace?.iconUrl ||
+                    (currentWorkspace?.id ? localStorage.getItem(`server_icon_${currentWorkspace.id}`) : null)
+                  }
+                  size="lg"
+                  className="size-9 rounded-[10px]"
                 />
-                <div className="min-w-0 text-left flex-1 overflow-hidden">
-                  <span className="text-zinc-400 block text-[10px] font-mono uppercase tracking-wider font-semibold truncate">
-                    ACTIVE COMMUNITY
-                  </span>
-                  <span className="block truncate text-xs font-bold text-white group-hover:text-emerald-400 transition-colors">
-                    {currentWorkspace?.name || 'Select Server'}
-                  </span>
-                </div>
-              </div>
+              ) : (
+                <>
+                  <div className="flex items-center gap-3 min-w-0">
+                    <ServerAvatar
+                      name={currentWorkspace?.name}
+                      iconUrl={
+                        currentWorkspace?.iconUrl ||
+                        (currentWorkspace?.id ? localStorage.getItem(`server_icon_${currentWorkspace.id}`) : null)
+                      }
+                      size="lg"
+                      className="size-10 rounded-[12px] shrink-0"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <span className="block truncate text-[15px] leading-snug font-semibold text-[#F4F4F5] tracking-normal font-sans">
+                        {currentWorkspace?.name || 'Select server'}
+                      </span>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        <span className="size-2 rounded-full bg-[var(--accent)] shrink-0" />
+                        <span className="text-[12px] leading-none text-[#A1A1AA] font-normal tabular-nums truncate font-sans">
+                          {realMemberCount.toLocaleString()} {realMemberCount === 1 ? 'member' : 'members'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="size-7 rounded-[6px] flex items-center justify-center text-[#71717A] group-hover:text-[#F4F4F5] hover:bg-white/[0.06] transition-colors shrink-0">
+                    <ChevronDown className="size-4" />
+                  </div>
+                </>
+              )}
             </DropdownMenuTrigger>
 
             <DropdownMenuContent
               align="start"
-              sideOffset={6}
-              className="z-50 w-64 rounded-2xl p-1.5 shadow-2xl border border-white/10 bg-[#161616] backdrop-blur-xl"
+              side={collapsed ? 'right' : 'bottom'}
+              sideOffset={8}
+              className="z-50 w-64 rounded-[16px] p-1.5 border border-[var(--border-strong)] bg-[#0E0E11] text-[#F4F4F5] shadow-2xl backdrop-blur-md"
             >
-              <DropdownMenuGroup className="max-h-64 overflow-y-auto overflow-x-hidden scrollbar-none space-y-0.5">
-                <DropdownMenuLabel className="px-2.5 py-1 text-[10px] font-mono font-semibold text-zinc-400 tracking-wider uppercase">
-                  Select Server ({workspaces?.length || 0})
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator className="bg-white/10 my-1" />
+              {showServerSearch && (
+                <div className="px-1.5 py-1">
+                  <input
+                    type="text"
+                    value={searchServerQuery}
+                    onChange={(e) => setSearchServerQuery(e.target.value)}
+                    placeholder="Filter servers…"
+                    className="w-full h-8 rounded-[8px] border border-[var(--border)] bg-[#141417] px-2.5 text-xs text-[#F4F4F5] placeholder:text-[#71717A] focus-visible:outline-none focus-visible:border-[var(--accent)]"
+                  />
+                </div>
+              )}
 
-                {!workspaces || workspaces.length === 0 ? (
-                  <div className="p-3 text-center text-xs text-zinc-500 font-mono">
-                    No servers available
+              <DropdownMenuGroup className="max-h-64 overflow-y-auto space-y-0.5">
+                <DropdownMenuLabel className="px-2.5 py-1 text-xs font-medium text-[#71717A]">
+                  Your servers
+                </DropdownMenuLabel>
+                {!filteredWorkspaces || filteredWorkspaces.length === 0 ? (
+                  <div className="px-2.5 py-3 text-xs text-[#71717A]">
+                    No servers found
                   </div>
                 ) : (
-                  workspaces.map((ws) => {
+                  filteredWorkspaces.map((ws) => {
                     const isSelected = ws.id === currentWorkspace?.id;
-                    const wsIconUrl = ws.iconUrl || (ws.id ? localStorage.getItem(`server_icon_${ws.id}`) : null);
+                    const wsIconUrl =
+                      ws.iconUrl ||
+                      (ws.id ? localStorage.getItem(`server_icon_${ws.id}`) : null);
                     return (
                       <DropdownMenuItem
                         key={ws.id}
                         onClick={() => {
                           onWorkspaceChange?.(ws.id);
+                          if (isMobile) setOpenMobile(false);
                         }}
                         className={cn(
-                          'justify-between rounded-xl px-2.5 py-2 cursor-pointer transition-all text-xs',
+                          'flex items-center justify-between gap-2 rounded-[8px] px-2.5 py-2 cursor-pointer text-[13px] transition-colors',
                           isSelected
-                            ? 'text-emerald-400 font-semibold bg-emerald-500/10 border border-emerald-500/20'
-                            : 'text-zinc-300 hover:text-white hover:bg-white/[0.06]',
+                            ? 'bg-[#141417] text-[#F4F4F5] font-medium'
+                            : 'text-[#A1A1AA] hover:text-[#F4F4F5] hover:bg-[#19191D]'
                         )}
                       >
-                        <div className="flex items-center gap-2.5 min-w-0 overflow-hidden">
+                        <div className="flex items-center gap-2.5 min-w-0">
                           <ServerAvatar name={ws.name} iconUrl={wsIconUrl} size="sm" />
-                          <div className="min-w-0 overflow-hidden">
-                            <span className="truncate block font-medium">{ws.name}</span>
-                          </div>
+                          <span className="truncate">{ws.name}</span>
                         </div>
                         {isSelected && (
-                          <div className="flex items-center gap-1.5 shrink-0">
-                            <Check className="text-emerald-400 size-4" />
-                          </div>
+                          <Check className="size-4 text-[var(--accent)] shrink-0" />
                         )}
                       </DropdownMenuItem>
                     );
@@ -368,527 +646,341 @@ export function DashboardSidebar({
                 )}
               </DropdownMenuGroup>
 
+              <DropdownMenuSeparator className="my-1 bg-[var(--border)]" />
+              <DropdownMenuItem
+                onClick={() => handleNavClick('/servers')}
+                className="flex items-center gap-2 rounded-[8px] px-2.5 py-2 text-[13px] text-[#A1A1AA] hover:text-[#F4F4F5] hover:bg-[#19191D] cursor-pointer"
+              >
+                <Server className="size-4 text-[#71717A]" />
+                <span>All servers</span>
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+
+          {/* Search Box: 36px tall, radius 10px, 1px border at 7%, transparent background, 12px under header */}
+          {!collapsed ? (
+            <button
+              type="button"
+              onClick={() => {
+                onSearch?.();
+                if (isMobile) setOpenMobile(false);
+              }}
+              className="w-full h-9 mt-3 flex items-center justify-between rounded-[10px] border border-white/[0.07] bg-transparent hover:bg-[#141417] px-3 text-[13px] text-[#71717A] hover:text-[#F4F4F5] transition-colors duration-120 cursor-pointer"
+            >
+              <span className="flex items-center gap-2.5">
+                <Search className="size-4 text-[#71717A]" />
+                <span className="text-[13px] font-normal text-[#A1A1AA] font-sans">Search</span>
+              </span>
+              <kbd className="inline-flex items-center gap-0.5 rounded-[6px] border border-white/[0.07] bg-[#141417] px-1.5 py-0.5 text-[11px] font-mono text-[#71717A]">
+                <span className="text-[10px]">Ctrl</span> K
+              </kbd>
+            </button>
+          ) : (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  onClick={() => onSearch?.()}
+                  aria-label="Search (Ctrl K)"
+                  className="mx-auto size-11 flex items-center justify-center rounded-[12px] text-[#71717A] hover:text-[#F4F4F5] hover:bg-[#19191D] transition-colors duration-120 cursor-pointer"
+                >
+                  <Search className="size-[18px]" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="right">Search (Ctrl K)</TooltipContent>
+            </Tooltip>
+          )}
         </SidebarHeader>
 
-        {/* Navigation Content */}
-        <SidebarContent className="px-3 pt-3 pb-3 bg-sidebar flex flex-col gap-1.5 overflow-y-auto">
-          <SidebarMenu className="gap-1.5">
-            {primaryNavigation.map((item) => (
-              <SidebarNavigationItem
-                key={item.section}
-                active={item.section === activeSection}
-                item={item}
-                activeSubsection={activeSubsection}
-                onNavigate={(href) => navigate(href)}
-              />
-            ))}
-          </SidebarMenu>
-        </SidebarContent>
+        {/* ── NAVIGATION CONTENT ─────────────────────────────────────── */}
+        <SidebarContent className="relative z-10 px-3 pt-5 pb-2 bg-transparent flex flex-col flex-1 min-h-0 overflow-y-auto scrollbar-thin">
+          {navigationGroups.map((group, groupIndex) => {
+            const isOverviewGroup = groupIndex === 0;
 
-        {/* User Profile Card docked at bottom */}
-        {user && (
-          <SidebarFooter className="p-3 border-t border-white/[0.08] bg-[#161616]">
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                className="w-full flex items-center justify-between p-2.5 rounded-2xl border border-white/[0.08] bg-[#1f1f1f] hover:bg-[#262626] transition-all cursor-pointer text-left"
-              >
-                <div className="flex items-center gap-2.5 min-w-0">
-                  {user.avatarUrl ? (
-                    <img
-                      src={user.avatarUrl}
-                      alt={user.name}
-                      className="size-8 rounded-full object-cover shrink-0 border border-white/10"
-                    />
-                  ) : (
-                    <div className="size-8 rounded-full bg-slate-800 text-slate-200 border border-white/10 flex items-center justify-center text-xs font-bold shrink-0">
-                      {user.initials || user.name.slice(0, 2).toUpperCase()}
-                    </div>
-                  )}
-                  <div className="flex flex-col min-w-0 text-left">
-                    <span className="text-xs font-semibold text-white truncate">{user.name}</span>
-                    <span className="text-[11px] text-slate-400 truncate font-mono">
-                      {user.handle || (user.username ? `@${user.username}` : `@${user.name}`)}
-                    </span>
-                  </div>
-                </div>
-                <ChevronUp className="text-slate-400 size-4 ml-1.5 shrink-0" />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent
-                side="top"
-                align="start"
-                sideOffset={8}
-                className="w-64 p-2 shadow-2xl z-50 rounded-2xl border border-white/10 bg-[#161616] backdrop-blur-xl"
-              >
-                <DropdownMenuLabel className="px-2.5 py-2 font-normal">
-                  <div className="flex items-center gap-3">
-                    {user.avatarUrl ? (
-                      <img src={user.avatarUrl} alt={user.name} className="size-9 rounded-full object-cover border border-white/10" />
-                    ) : (
-                      <div className="size-9 rounded-full bg-slate-800 text-slate-200 border border-white/10 flex items-center justify-center text-xs font-bold">
-                        {user.initials || 'ME'}
-                      </div>
-                    )}
-                    <div className="min-w-0">
-                      <span className="text-sm font-semibold block truncate text-white">{user.name}</span>
-                      <span className="text-xs text-zinc-400 block truncate font-mono">
-                        {user.handle || (user.username ? `@${user.username}` : (user.email?.startsWith('@') ? user.email : `@${user.email?.split('@')[0] || user.name}`))}
-                      </span>
-                    </div>
-                  </div>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator className="bg-white/10 my-1" />
-
-                {/* Help & Support */}
-                <DropdownMenuItem
-                  onClick={() => navigate('/docs')}
-                  className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-xs font-medium text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.06] cursor-pointer transition-colors"
-                >
-                  <HelpIcon className="size-4 text-zinc-400" />
-                  <span>Help & Support</span>
-                </DropdownMenuItem>
-
-                {/* Back to Home */}
-                <DropdownMenuItem
-                  onClick={() => navigate('/')}
-                  className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-xs font-medium text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.06] cursor-pointer transition-colors"
-                >
-                  <Home className="size-4 text-zinc-400" />
-                  <span>Back to Home</span>
-                </DropdownMenuItem>
-
-                {/* Sign Out */}
-                {onSignOut && (
-                  <DropdownMenuItem
-                    onClick={onSignOut}
-                    className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-xs font-medium text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 cursor-pointer transition-colors"
-                  >
-                    <LogOut className="size-4 text-rose-400" />
-                    <span>Sign Out</span>
-                  </DropdownMenuItem>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </SidebarFooter>
-        )}
-      </Sidebar>
-
-      <MobileBottomNavigation
-        activeSection={activeSection}
-        activeSubsection={activeSubsection}
-        workspaces={workspaces}
-        currentWorkspace={currentWorkspace}
-        onWorkspaceChange={onWorkspaceChange}
-        primaryItems={mobilePrimaryNavigation}
-        moreItems={mobileMoreNavigation}
-        onNavigate={(href) => navigate(href)}
-        onSignOut={onSignOut}
-      />
-    </>
-  );
-}
-
-function MobileBottomNavigation({
-  activeSection,
-  activeSubsection,
-  workspaces,
-  currentWorkspace,
-  onWorkspaceChange,
-  primaryItems,
-  moreItems,
-  onNavigate,
-  onSignOut,
-}: {
-  activeSection: string;
-  activeSubsection?: string;
-  workspaces?: AppShellWorkspace[];
-  currentWorkspace?: AppShellWorkspace;
-  onWorkspaceChange?: (id: string) => void;
-  primaryItems: NavigationItem[];
-  moreItems: { label: string; href: string; icon: React.ComponentType<{ className?: string }> }[];
-  onNavigate: (href: string) => void;
-  onSignOut?: () => void;
-}) {
-  const [moreOpen, setMoreOpen] = useState(false);
-  const moreActive = moreItems.some((item) => activeSubsection ? item.href.endsWith(`/${activeSubsection}`) : false);
-
-  return (
-    <div className="bg-sidebar fixed inset-x-0 bottom-0 z-50 flex h-16 items-center justify-around border-t px-2 md:hidden">
-      {primaryItems.map((item) => {
-        const active = item.section === activeSection;
-        const activeSubItem =
-          active && activeSubsection
-            ? item.subItems?.find((subItem) =>
-              subItem.href.endsWith(`/${activeSubsection}`),
-            )
-            : undefined;
-        const Icon = activeSubItem?.icon ?? item.icon;
-        const label = activeSubItem?.label ?? item.label;
-
-        if (item.subItems?.length) {
-          return (
-            <DropdownMenu key={item.section}>
-              <DropdownMenuTrigger
-                aria-label={label}
-                className={cn(
-                  bottomNavItemClassName,
-                  active && 'text-primary font-medium',
-                )}
-              >
-                <Icon className="size-5" />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent
-                side="top"
-                align="center"
-                sideOffset={8}
-                className={subItemsMenuContentClassName}
-              >
-                <NavigationSubItemsMenu
-                  item={item}
-                  isSubItemActive={(href) =>
-                    active && href.endsWith(`/${activeSubsection}`)
-                  }
-                  onSelect={(href) => onNavigate(href)}
-                />
-              </DropdownMenuContent>
-            </DropdownMenu>
-          );
-        }
-
-        return (
-          <button
-            key={item.section}
-            type="button"
-            aria-label={item.label}
-            onClick={() => onNavigate(item.href)}
-            className={cn(
-              bottomNavItemClassName,
-              active && 'text-primary font-medium',
-            )}
-          >
-            <Icon className="size-5" />
-          </button>
-        );
-      })}
-
-      <Sheet open={moreOpen} onOpenChange={setMoreOpen}>
-        <SheetTrigger
-          aria-label="More navigation"
-          className={cn(
-            bottomNavItemClassName,
-            moreActive && 'text-primary font-medium',
-          )}
-        >
-          <Ellipsis className="size-5" />
-        </SheetTrigger>
-        <SheetContent
-          side="bottom"
-          showCloseButton={false}
-          className="max-h-[85dvh] gap-1.5 rounded-t-3xl px-4 pt-2 pb-[calc(1rem+env(safe-area-inset-bottom))] md:hidden overflow-y-auto"
-        >
-          <div className="bg-border mx-auto h-1 w-10 rounded-full mb-2" />
-          <SheetHeader className="px-0 pt-0 pb-1">
-            <SheetTitle className="text-lg font-semibold">More Menu</SheetTitle>
-          </SheetHeader>
-
-          {/* Server Switcher in Mobile Sheet */}
-          {workspaces && workspaces.length > 0 ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                className={cn(
-                  buttonVariants({ variant: 'ghost' }),
-                  'h-auto w-full justify-between py-2 border border-white/[0.08] bg-muted/40 rounded-xl mb-2',
-                )}
-              >
-                <span className="flex min-w-0 items-center gap-3">
-                  <ServerAvatar name={currentWorkspace?.name} iconUrl={currentWorkspace?.iconUrl} size="md" />
-                  <span className="min-w-0 text-left">
-                    <span className="text-muted-foreground block text-xs font-normal">
-                      Discord Server
-                    </span>
-                    <span className="block truncate text-sm font-semibold">
-                      {currentWorkspace?.name || 'Select Server'}
-                    </span>
-                  </span>
-                </span>
-                <ArrowDown01Icon className="text-muted-foreground size-5" />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent
-                align="center"
-                side="top"
-                sideOffset={8}
-                className="z-70 w-[calc(100vw-2rem)] max-w-sm rounded-xl p-2 shadow-lg"
-              >
-                <DropdownMenuGroup>
-                  <DropdownMenuLabel className="px-2 py-1.5 font-semibold tracking-wider uppercase text-xs">
-                    Select Server
-                  </DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  {workspaces.map((organization) => (
-                    <DropdownMenuItem
-                      key={organization.id}
-                      onClick={() => onWorkspaceChange?.(organization.id)}
-                      className={cn(
-                        'justify-between rounded-lg px-2 py-2.5 cursor-pointer',
-                        organization.id === currentWorkspace?.id
-                          ? 'text-primary font-semibold'
-                          : 'text-muted-foreground',
-                      )}
-                    >
-                      <div className="flex items-center gap-2">
-                        <ServerAvatar name={organization.name} iconUrl={organization.iconUrl} size="sm" />
-                        <span>{organization.name}</span>
-                      </div>
-                      {organization.id === currentWorkspace?.id && (
-                        <Check className="text-primary size-4" />
-                      )}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuGroup>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : null}
-
-          <nav aria-label="More navigation" className="flex flex-col gap-1.5">
-            {moreItems.map((item) => {
-              const Icon = item.icon;
-              const active = item.href.endsWith(`/${activeSubsection}`);
-
-              return (
-                <button
-                  key={item.href}
-                  type="button"
-                  data-active={active || undefined}
-                  onClick={() => {
-                    onNavigate(item.href);
-                    setMoreOpen(false);
-                  }}
-                  className={cn(moreNavItemClassName, 'w-full text-left')}
-                >
-                  <Icon />
-                  <span>{item.label}</span>
-                </button>
-              );
-            })}
-            <a
-              href="/docs"
-              onClick={() => setMoreOpen(false)}
-              className={moreNavItemClassName}
-            >
-              <HelpIcon />
-              <span>Help & Support</span>
-            </a>
-            {onSignOut && (
-              <button
-                type="button"
-                onClick={() => {
-                  setMoreOpen(false);
-                  onSignOut();
-                }}
-                className={cn(moreNavItemClassName, 'text-rose-400')}
-              >
-                <span>Sign Out</span>
-              </button>
-            )}
-          </nav>
-        </SheetContent>
-      </Sheet>
-    </div>
-  );
-}
-
-type SidebarNavigationItemProps = {
-  active: boolean;
-  activeSubsection?: string;
-  item: NavigationItem;
-};
-
-function SidebarNavigationItem({
-  active,
-  activeSubsection,
-  item,
-  onNavigate,
-}: SidebarNavigationItemProps & { onNavigate: (href: string) => void }) {
-  const { state } = useSidebar();
-  const collapsed = state === 'collapsed';
-
-  // KEEP OPEN BY DEFAULT: "Community Growth" and "System & Status" stay open
-  // unless user clicks the section button to close them, and remembers preference in localStorage.
-  const [open, setOpen] = useState<boolean>(() => {
-    try {
-      const stored = localStorage.getItem(`nav_section_${item.section}_open`);
-      if (stored !== null) return stored === 'true';
-    } catch {}
-    return true; // Default open as requested!
-  });
-
-  const [flyoutOpen, setFlyoutOpen] = useState(false);
-  const flyoutCloseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const subItems = item.subItems;
-  const hasSubItems = Boolean(subItems?.length);
-  const showSubItems = !collapsed && open && hasSubItems;
-
-  const activeChild = activeSubsection
-    ? subItems?.find((subItem) => subItem.href.endsWith(`/${activeSubsection}`))
-    : undefined;
-  const DisplayedIcon = active && activeChild ? activeChild.icon : item.icon;
-  const displayedLabel = active && activeChild ? activeChild.label : item.label;
-  const activeChildHref = activeChild?.href;
-  const isActiveSubItem = (href: string) => active && href === activeChildHref;
-
-  function toggleOpen() {
-    setOpen((currentOpen) => {
-      const next = !currentOpen;
-      try {
-        localStorage.setItem(`nav_section_${item.section}_open`, String(next));
-      } catch {}
-      return next;
-    });
-  }
-
-  function openFlyout() {
-    if (flyoutCloseTimer.current) {
-      clearTimeout(flyoutCloseTimer.current);
-    }
-    setFlyoutOpen(true);
-  }
-
-  function scheduleFlyoutClose() {
-    flyoutCloseTimer.current = setTimeout(() => {
-      setFlyoutOpen(false);
-    }, 120);
-  }
-
-  return (
-    <SidebarMenuItem>
-      {collapsed && hasSubItems ? (
-        <DropdownMenu
-          modal={false}
-          open={flyoutOpen}
-          onOpenChange={setFlyoutOpen}
-        >
-          <DropdownMenuTrigger
-            aria-label={displayedLabel}
-            data-active={active || undefined}
-            onPointerEnter={openFlyout}
-            onPointerLeave={scheduleFlyoutClose}
-            className={cn(sidebarMenuButtonClassName, 'flex w-full items-center cursor-pointer')}
-          >
-            <DisplayedIcon />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent
-            side="right"
-            align="start"
-            sideOffset={8}
-            onPointerEnter={openFlyout}
-            onPointerLeave={scheduleFlyoutClose}
-            className={subItemsMenuContentClassName}
-          >
-            <NavigationSubItemsMenu
-              item={item}
-              isSubItemActive={isActiveSubItem}
-              onSelect={onNavigate}
-            />
-          </DropdownMenuContent>
-        </DropdownMenu>
-      ) : hasSubItems ? (
-        <SidebarMenuButton
-          isActive={active}
-          onClick={toggleOpen}
-          className={cn(sidebarMenuButtonClassName, 'cursor-pointer select-none')}
-        >
-          <DisplayedIcon />
-          {!collapsed && (
-            <>
-              <span>{displayedLabel}</span>
-              <ChevronDown
-                className={cn(
-                  'pointer-events-none ml-auto size-4 transition-transform text-slate-400 duration-200',
-                  open && 'rotate-180',
-                )}
-              />
-            </>
-          )}
-        </SidebarMenuButton>
-      ) : (
-        <SidebarMenuButton
-          isActive={active}
-          tooltip={displayedLabel}
-          className={cn(sidebarMenuButtonClassName, 'cursor-pointer')}
-          onClick={(event) => {
-            event.preventDefault();
-            onNavigate(item.href);
-          }}
-        >
-          <DisplayedIcon />
-          {!collapsed && <span>{displayedLabel}</span>}
-        </SidebarMenuButton>
-      )}
-
-      {showSubItems ? (
-        <SidebarMenuSub>
-          {subItems?.map((subItem) => {
-            const SubIcon = subItem.icon;
             return (
-              <SidebarMenuSubItem key={subItem.href}>
-                <SidebarMenuSubButton
-                  isActive={isActiveSubItem(subItem.href)}
-                  onClick={(event) => {
-                    event.preventDefault();
-                    onNavigate(subItem.href);
-                  }}
-                  className={cn(sidebarMenuSubButtonClassName, 'cursor-pointer')}
-                >
-                  <SubIcon />
-                  <span>{subItem.label}</span>
-                </SidebarMenuSubButton>
-              </SidebarMenuSubItem>
+              <div
+                key={group.label || `group-${groupIndex}`}
+                className={cn(
+                  'space-y-1',
+                  isOverviewGroup ? 'mt-0' : 'mt-7'
+                )}
+              >
+                {group.label && (
+                  collapsed ? (
+                    <div className="my-3 border-t border-[var(--border)] w-8 mx-auto" />
+                  ) : (
+                    <div className="px-3 mb-2 text-[12px] font-medium text-[#71717A] select-none font-sans">
+                      {group.label}
+                    </div>
+                  )
+                )}
+
+                <div className={cn('space-y-1', collapsed && 'space-y-2 flex flex-col items-center')}>
+                  {group.items.map((item) => {
+                    const Icon = item.icon;
+                    const active = isItemActive(item);
+
+                    if (collapsed) {
+                      /* Collapsed item: 44px square button with tooltip */
+                      return (
+                        <Tooltip key={item.href}>
+                          <TooltipTrigger asChild>
+                            <button
+                              type="button"
+                              aria-current={active ? 'page' : undefined}
+                              onClick={() => handleNavClick(item.href)}
+                              className={cn(
+                                'relative size-11 flex items-center justify-center rounded-[12px] transition-colors duration-120 cursor-pointer',
+                                active
+                                  ? 'bg-[#141417] text-[var(--accent)] border border-[rgba(255,255,255,0.07)]'
+                                  : 'text-[#71717A] hover:bg-[#19191D] hover:text-[#F4F4F5]'
+                              )}
+                            >
+                              <Icon className="size-[18px]" strokeWidth={1.75} />
+                              {item.badge && (
+                                <span className="absolute top-2 right-2 size-2 rounded-full bg-[var(--accent)] ring-2 ring-[#09090B]" />
+                              )}
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent side="right" className="bg-[#0E0E11] text-[#F4F4F5] border-[var(--border)] text-xs">
+                            {item.label}
+                          </TooltipContent>
+                        </Tooltip>
+                      );
+                    }
+
+                    if (item.isChild) {
+                      /* Child item: indented 16px, 1px vertical connector line on left, 32px row, 13px label, smaller icon */
+                      return (
+                        <div key={item.href} className="relative pl-4">
+                          <div className="absolute left-2.5 top-0 bottom-0 w-px bg-[var(--border)]" />
+                          <button
+                            type="button"
+                            aria-current={active ? 'page' : undefined}
+                            onClick={() => handleNavClick(item.href)}
+                            className={cn(
+                              'w-full h-8 flex items-center justify-between gap-2 rounded-[8px] px-2.5 text-[13px] font-medium transition-colors duration-120 cursor-pointer select-none',
+                              active
+                                ? 'bg-[#141417] text-[#F4F4F5] border border-[rgba(255,255,255,0.07)]'
+                                : 'text-[#71717A] hover:bg-[#19191D] hover:text-[#F4F4F5]'
+                            )}
+                          >
+                            <div className="flex items-center gap-2 min-w-0">
+                              <Icon
+                                className={cn(
+                                  'size-3.5 shrink-0 transition-colors',
+                                  active ? 'text-[var(--accent)]' : 'text-[#71717A]'
+                                )}
+                                strokeWidth={1.75}
+                              />
+                              <span className="truncate">{item.label}</span>
+                            </div>
+                            <div className="flex items-center gap-1.5 shrink-0">
+                          {item.badge}
+                          {item.chevron}
+                        </div>
+                          </button>
+                        </div>
+                      );
+                    }
+
+                    /* Expanded item: 36px row, radius 10px, 12px padding, 10px gap */
+                    return (
+                      <button
+                        key={item.href}
+                        type="button"
+                        aria-current={active ? 'page' : undefined}
+                        onClick={() => handleNavClick(item.href)}
+                        className={cn(
+                          'w-full h-9 flex items-center justify-between gap-2.5 rounded-[10px] px-3 text-[14px] font-medium transition-colors duration-120 cursor-pointer select-none',
+                          active
+                            ? 'bg-[#141417] text-[#F4F4F5] border border-[rgba(255,255,255,0.07)]'
+                            : 'text-[#71717A] hover:bg-[#19191D] hover:text-[#F4F4F5]'
+                        )}
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <Icon
+                            className={cn(
+                              'size-[18px] shrink-0 transition-colors',
+                              active ? 'text-[var(--accent)]' : 'text-[#71717A]'
+                            )}
+                            strokeWidth={1.75}
+                          />
+                          <span className="truncate">{item.label}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          {item.badge}
+                          {item.chevron}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             );
           })}
-        </SidebarMenuSub>
-      ) : null}
-    </SidebarMenuItem>
-  );
-}
+        </SidebarContent>
 
-function NavigationSubItemsMenu({
-  item,
-  isSubItemActive,
-  onSelect,
-}: {
-  item: NavigationItem;
-  isSubItemActive: (href: string) => boolean;
-  onSelect?: (href: string) => void;
-}) {
-  return (
-    <DropdownMenuGroup>
-      <DropdownMenuLabel className="px-2 py-1 font-semibold tracking-wider uppercase text-[11px] text-muted-foreground">
-        {item.label}
-      </DropdownMenuLabel>
-      <DropdownMenuSeparator />
-      {item.subItems?.map((subItem) => {
-        const SubIcon = subItem.icon;
+        {/* ── FOOTER: USER MENU ONLY (Bump card deleted) ────────────────── */}
+        <SidebarFooter className="p-3 pt-2 border-t border-[var(--border)] bg-[#09090B] shrink-0 mt-auto">
+          {user && (
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                className={cn(
+                  'transition-all duration-120 cursor-pointer select-none outline-none focus-visible:ring-1 focus-visible:ring-[var(--accent)]',
+                  collapsed
+                    ? 'mx-auto size-11 flex items-center justify-center rounded-[12px] hover:bg-[#141417]'
+                    : 'group w-full flex items-center justify-between gap-2.5 rounded-[12px] p-2 hover:bg-[#141417] text-left'
+                )}
+              >
+                {collapsed ? (
+                  <div className="relative">
+                    <UserAvatar
+                      avatarUrl={user.avatarUrl}
+                      name={user.name}
+                      size={36}
+                      className="border border-[var(--border)]"
+                    />
+                    <span className="size-2.5 rounded-full bg-[var(--accent)] ring-2 ring-[#09090B] absolute bottom-0 right-0" />
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="relative shrink-0">
+                        <UserAvatar
+                          avatarUrl={user.avatarUrl}
+                          name={user.name}
+                          size={36}
+                          className="border border-[var(--border)]"
+                        />
+                        <span className="size-2.5 rounded-full bg-[var(--accent)] ring-2 ring-[#09090B] absolute bottom-0 right-0" />
+                      </div>
+                      <div className="flex flex-col min-w-0 text-left">
+                        <span className="text-[14px] leading-snug font-medium text-[#F4F4F5] truncate">
+                          {user.name}
+                        </span>
+                        <span className="text-[13px] leading-tight text-[#71717A] truncate">
+                          {user.handle ||
+                            (user.username ? `@${user.username}` : `@${user.name.toLowerCase().replace(/\s+/g, '')}`)}
+                        </span>
+                      </div>
+                    </div>
 
-        return (
-          <DropdownMenuItem
-            key={subItem.href}
-            data-active={isSubItemActive(subItem.href) || undefined}
-            onClick={(event) => {
-              event.preventDefault();
-              onSelect?.(subItem.href);
-            }}
-            className={cn(
-              sidebarMenuSubButtonClassName,
-              'h-10 gap-2.5 px-3 focus:bg-muted focus:text-foreground data-active:focus:bg-card data-active:focus:text-primary cursor-pointer',
-            )}
-          >
-            <SubIcon />
-            <span>{subItem.label}</span>
-          </DropdownMenuItem>
-        );
-      })}
-    </DropdownMenuGroup>
+                    <div className="size-6 rounded-[6px] flex items-center justify-center text-[#71717A] group-hover:text-[#F4F4F5] transition-colors shrink-0">
+                      <MoreHorizontal className="size-4" />
+                    </div>
+                  </>
+                )}
+              </DropdownMenuTrigger>
+
+              <DropdownMenuContent
+                side={collapsed ? 'right' : 'top'}
+                align="start"
+                sideOffset={8}
+                className="w-[260px] p-1.5 z-50 rounded-[16px] border border-[var(--border-strong)] bg-[#0E0E11] text-[#F4F4F5] shadow-2xl backdrop-blur-md"
+              >
+                {/* 1. Header: Avatar 40px, Name, Handle, Role Badge */}
+                <DropdownMenuLabel className="px-2.5 py-2 font-normal">
+                  <div className="flex items-center justify-between gap-2.5">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <UserAvatar
+                        userId={user.id}
+                        avatarUrl={user.avatarUrl}
+                        name={user.name}
+                        size={40}
+                        className="size-10 rounded-full shrink-0"
+                      />
+                      <div className="min-w-0">
+                        <span className="text-[14px] leading-snug font-semibold block truncate text-[#F4F4F5]">
+                          {user.name}
+                        </span>
+                        <span className="text-[12px] leading-tight text-[#71717A] block truncate">
+                          {user.handle ||
+                            (user.username ? `@${user.username}` : `@${user.name.toLowerCase().replace(/\s+/g, '')}`)}
+                        </span>
+                      </div>
+                    </div>
+                    <Badge variant="outline" className="text-[10px] px-1.5 py-0.5 shrink-0 bg-[#141417] text-[#A1A1AA] border-white/10">
+                      Owner
+                    </Badge>
+                  </div>
+                </DropdownMenuLabel>
+
+                <DropdownMenuSeparator className="my-1 bg-[var(--border)]" />
+
+                {/* 2. Menu group: Account, Credit history, Bot setup */}
+                <DropdownMenuItem
+                  onClick={() => handleNavClick(`/dashboard/${currentGuildId}/settings`)}
+                  className="h-9 flex items-center gap-2.5 px-2.5 rounded-[8px] text-[14px] text-[#A1A1AA] hover:text-[#F4F4F5] hover:bg-[#19191D] cursor-pointer"
+                >
+                  <UserRound className="size-4 text-[#71717A]" />
+                  <span className="flex-1">Account</span>
+                </DropdownMenuItem>
+
+                <DropdownMenuItem
+                  onClick={() => handleNavClick(`/dashboard/${currentGuildId}/history`)}
+                  className="h-9 flex items-center gap-2.5 px-2.5 rounded-[8px] text-[14px] text-[#A1A1AA] hover:text-[#F4F4F5] hover:bg-[#19191D] cursor-pointer"
+                >
+                  <Receipt className="size-4 text-[#71717A]" />
+                  <span className="flex-1">Credit history</span>
+                </DropdownMenuItem>
+
+                <DropdownMenuItem
+                  onClick={() => handleNavClick(`/dashboard/${currentGuildId}/bot`)}
+                  className="h-9 flex items-center gap-2.5 px-2.5 rounded-[8px] text-[14px] text-[#A1A1AA] hover:text-[#F4F4F5] hover:bg-[#19191D] cursor-pointer"
+                >
+                  <Bot className="size-4 text-[#71717A]" />
+                  <span className="flex-1">Bot setup</span>
+                </DropdownMenuItem>
+
+                <DropdownMenuSeparator className="my-1 bg-[var(--border)]" />
+
+                {/* 3. Group: Docs, Support, Changelog */}
+                <DropdownMenuItem
+                  onClick={() => handleNavClick('/docs')}
+                  className="h-9 flex items-center gap-2.5 px-2.5 rounded-[8px] text-[14px] text-[#A1A1AA] hover:text-[#F4F4F5] hover:bg-[#19191D] cursor-pointer"
+                >
+                  <BookOpen className="size-4 text-[#71717A]" />
+                  <span className="flex-1">Docs</span>
+                </DropdownMenuItem>
+
+                <DropdownMenuItem
+                  onClick={() => window.open('https://discord.gg/mavely', '_blank', 'noopener,noreferrer')}
+                  className="h-9 flex items-center gap-2.5 px-2.5 rounded-[8px] text-[14px] text-[#A1A1AA] hover:text-[#F4F4F5] hover:bg-[#19191D] cursor-pointer"
+                >
+                  <HelpCircle className="size-4 text-[#71717A]" />
+                  <span className="flex-1">Support</span>
+                </DropdownMenuItem>
+
+                <DropdownMenuItem
+                  onClick={() => handleNavClick(`/dashboard/${currentGuildId}/changelog`)}
+                  className="h-9 flex items-center gap-2.5 px-2.5 rounded-[8px] text-[14px] text-[#A1A1AA] hover:text-[#F4F4F5] hover:bg-[#19191D] cursor-pointer"
+                >
+                  <GitBranch className="size-4 text-[#71717A]" />
+                  <span className="flex-1">Changelog</span>
+                </DropdownMenuItem>
+
+
+
+                {/* 5. Sign out */}
+                {onSignOut && (
+                  <>
+                    <DropdownMenuSeparator className="my-1 bg-[var(--border)]" />
+                    <DropdownMenuItem
+                      onClick={onSignOut}
+                      className="h-9 flex items-center gap-2.5 px-2.5 rounded-[8px] text-[14px] text-[#F87171] hover:text-[#F87171] hover:bg-[#F87171]/10 cursor-pointer"
+                    >
+                      <LogOut className="size-4 text-[#F87171]" />
+                      <span>Sign out</span>
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+        </SidebarFooter>
+      </Sidebar>
+    </TooltipProvider>
   );
 }
 

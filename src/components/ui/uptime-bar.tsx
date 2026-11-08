@@ -8,7 +8,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 const uptimeBarDayVariants = cva("min-w-0 flex-1 rounded-[2px]", {
   variants: {
     status: {
-      up: "bg-emerald-500",
+      up: "bg-[var(--accent)]",
       degraded: "bg-amber-500",
       down: "bg-rose-500",
       none: "bg-white/10",

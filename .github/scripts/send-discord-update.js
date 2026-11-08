@@ -32,7 +32,7 @@ async function run() {
   let devDisplayName = 'Lead Developer';
   if (senderLogin.includes('george') || senderLogin.includes('ford')) {
     devDisplayName = 'George • Lead Developer';
-  } else if (senderLogin.includes('eazy') || senderLogin.includes('kim') || senderLogin.includes('sulman') || senderLogin.includes('lumora') || senderLogin.includes('liberty')) {
+  } else if (senderLogin.includes('eazy') || senderLogin.includes('kim') || senderLogin.includes('eazykims') || senderLogin.includes('lumora') || senderLogin.includes('liberty')) {
     devDisplayName = 'eazykims • Lead Developer';
   } else {
     // Check first commit author if sender is a generic bot/action

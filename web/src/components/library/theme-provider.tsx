@@ -1,71 +1,88 @@
 import {
   createContext,
-  useCallback,
   useContext,
   useEffect,
-  useMemo,
-  useState,
   type ReactNode,
 } from 'react';
 
-type Theme = 'light' | 'dark';
-
-type ThemeProviderProps = {
-  children: ReactNode;
-  defaultTheme?: Theme;
-  storageKey?: string;
+export type AccentPreset = {
+  id: string;
+  name: string;
+  accent: string;
+  textOnAccent: string;
 };
 
-type ThemeProviderState = {
-  theme: Theme;
-  setTheme: (theme: Theme) => void;
+export const FIXED_ORANGE_PRESET: AccentPreset = {
+  id: 'orange',
+  name: 'ConnectingERLC Orange',
+  accent: '#F97316',
+  textOnAccent: '#1C0A00',
+};
+
+export const ACCENT_PRESETS: AccentPreset[] = [FIXED_ORANGE_PRESET];
+
+export function applyAccentToDom() {
+  if (typeof document === 'undefined') return;
+  const root = document.documentElement;
+  root.classList.add('dark');
+  root.classList.remove('light');
+
+  root.style.setProperty('--accent', '#F97316');
+  root.style.setProperty('--accent-hover', '#FB8A3C');
+  root.style.setProperty('--accent-foreground', '#1C0A00');
+  root.style.setProperty('--accent-soft', 'rgba(249, 115, 22, 0.12)');
+  root.style.setProperty('--accent-border', 'rgba(249, 115, 22, 0.35)');
+  root.style.setProperty('--brand', '#F97316');
+  root.style.setProperty('--brand-foreground', '#1C0A00');
+  root.style.setProperty('--brand-muted', 'rgba(249, 115, 22, 0.12)');
+  root.style.setProperty('--success', '#F97316');
+  root.style.setProperty('--success-foreground', '#1C0A00');
+  root.style.setProperty('--success-muted', 'rgba(249, 115, 22, 0.12)');
+  root.style.setProperty('--ring', '#F97316');
+  root.style.setProperty('--sidebar-primary', '#F97316');
+  root.style.setProperty('--sidebar-primary-foreground', '#1C0A00');
+  root.style.setProperty('--sidebar-ring', '#F97316');
+  root.style.setProperty('--chart-1', '#F97316');
+  root.style.setProperty('--chart-positive', '#F97316');
+}
+
+export type ThemeProviderState = {
+  theme: 'dark';
+  setTheme: (theme: string) => void;
   toggleTheme: () => void;
+  accent: string;
+  currentPreset: AccentPreset;
+  presets: AccentPreset[];
+  setAccent: (accentId: string) => void;
 };
 
 const ThemeProviderContext = createContext<ThemeProviderState | null>(null);
 
 export function ThemeProvider({
   children,
-  defaultTheme = 'light',
-  storageKey = 'theme',
-}: ThemeProviderProps) {
-  const [theme, setThemeState] = useState<Theme>(() => {
-    if (typeof window === 'undefined') return defaultTheme;
-
-    const storedTheme = localStorage.getItem(storageKey);
-    if (storedTheme === 'light' || storedTheme === 'dark') {
-      return storedTheme;
-    }
-
-    return window.matchMedia('(prefers-color-scheme: dark)').matches
-      ? 'dark'
-      : defaultTheme;
-  });
-
+  defaultTheme,
+  storageKey,
+}: {
+  children: ReactNode;
+  defaultTheme?: string;
+  storageKey?: string;
+}) {
   useEffect(() => {
-    document.documentElement.classList.toggle('dark', theme === 'dark');
-  }, [theme]);
+    applyAccentToDom();
+    try {
+      localStorage.removeItem('erlcus_theme_accent');
+    } catch {}
+  }, []);
 
-  const setTheme = useCallback(
-    (nextTheme: Theme) => {
-      localStorage.setItem(storageKey, nextTheme);
-      setThemeState(nextTheme);
-    },
-    [storageKey],
-  );
-
-  const toggleTheme = useCallback(() => {
-    setThemeState((currentTheme) => {
-      const nextTheme = currentTheme === 'dark' ? 'light' : 'dark';
-      localStorage.setItem(storageKey, nextTheme);
-      return nextTheme;
-    });
-  }, [storageKey]);
-
-  const value = useMemo(
-    () => ({ theme, setTheme, toggleTheme }),
-    [setTheme, theme, toggleTheme],
-  );
+  const value: ThemeProviderState = {
+    theme: 'dark',
+    setTheme: () => {},
+    toggleTheme: () => {},
+    accent: '#F97316',
+    currentPreset: FIXED_ORANGE_PRESET,
+    presets: ACCENT_PRESETS,
+    setAccent: () => {},
+  };
 
   return (
     <ThemeProviderContext.Provider value={value}>
@@ -74,41 +91,18 @@ export function ThemeProvider({
   );
 }
 
-export function useTheme(): ThemeProviderState {
-  const context = useContext(ThemeProviderContext);
-
-  if (!context) {
-    // Safe fallback so components never crash even outside of ThemeProvider
-    const isDark =
-      typeof document !== 'undefined'
-        ? document.documentElement.classList.contains('dark') ||
-          (!document.documentElement.classList.contains('light') &&
-            window.matchMedia?.('(prefers-color-scheme: dark)')?.matches)
-        : true;
-
+export function useTheme() {
+  const ctx = useContext(ThemeProviderContext);
+  if (!ctx) {
     return {
-      theme: isDark ? 'dark' : 'light',
-      setTheme: (nextTheme: Theme) => {
-        if (typeof document !== 'undefined') {
-          document.documentElement.classList.toggle('dark', nextTheme === 'dark');
-          document.documentElement.classList.toggle('light', nextTheme === 'light');
-          try {
-            localStorage.setItem('theme', nextTheme);
-          } catch {}
-        }
-      },
-      toggleTheme: () => {
-        if (typeof document !== 'undefined') {
-          const nextIsDark = !document.documentElement.classList.contains('dark');
-          document.documentElement.classList.toggle('dark', nextIsDark);
-          document.documentElement.classList.toggle('light', !nextIsDark);
-          try {
-            localStorage.setItem('theme', nextIsDark ? 'dark' : 'light');
-          } catch {}
-        }
-      },
+      theme: 'dark' as const,
+      setTheme: () => {},
+      toggleTheme: () => {},
+      accent: '#F97316',
+      currentPreset: FIXED_ORANGE_PRESET,
+      presets: ACCENT_PRESETS,
+      setAccent: () => {},
     };
   }
-
-  return context;
+  return ctx;
 }

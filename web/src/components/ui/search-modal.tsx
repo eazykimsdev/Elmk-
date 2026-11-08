@@ -3,12 +3,9 @@
 import * as React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  CheckCheck as Checks,
-  Download as FileArrowDown,
   Search as MagnifyingGlass,
   Plus,
-  Share2 as ShareFat,
-  Sliders as SlidersHorizontal,
+  SlidersHorizontal,
   Users,
   X,
   Activity,
@@ -16,123 +13,67 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-/**
- * Search Modal
- *
- * A minimalist command-palette panel: a search bar that live-filters the result
- * list, removable "I'm looking for…" tags, people/results rows with per-row
- * actions, a quick-actions list with keyboard hints, and a files section.
- *
- * Ported from the vanilla "CodeGrid Modern Minimalist Search Modal" into a
- * single, self-contained, prop-driven React component. Every section is data
- * driven and optional, icons are Phosphor, and it adapts to light and dark mode.
- */
-
 export interface SearchTag {
   label: string;
   icon?: React.ReactNode;
 }
 
-export interface SearchResultAction {
-  icon: React.ReactNode;
-  label?: string;
-  onClick?: () => void;
-}
-
 export interface SearchResult {
-  /** Primary label (also matched against the query). */
   name: string;
-  /** Secondary text such as an email or context (also matched). */
   meta?: string;
-  /** Avatar image URL. Falls back to a neutral circle. */
   avatar?: string;
-  /** Link target for the row. */
   href?: string;
-  /** Optional click handler for the row. */
   onClick?: () => void;
-  /** Trailing action icons. */
-  actions?: SearchResultAction[];
 }
 
 export interface QuickAction {
   label: string;
   icon?: React.ReactNode;
-  /** Keyboard hint shown on the right (e.g. "E"). */
   shortcut?: string;
   onClick?: () => void;
 }
 
-export interface SearchFile {
-  name: string;
-  /** File extension shown dimmed after the name (e.g. ".pdf"). */
-  ext?: string;
-  icon?: React.ReactNode;
-  /** Show the green "verified" checks next to the name. */
-  verified?: boolean;
-  onShare?: () => void;
-}
-
 export interface SearchModalProps {
-  /** Placeholder for the search input. */
   placeholder?: string;
-  /** Removable filter tags. */
   tags?: SearchTag[];
-  /** Result rows, live-filtered by the query. */
   results?: SearchResult[];
-  /** Quick-action rows. */
   quickActions?: QuickAction[];
-  /** File rows. */
-  files?: SearchFile[];
-  /** Initial query value. */
   defaultQuery?: string;
-  /** Called as the query changes. */
   onQueryChange?: (query: string) => void;
-  /** Called when a result row is clicked. */
   onSelectResult?: (result: SearchResult, index: number) => void;
-  /** Extra classes for the root panel. */
   className?: string;
-
-  /** Render as a centered overlay with a backdrop instead of an inline panel. */
   modal?: boolean;
-  /** Controlled open state (modal mode). */
   open?: boolean;
-  /** Uncontrolled initial open state (modal mode). Defaults to false. */
   defaultOpen?: boolean;
-  /** Called when the modal opens (true) or closes (false). */
   onOpenChange?: (open: boolean) => void;
-  /** Key (pressed with ⌘/Ctrl) that toggles the modal. Defaults to "k"; set null to disable. */
   hotkey?: string | null;
-  /** Close the modal on Escape. Defaults to true. */
   closeOnEscape?: boolean;
-  /** Extra classes for the overlay wrapper (e.g. override `fixed` with `absolute` to scope it). */
   overlayClassName?: string;
 }
 
-const ICON = "h-[18px] w-[18px] text-neutral-400 dark:text-neutral-500";
-
 const DEFAULT_TAGS: SearchTag[] = [
-  { label: "PRC Radar", icon: <Activity className="h-4 w-4" /> },
-  { label: "Servers", icon: <Users className="h-4 w-4" /> },
-  { label: "Docs", icon: <BookOpen className="h-4 w-4" /> },
+  { label: "PRC Radar", icon: <Activity className="h-3.5 w-3.5 text-zinc-400" /> },
+  { label: "Servers", icon: <Users className="h-3.5 w-3.5 text-zinc-400" /> },
+  { label: "Docs", icon: <BookOpen className="h-3.5 w-3.5 text-zinc-400" /> },
 ];
 
 const DEFAULT_RESULTS: SearchResult[] = [
   {
     name: "Open Dashboard",
     meta: "Manage your servers and ER:LC radar",
-    avatar: "/mavely-mark.png",
+    avatar: "/brand/logo.png",
     onClick: () => { window.location.href = "/dashboard"; }
   },
   {
     name: "Live PRC Server Radar",
     meta: "Real-time player count, join codes, server queue",
-    avatar: "/mavely-mark.png",
+    avatar: "/brand/logo.png",
     onClick: () => { window.location.href = "/dashboard"; }
   },
   {
     name: "Documentation & Setup Guide",
     meta: "Full API reference and ER:LC integration tutorial",
-    avatar: "/mavely-mark.png",
+    avatar: "/brand/logo.png",
     onClick: () => { window.location.href = "/docs"; }
   },
 ];
@@ -140,23 +81,20 @@ const DEFAULT_RESULTS: SearchResult[] = [
 const DEFAULT_QUICK_ACTIONS: QuickAction[] = [
   { label: "Open Dashboard", shortcut: "D", onClick: () => { window.location.href = "/dashboard"; } },
   { label: "View Documentation", shortcut: "G", onClick: () => { window.location.href = "/docs"; } },
-  { label: "Add Your Server", shortcut: "A", onClick: () => { window.location.href = "/login"; } },
+  { label: "Add server", shortcut: "A", onClick: () => { window.location.href = "/login"; } },
   { label: "Help & Support", shortcut: "S", onClick: () => { window.location.href = "/docs"; } },
 ];
-
-const DEFAULT_FILES: SearchFile[] = [];
 
 export function SearchModal({
   placeholder = "Search servers, documentation...",
   tags = DEFAULT_TAGS,
   results = DEFAULT_RESULTS,
   quickActions = DEFAULT_QUICK_ACTIONS,
-  files = DEFAULT_FILES,
   defaultQuery = "",
   onQueryChange,
   onSelectResult,
   className,
-  modal = false,
+  modal = true,
   open,
   defaultOpen = false,
   onOpenChange,
@@ -166,7 +104,6 @@ export function SearchModal({
 }: SearchModalProps) {
   const [query, setQuery] = useState(defaultQuery);
   const [activeTags, setActiveTags] = useState<SearchTag[]>(tags);
-
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Open state — controlled via `open`, otherwise internal.
@@ -182,7 +119,6 @@ export function SearchModal({
     [isControlled, onOpenChange],
   );
 
-  // Keep the latest open state / setter reachable from the one-time listener.
   const openRef = useRef(actualOpen);
   const setOpenRef = useRef(setOpen);
   useEffect(() => {
@@ -190,22 +126,48 @@ export function SearchModal({
     setOpenRef.current = setOpen;
   });
 
-  // ⌘K / Ctrl+K to toggle, Escape to close.
+  // Hotkey listener: Cmd/Ctrl + K or Cmd/Ctrl + F toggles modal; Escape closes it.
+  // Also shortcuts D, G, A, S when modal is open and input is empty.
   useEffect(() => {
     if (!modal) return;
     const onKeyDown = (e: KeyboardEvent) => {
-      if (hotkey && e.key.toLowerCase() === hotkey.toLowerCase() && (e.metaKey || e.ctrlKey)) {
+      const isCmdOrCtrl = e.metaKey || e.ctrlKey;
+      const key = e.key.toLowerCase();
+
+      if (isCmdOrCtrl && (key === "k" || key === "f")) {
         e.preventDefault();
         setOpenRef.current(!openRef.current);
-      } else if (closeOnEscape && e.key === "Escape" && openRef.current) {
+        return;
+      }
+
+      if (closeOnEscape && key === "escape" && openRef.current) {
         setOpenRef.current(false);
+        return;
+      }
+
+      // Quick action keys if search input is not focused or is empty
+      if (openRef.current && !isCmdOrCtrl && document.activeElement !== inputRef.current) {
+        if (key === "d") {
+          e.preventDefault();
+          window.location.href = "/dashboard";
+        } else if (key === "g") {
+          e.preventDefault();
+          window.location.href = "/docs";
+        } else if (key === "a") {
+          e.preventDefault();
+          window.location.href = "/login";
+        } else if (key === "s") {
+          e.preventDefault();
+          window.location.href = "/docs";
+        }
       }
     };
+
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [modal, hotkey, closeOnEscape]);
+  }, [modal, closeOnEscape]);
 
-  // Focus the input when the modal opens.
+  // Focus input on open
   useEffect(() => {
     if (modal && actualOpen) {
       const id = requestAnimationFrame(() => inputRef.current?.focus());
@@ -232,15 +194,13 @@ export function SearchModal({
       role={modal ? "dialog" : undefined}
       aria-modal={modal ? true : undefined}
       className={cn(
-        "mx-auto w-full max-w-xl overflow-hidden rounded-2xl border backdrop-blur-xl",
-        "border-black/[0.07] bg-white/85 text-neutral-900 shadow-[0_10px_40px_-14px_rgba(0,0,0,0.22)]",
-        "dark:border-white/[0.08] dark:bg-neutral-900/85 dark:text-white dark:shadow-[0_18px_50px_-16px_rgba(0,0,0,0.7)]",
+        "mx-auto w-full max-w-xl overflow-hidden rounded-2xl border border-white/[0.08] bg-[#121214] text-white shadow-[0_24px_60px_-15px_rgba(0,0,0,0.85)] font-sans select-none",
         className,
       )}
     >
       {/* Search bar */}
-      <div className="flex items-center gap-1 border-b border-black/[0.06] px-4 py-3.5 dark:border-white/[0.06]">
-        <MagnifyingGlass className={ICON} />
+      <div className="flex items-center gap-2 border-b border-white/[0.06] px-4 py-3.5">
+        <MagnifyingGlass className="h-[18px] w-[18px] text-zinc-400 shrink-0" />
         <input
           ref={inputRef}
           type="text"
@@ -248,36 +208,40 @@ export function SearchModal({
           onChange={(e) => handleQuery(e.target.value)}
           placeholder={placeholder}
           aria-label="Search"
-          className="min-w-0 flex-1 bg-transparent px-3 text-sm text-current outline-none placeholder:text-neutral-400 dark:placeholder:text-neutral-500"
+          className="min-w-0 flex-1 bg-transparent px-2 text-sm text-white outline-none placeholder:text-zinc-500 font-sans"
         />
         <div className="flex shrink-0 items-center gap-2.5">
-          <button type="button" aria-label="Filters" className="text-neutral-400 transition-colors hover:text-neutral-700 dark:text-neutral-500 dark:hover:text-neutral-200">
+          <button
+            type="button"
+            aria-label="Filters"
+            className="text-zinc-400 transition-colors hover:text-white"
+          >
             <SlidersHorizontal className="h-[18px] w-[18px]" />
           </button>
-          <kbd className="flex items-center gap-0.5 rounded-md border border-black/[0.06] bg-black/[0.03] px-1.5 py-0.5 font-sans text-[11px] font-medium text-neutral-400 dark:border-white/[0.08] dark:bg-white/[0.06] dark:text-neutral-500">
-            <span className="text-[13px] leading-none">⌘</span>
-            {modal && hotkey ? hotkey.toUpperCase() : "F"}
+          <kbd className="flex items-center gap-1 rounded-md border border-white/[0.08] bg-white/[0.04] px-1.5 py-0.5 font-sans text-[11px] font-medium text-zinc-400">
+            <span className="text-[12px] leading-none">⌘</span>
+            <span>F</span>
           </kbd>
         </div>
       </div>
 
-      {/* Tags */}
-      {activeTags.length > 0 ? (
-        <div className="border-b border-black/[0.06] px-4 py-3.5 dark:border-white/[0.06]">
-          <span className="text-[13px] text-neutral-400 dark:text-neutral-500">I&apos;m looking for...</span>
-          <div className="mt-3 flex flex-wrap gap-2">
+      {/* Tags: I'm looking for... */}
+      {activeTags.length > 0 && (
+        <div className="border-b border-white/[0.06] px-4 py-3">
+          <span className="text-xs text-zinc-400 font-sans">I&apos;m looking for...</span>
+          <div className="mt-2.5 flex flex-wrap gap-2">
             {activeTags.map((tag, i) => (
               <span
                 key={`${tag.label}-${i}`}
-                className="flex items-center gap-1.5 rounded-full bg-black/[0.04] py-1 pl-2.5 pr-2 text-[13px] ring-1 ring-inset ring-black/[0.04] dark:bg-white/[0.06] dark:ring-white/[0.06]"
+                className="flex items-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.04] py-1 pl-3 pr-2 text-xs text-zinc-200 transition-colors hover:bg-white/[0.08]"
               >
                 {tag.icon}
-                <span>{tag.label}</span>
+                <span className="font-medium">{tag.label}</span>
                 <button
                   type="button"
                   onClick={() => removeTag(i)}
                   aria-label={`Remove ${tag.label}`}
-                  className="text-neutral-400 transition-colors hover:text-neutral-700 dark:text-neutral-500 dark:hover:text-neutral-200"
+                  className="text-zinc-400 transition-colors hover:text-white ml-0.5"
                 >
                   <X className="h-3.5 w-3.5" />
                 </button>
@@ -285,15 +249,16 @@ export function SearchModal({
             ))}
           </div>
         </div>
-      ) : null}
+      )}
 
-      {/* Results */}
-      {results.length > 0 ? (
-        <div className="border-b border-black/[0.06] dark:border-white/[0.06]">
-          <p className="px-4 pt-3.5 pb-2 text-[13px] text-neutral-400 dark:text-neutral-500">
-            Last search&nbsp;&nbsp;<span className="text-neutral-600 dark:text-neutral-300">{filteredResults.length}</span>
+      {/* Results: Last search */}
+      {results.length > 0 && (
+        <div className="border-b border-white/[0.06]">
+          <p className="px-4 pt-3.5 pb-2 text-xs text-zinc-400 font-sans flex items-center gap-2">
+            <span>Last search</span>
+            <span className="text-zinc-200 font-medium">{filteredResults.length}</span>
           </p>
-          <ul className="px-1.5 pb-1.5">
+          <ul className="px-2 pb-2 space-y-0.5">
             {filteredResults.map((result, i) => (
               <li key={`${result.name}-${i}`}>
                 <a
@@ -305,108 +270,62 @@ export function SearchModal({
                     }
                     onSelectResult?.(result, i);
                   }}
-                  className="group relative flex items-center rounded-lg px-2.5 py-2 transition-colors hover:bg-black/[0.03] dark:hover:bg-white/[0.04]"
+                  className="group flex items-center gap-3 rounded-lg px-2.5 py-2 transition-colors hover:bg-white/[0.04]"
                 >
-                  {result.avatar ? (
-                    // eslint-disable-next-line @next/next/no-img-element
+                  <div className="size-6 shrink-0 rounded-full bg-black/40 border border-white/[0.08] flex items-center justify-center overflow-hidden">
                     <img
-                      src={result.avatar}
+                      src={result.avatar || "/brand/logo.png"}
                       alt=""
-                      className="h-6 w-6 shrink-0 rounded-full object-cover ring-1 ring-black/5 dark:ring-white/10"
+                      className="size-5 object-contain"
                     />
-                  ) : (
-                    <span className="h-6 w-6 shrink-0 rounded-full bg-neutral-300 ring-1 ring-black/5 dark:bg-neutral-600 dark:ring-white/10" />
-                  )}
-                  <span className="ml-2.5 truncate text-sm">
-                    {result.name}
-                    {result.meta ? <span className="pl-1.5 text-neutral-400 dark:text-neutral-500">{result.meta}</span> : null}
-                  </span>
-                  {result.actions && result.actions.length > 0 ? (
-                    <span className="ml-auto flex items-center gap-2.5 pl-3 text-neutral-400 opacity-70 transition-opacity group-hover:opacity-100 dark:text-neutral-500">
-                      {result.actions.map((action, ai) => (
-                        <button
-                          key={ai}
-                          type="button"
-                          aria-label={action.label}
-                          onClick={(e) => {
-                            e.preventDefault();
-                            action.onClick?.();
-                          }}
-                          className="transition-colors hover:text-neutral-700 dark:hover:text-neutral-200"
-                        >
-                          {action.icon}
-                        </button>
-                      ))}
-                    </span>
-                  ) : null}
+                  </div>
+                  <div className="min-w-0 flex-1 truncate text-xs">
+                    <span className="font-semibold text-white mr-2">{result.name}</span>
+                    {result.meta && (
+                      <span className="text-zinc-400 font-normal">{result.meta}</span>
+                    )}
+                  </div>
                 </a>
               </li>
             ))}
           </ul>
         </div>
-      ) : null}
+      )}
 
       {/* Quick actions */}
-      {quickActions.length > 0 ? (
-        <div className="border-b border-black/[0.06] px-1.5 py-1.5 dark:border-white/[0.06]">
-          <p className="px-2.5 pt-2 pb-1 text-[13px] text-neutral-400 dark:text-neutral-500">Quick actions</p>
-          {quickActions.map((action, i) => (
-            <button
-              key={`${action.label}-${i}`}
-              type="button"
-              onClick={action.onClick}
-              className="relative flex w-full items-center rounded-lg px-2.5 py-2 text-left transition-colors hover:bg-black/[0.03] dark:hover:bg-white/[0.04]"
-            >
-              <span className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-lg bg-black/[0.04] text-neutral-500 dark:bg-white/[0.06] dark:text-neutral-300">
-                {action.icon ?? <Plus className="h-[15px] w-[15px]" />}
-              </span>
-              <span className="pl-3 text-sm">{action.label}</span>
-              {action.shortcut ? (
-                <kbd className="ml-auto flex h-[26px] w-[26px] items-center justify-center rounded-md bg-black/[0.04] font-sans text-[13px] text-neutral-500 ring-1 ring-inset ring-black/[0.04] dark:bg-white/[0.06] dark:text-neutral-300 dark:ring-white/[0.06]">
-                  {action.shortcut}
-                </kbd>
-              ) : null}
-            </button>
-          ))}
-        </div>
-      ) : null}
-
-      {/* Files */}
-      {files.length > 0 ? (
-        <div className="px-1.5 py-1.5">
-          <p className="px-2.5 pt-2 pb-1 text-[13px] text-neutral-400 dark:text-neutral-500">
-            Files&nbsp;&nbsp;<span className="text-neutral-600 dark:text-neutral-300">{files.length}</span>
-          </p>
-          {files.map((file, i) => (
-            <div
-              key={`${file.name}-${i}`}
-              className="group relative flex items-center rounded-lg px-2.5 py-2 transition-colors hover:bg-black/[0.03] dark:hover:bg-white/[0.04]"
-            >
-              <span className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-lg bg-black/[0.04] text-neutral-500 dark:bg-white/[0.06] dark:text-neutral-300">
-                {file.icon ?? <FileArrowDown className="h-[15px] w-[15px]" />}
-              </span>
-              <span className="flex items-center gap-1.5 pl-3 text-sm">
-                <span>
-                  {file.name}
-                  {file.ext ? <span className="text-neutral-400 dark:text-neutral-500">{file.ext}</span> : null}
-                </span>
-                {file.verified ? <Checks className="h-4 w-4 text-emerald-500" /> : null}
-              </span>
+      {quickActions.length > 0 && (
+        <div className="px-2 py-2">
+          <p className="px-2.5 pt-1.5 pb-2 text-xs text-zinc-400 font-sans">Quick actions</p>
+          <div className="space-y-0.5">
+            {quickActions.map((action, i) => (
               <button
+                key={`${action.label}-${i}`}
                 type="button"
-                onClick={file.onShare}
-                className="ml-auto flex items-center gap-1.5 text-sm text-neutral-400 opacity-80 transition-all hover:text-neutral-700 group-hover:opacity-100 dark:text-neutral-500 dark:hover:text-neutral-200"
+                onClick={action.onClick}
+                className="group flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-left transition-colors hover:bg-white/[0.04]"
               >
-                <ShareFat className="h-4 w-4" />
-                <span>Share</span>
+                <div className="flex items-center gap-3 min-w-0">
+                  <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-white/[0.06] text-zinc-400 group-hover:text-white transition-colors">
+                    <Plus className="h-3.5 w-3.5 stroke-[2.5]" />
+                  </span>
+                  <span className="text-xs text-zinc-200 group-hover:text-white transition-colors font-sans">
+                    {action.label}
+                  </span>
+                </div>
+                {action.shortcut && (
+                  <kbd className="flex size-6 shrink-0 items-center justify-center rounded-md border border-white/[0.08] bg-white/[0.04] font-sans text-xs text-zinc-400">
+                    {action.shortcut}
+                  </kbd>
+                )}
               </button>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      ) : null}
+      )}
     </div>
   );
 
+  if (!actualOpen) return null;
   if (!modal) return panel;
 
   return (
@@ -414,12 +333,12 @@ export function SearchModal({
       onClick={() => setOpen(false)}
       aria-hidden={!actualOpen}
       className={cn(
-        "fixed inset-0 z-50 flex items-start justify-center p-4 pt-[12vh] transition-opacity duration-200",
+        "fixed inset-0 z-50 flex items-start justify-center p-4 pt-[14vh] transition-opacity duration-200",
         actualOpen ? "opacity-100" : "pointer-events-none opacity-0",
         overlayClassName,
       )}
     >
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm dark:bg-black/60" />
+      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
       <div
         onClick={(e) => e.stopPropagation()}
         className={cn(

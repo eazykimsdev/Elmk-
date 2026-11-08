@@ -15,12 +15,15 @@ export async function api<T>(path: string, init: RequestInit = {}, isRetry = fal
   const method = (init.method || 'GET').toUpperCase();
   const headers = new Headers(init.headers);
   headers.set('Accept', 'application/json');
-  if (init.body) headers.set('Content-Type', 'application/json');
+  if (init.body && !(init.body instanceof FormData)) {
+    headers.set('Content-Type', 'application/json');
+  }
   if (!['GET', 'HEAD', 'OPTIONS'].includes(method) && csrfToken) {
     headers.set('X-CSRF-Token', csrfToken);
   }
 
-  const response = await fetch(`/api${path}`, {
+  const normalizedPath = path.startsWith('/api') ? path : `/api${path}`;
+  const response = await fetch(normalizedPath, {
     ...init,
     method,
     headers,
@@ -29,15 +32,34 @@ export async function api<T>(path: string, init: RequestInit = {}, isRetry = fal
 
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
-    // If CSRF expired or token missing, refresh once and retry automatically
-    if (response.status === 403 && !isRetry && path !== '/auth/me') {
+    // If 401 or 403 (unauthorized or CSRF expired), refresh session once and retry automatically (Section 1.4)
+    if ((response.status === 401 || response.status === 403) && !isRetry && path !== '/auth/me') {
       try {
-        const authData = await fetch('/api/auth/me', { credentials: 'include' }).then(r => r.json());
-        if (authData?.csrfToken) {
-          setCsrfToken(authData.csrfToken);
-          return api<T>(path, init, true);
+        const authRes = await fetch('/api/auth/me', { credentials: 'include' });
+        if (authRes.ok) {
+          const authData = await authRes.json();
+          if (authData?.user) {
+            if (authData?.csrfToken) setCsrfToken(authData.csrfToken);
+            return api<T>(path, init, true);
+          }
         }
       } catch {}
+
+      // Notify auth context to synchronize real state
+      window.dispatchEvent(new CustomEvent('connectingerlc_auth_unauthorized'));
+
+      // If write request and session is genuinely lost, save draft to preserve changes and redirect to sign in
+      if (!['GET', 'HEAD', 'OPTIONS'].includes(method) && init.body) {
+        try {
+          sessionStorage.setItem('pending_save_draft', JSON.stringify({
+            path,
+            body: init.body,
+            returnTo: window.location.pathname + window.location.search,
+            timestamp: Date.now()
+          }));
+          window.location.assign(`/login?returnTo=${encodeURIComponent(window.location.pathname + window.location.search)}`);
+        } catch {}
+      }
     }
     const error: any = new Error(payload.error || `Request failed (${response.status})`);
     error.status = response.status;
@@ -87,18 +109,21 @@ export async function fetchChannels(guildId: string): Promise<{ id: string; name
 export async function fetchWorkspace(guildId: string): Promise<{ workspace: WorkspaceBot; guild: DiscordGuild }> {
   try {
     return await api<{ workspace: WorkspaceBot; guild: DiscordGuild }>(`/workspace/${guildId}`);
-  } catch {
-    const cachedName = localStorage.getItem(`server_name_${guildId}`) || 'Discord Server';
+  } catch (err: any) {
+    if (err?.status === 403 || err?.message?.includes('BOT_NOT_IN_GUILD') || err?.error === 'BOT_NOT_IN_GUILD') {
+      throw err;
+    }
+    const cachedName = localStorage.getItem(`server_name_${guildId}`) || 'Community Server';
     const cachedIcon = localStorage.getItem(`server_icon_${guildId}`);
     return {
       workspace: {
         id: `ws-${guildId}`,
         guildId,
         isMainBot: false,
-        discordBotId: '1552165138017165372',
+        discordBotId: '',
         botUser: {
-          id: '1552165138017165372',
-          username: 'Mavely Bot',
+          id: '',
+          username: 'ConnectingERLC Bot',
           avatarUrl: ''
         },
         isInGuild: true,
@@ -115,7 +140,8 @@ export async function fetchWorkspace(guildId: string): Promise<{ workspace: Work
           joinCredits: 28,
           sessionState: 'PATROL_LIVE'
         }
-      },      guild: {
+      },
+      guild: {
         id: guildId,
         name: cachedName,
         icon: null,
@@ -126,9 +152,9 @@ export async function fetchWorkspace(guildId: string): Promise<{ workspace: Work
   }
 }
 
-export async function createWorkspace(guildId: string): Promise<{ workspace: WorkspaceBot; created: boolean }> {
+export async function createWorkspace(guildId: string): Promise<{ workspace: WorkspaceBot; created: boolean; guild?: DiscordGuild }> {
   try {
-    return await api<{ workspace: WorkspaceBot; created: boolean }>('/workspace', {
+    return await api<{ workspace: WorkspaceBot; created: boolean; guild?: DiscordGuild }>('/workspace', {
       method: 'POST',
       body: JSON.stringify({ guildId })
     });
@@ -136,12 +162,13 @@ export async function createWorkspace(guildId: string): Promise<{ workspace: Wor
     const cachedName = localStorage.getItem(`server_name_${guildId}`) || 'Discord Server';
     const cachedIcon = localStorage.getItem(`server_icon_${guildId}`);
     return {
+      created: true,
       workspace: {
         id: `ws-${guildId}`,
         guildId,
         isMainBot: false,
         discordBotId: '1552165138017165372',
-        botUser: { id: '1552165138017165372', username: 'Mavely Bot', avatarUrl: '' },
+        botUser: { id: '1552165138017165372', username: 'ConnectingERLC Bot', avatarUrl: '' },
         isInGuild: true,
         inviteUrl: getBotInviteUrl(guildId),
         status: 'online',
@@ -198,6 +225,29 @@ export async function fetchDirectoryServers(): Promise<any[]> {
   return [];
 }
 
+export async function fetchServerProfile(guildId: string): Promise<any> {
+  const servers = await fetchDirectoryServers();
+  const matched = servers.find((s: any) => s.id === guildId || s.joinCode === guildId);
+  if (matched) return matched;
+  try {
+    const ws = await fetchWorkspace(guildId);
+    if (ws) {
+      return {
+        id: ws.guild?.id || guildId,
+        name: ws.guild?.name || 'Community Server',
+        icon: ws.guild?.iconUrl || null,
+        category: (ws.workspace as any)?.serverCategory || 'Roleplay server',
+        description: (ws.workspace as any)?.serverDescription || '',
+        bannerUrl: (ws.workspace as any)?.bannerUrl || null,
+        memberCount: ws.guild?.memberCount || 0,
+        inviteUrl: (ws.workspace as any)?.inviteUrl || '',
+        joinCode: (ws.workspace as any)?.joinCode || null,
+      };
+    }
+  } catch {}
+  return null;
+}
+
 export async function promoteServerToDirectory(server: any): Promise<any> {
   return api('/directory/promote', {
     method: 'POST',
@@ -227,6 +277,8 @@ export async function claimDirectoryBounty(guildId: string): Promise<any> {
   });
 }
 
+import { siteUrl } from './siteUrl';
+
 export async function sendTestNotification(guildId: string, type: 'anti_raid' | 'bump' | 'streak' | 'digest'): Promise<any> {
   return api(`/workspace/${guildId}/test-notification`, {
     method: 'POST',
@@ -240,7 +292,7 @@ export function getBotInviteUrl(guildId?: string): string {
   const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
   const redirectUri = isLocal
     ? `${window.location.origin}/auth/discord/callback`
-    : 'https://organizational-parliamentary-minimize-lookup.trycloudflare.com/auth/discord/callback';
+    : siteUrl('/auth/discord/callback');
   const base = `https://discord.com/oauth2/authorize?client_id=${clientId}&permissions=${permissions}&redirect_uri=${encodeURIComponent(redirectUri)}&integration_type=0&scope=bot`;
   return guildId ? `${base}&guild_id=${guildId}&disable_guild_select=true` : base;
 }

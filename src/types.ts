@@ -1,8 +1,11 @@
 export interface DiscordUser {
   id: string;
   username: string;
-  globalName: string;
+  name?: string;
+  globalName?: string;
+  global_name?: string;
   avatar: string | null;
+  role?: string;
 }
 
 export interface DiscordGuild {
@@ -10,11 +13,18 @@ export interface DiscordGuild {
   name: string;
   icon: string | null;
   iconUrl: string | null;
+  icon_hash?: string | null;
+  iconHash?: string | null;
   owner: boolean;
+  ownerId?: string;
   hasWorkspace?: boolean;
   configured?: boolean;
   approximateMemberCount?: number;
   memberCount?: number;
+  botStatus?: string;
+  bot_in_guild?: boolean;
+  channels?: any[];
+  missingPermissions?: any;
 }
 
 export interface TicketCategoryConfig {
@@ -91,6 +101,29 @@ export interface CustomStaffApplication {
 
 export interface WorkspaceCustomizations {
   serverName?: string;
+  serverCategory?: string;
+  serverSummary?: string;
+  serverDescription?: string;
+  serverTags?: string[] | string;
+  bannerUrl?: string;
+  discordInvite?: string;
+  inviteUrl?: string;
+  language?: string;
+  listedInDirectory?: boolean;
+  rewardCoins?: number;
+  offerHigherReward?: boolean;
+  extraRewardPaused?: boolean;
+  retentionTargetHours?: number;
+  representativesWanted?: number;
+  openForPartnerships?: boolean;
+  partnershipMinMembers?: number;
+  partnershipPrice?: number;
+  partnershipAllowedMentions?: string;
+  partnershipHerePrice?: number;
+  partnershipEveryonePrice?: number;
+  partnershipBroadcastChannel?: string | null;
+  partnershipAcceptedCategories?: string[];
+  partnershipDailyLimit?: number;
   joinCode?: string;
   botActivityText?: string;
   panelTitle?: string;
@@ -213,6 +246,17 @@ export interface WorkspaceBot {
   createdAt: string;
   updatedAt: string;
   hasErlcApiKey: boolean;
+  hasErlcKey?: boolean;
+  ownerUserId?: string;
+  active?: boolean;
+  isInGuild?: boolean;
+  hasWorkspace?: boolean;
+  botTokenConfigured?: boolean;
+  isMainBot?: boolean;
+  discordBotId?: string;
+  botUser?: any;
+  inviteUrl?: string;
+  status?: string;
   customizations: WorkspaceCustomizations;
 }
 

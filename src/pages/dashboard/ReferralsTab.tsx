@@ -50,7 +50,7 @@ export function ReferralsTab({ currentGuildId, addToast }: ReferralsTabProps) {
   };
 
   const handleCopyDiscordMessage = () => {
-    const text = `Join Mavely and boost your Discord server with verified members! Claim free growth credits here: ${refLink}`;
+    const text = `Join ConnectingERLC and boost your Discord server with verified members! Claim free growth credits here: ${refLink}`;
     navigator.clipboard.writeText(text);
     addToast('success', 'Message Template Copied', 'Discord invite message copied to clipboard.');
   };
@@ -84,7 +84,7 @@ export function ReferralsTab({ currentGuildId, addToast }: ReferralsTabProps) {
         <Card className="border-white/[0.08] bg-[#161a24] shadow-[0_4px_20px_-4px_rgba(0,0,0,0.5),inset_0_1px_0_0_rgba(255,255,255,0.06)]">
           <CardContent className="p-4 space-y-1">
             <span className="text-[11px] font-mono uppercase tracking-wider text-slate-400">Bounty Per Referral</span>
-            <div className="flex items-center gap-2 text-2xl font-bold text-emerald-400 font-mono">
+            <div className="flex items-center gap-2 text-2xl font-bold text-[var(--accent)] font-mono">
               <Sparkles className="size-5" />
               <span>+15 Credits</span>
             </div>
@@ -98,7 +98,7 @@ export function ReferralsTab({ currentGuildId, addToast }: ReferralsTabProps) {
         <CardHeader className="pb-4 border-b border-white/[0.06]">
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
-              <div className="flex items-center gap-2 text-emerald-400 text-xs font-mono uppercase tracking-wider">
+              <div className="flex items-center gap-2 text-[var(--accent)] text-xs font-mono uppercase tracking-wider">
                 <Share2 className="size-4" />
                 <span>Invite Community Owners</span>
               </div>
@@ -138,7 +138,7 @@ export function ReferralsTab({ currentGuildId, addToast }: ReferralsTabProps) {
                   onClick={() => window.open(refLink, '_blank', 'noopener,noreferrer')}
                   className="text-xs py-2 cursor-pointer gap-2 hover:bg-white/[0.04]"
                 >
-                  <ExternalLink className="size-3.5 text-emerald-400" />
+                  <ExternalLink className="size-3.5 text-[var(--accent)]" />
                   <span>Test Referral Page</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -146,7 +146,7 @@ export function ReferralsTab({ currentGuildId, addToast }: ReferralsTabProps) {
           </div>
 
           <CardDescription className="text-xs text-slate-400 leading-relaxed pt-1">
-            Share this link with Discord server owners and community leaders. When they invite Mavely and register their server, you both receive +15 free growth credits.
+            Share this link with Discord server owners and community leaders. When they invite ConnectingERLC and register their server, you both receive +15 free growth credits.
           </CardDescription>
         </CardHeader>
 
@@ -161,7 +161,7 @@ export function ReferralsTab({ currentGuildId, addToast }: ReferralsTabProps) {
             <Button
               type="button"
               onClick={handleCopyLink}
-              className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold h-10 px-5 rounded-lg shadow-sm shrink-0 transition-colors"
+              className="w-full sm:w-auto bg-emerald-600 hover:bg-[var(--accent)] text-white text-xs font-semibold h-10 px-5 rounded-lg shadow-sm shrink-0 transition-colors"
             >
               {copied ? <Check className="size-3.5 mr-1.5 text-white" /> : <Copy className="size-3.5 mr-1.5" />}
               {copied ? 'Copied Link' : 'Copy Referral Link'}
@@ -171,7 +171,7 @@ export function ReferralsTab({ currentGuildId, addToast }: ReferralsTabProps) {
           {/* 3 Steps Explanation */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
             <div className="p-3.5 rounded-xl border border-white/[0.08] bg-[#11141c] space-y-1">
-              <Badge variant="outline" className="border-emerald-500/30 bg-emerald-500/10 text-emerald-400 text-[10px] font-mono px-1.5 py-0">
+              <Badge variant="outline" className="border-[var(--accent-border)] bg-[var(--accent-soft)] text-[var(--accent)] text-[10px] font-mono px-1.5 py-0">
                 STEP 1
               </Badge>
               <h4 className="text-xs font-semibold text-white pt-1">Send Invite to Owners</h4>

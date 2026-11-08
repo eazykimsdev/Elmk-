@@ -5,7 +5,7 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const DATA_DIR = path.join(__dirname, 'data');
+const DATA_DIR = process.env.DATA_DIR || path.join(process.cwd(), 'data');
 const INSTANCES_FILE = path.join(DATA_DIR, 'bot_instances.json');
 
 if (!fs.existsSync(DATA_DIR)) {
@@ -109,6 +109,16 @@ export const DEFAULT_CUSTOMIZATIONS = {
 
   // ─── Community & Applications ─────────────────────────────────────────────
   serverName: "",
+  serverCategory: "Roleplay server",
+  serverSummary: "",
+  serverDescription: "",
+  serverTags: ["roleplay"],
+  bannerUrl: "",
+  discordInvite: "",
+  inviteUrl: "",
+  joinCode: "",
+  language: "English",
+  listedInDirectory: true,
   reviewChannelId: "",
   resultsChannelId: "",
 
@@ -137,7 +147,23 @@ export const DEFAULT_CUSTOMIZATIONS = {
   aiSystemInstructions: "",
 
   // ─── Bot Presence ──────────────────────────────────────────────────────────
-  botActivityText: "" // Custom activity status text (replaces default 'ER:LC')
+  botActivityText: "", // Custom activity status text (replaces default 'ER:LC')
+
+  // ─── Directory & Rewards (Phase D) ──────────────────────────────────────────
+  rewardCoins: 2,
+  offerHigherReward: false,
+  extraRewardPaused: false,
+  retentionTargetHours: 72,
+  representativesWanted: 4,
+  openForPartnerships: true,
+  partnershipMinMembers: 5,
+  partnershipPrice: 0,
+  partnershipAllowedMentions: "here",
+  partnershipHerePrice: 15,
+  partnershipEveryonePrice: 30,
+  partnershipBroadcastChannel: "",
+  partnershipAcceptedCategories: ["Design Server", "Roleplay Server", "Misc", "COTS", "Departments", "Events"],
+  partnershipDailyLimit: 1
 };
 
 

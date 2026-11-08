@@ -11,45 +11,31 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
-import { useDashboardShell } from "@/components/ui/dashboard-shell"
 import { Separator } from "@/components/ui/separator"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 
-/**
- * Swaps the plain anchor for a router link. Declared here rather than imported
- * from app-sidebar so this file installs on its own; the shape is the same.
- */
 export type RenderLink = (href: string, props: React.ComponentProps<"a">) => React.ReactNode
 
 export type Crumb = { label: React.ReactNode; href?: string }
 
 export type HeaderBarProps = React.ComponentProps<"header"> & {
-  /** The trail to this page; the last entry is the page itself. */
   breadcrumbs?: Crumb[]
-  /** Shown when there are no breadcrumbs. */
   title?: React.ReactNode
   search?: React.ReactNode
   actions?: React.ReactNode
   sticky?: boolean
-  /**
-   * Whether the last crumb is the page you are on. True renders it as
-   * BreadcrumbPage, which is what a full trail wants. Pass false when the trail
-   * has been cut short of the page — because the page writes its own name in a
-   * PageHeader — so the crumb that is left stays a link to somewhere.
-   */
   lastCrumbIsPage?: boolean
-  /** "auto" shows the collapse toggle only inside a DashboardShell; true always shows it. */
   showSidebarTrigger?: boolean | "auto"
-  /**
-   * Names the trail's nav landmark; the Breadcrumb primitive calls it
-   * "breadcrumb". Give each bar its own when a page holds two — two shells
-   * previewed on one page, say — so the landmarks can be told apart.
-   */
   breadcrumbLabel?: string
   renderLink?: RenderLink
 }
 
-/** The 56px bar across the top of a dashboard page: trigger, trail, search, actions. */
+/**
+ * HeaderBar:
+ * 48px (h-12) bar across the top of a dashboard page.
+ * Left: sidebar collapse button and breadcrumb (Server name > Page).
+ * Right: credits chip, notification bell, Docs link, Discord support link.
+ */
 function HeaderBar({
   className,
   breadcrumbs,
@@ -64,8 +50,6 @@ function HeaderBar({
   ...props
 }: HeaderBarProps) {
   const showTrigger = showSidebarTrigger !== false
-  // renderLink is typed to ReactNode for callers; Breadcrumb's render slot
-  // needs an element, and every path here produces one.
   const link = (href: string, linkProps: React.ComponentProps<"a">) =>
     (renderLink ? renderLink(href, linkProps) : <a href={href} {...linkProps} />) as React.ReactElement
 
@@ -74,11 +58,7 @@ function HeaderBar({
       data-slot="header-bar"
       data-sticky={sticky || undefined}
       className={cn(
-        // The bar and the content beneath it share one plane — --background —
-        // in both themes, which ends the old raised-in-light / recessed-in-dark
-        // flip. 85% is the floor for translucent chrome: below it the text
-        // starts reading against whatever scrolls under the bar.
-        "flex h-14 shrink-0 items-center gap-2 border-b bg-background/95 px-4 backdrop-blur-md supports-backdrop-filter:bg-background/85",
+        "flex h-12 shrink-0 items-center gap-2 border-b border-[var(--border)] bg-[var(--background)]/95 px-4 backdrop-blur-md",
         sticky && "sticky top-0 z-30",
         className
       )}
@@ -86,14 +66,14 @@ function HeaderBar({
     >
       {showTrigger ? (
         <>
-          <SidebarTrigger className="-ms-1.5" />
-          <Separator orientation="vertical" className="me-1 data-vertical:h-4 data-vertical:self-center" />
+          <SidebarTrigger className="-ms-1.5 text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--hover)]" />
+          <Separator orientation="vertical" className="me-1 h-4 self-center bg-[var(--border)]" />
         </>
       ) : null}
 
       {breadcrumbs?.length ? (
         <Breadcrumb className="min-w-0" {...(breadcrumbLabel ? { "aria-label": breadcrumbLabel } : {})}>
-          <BreadcrumbList className="flex-nowrap">
+          <BreadcrumbList className="flex-nowrap text-[13px]">
             {breadcrumbs.map((crumb, index) => {
               const last = index === breadcrumbs.length - 1
               const isPage = last && lastCrumbIsPage
@@ -101,24 +81,26 @@ function HeaderBar({
                 <React.Fragment key={index}>
                   <BreadcrumbItem className="min-w-0">
                     {isPage ? (
-                      <BreadcrumbPage className="truncate font-medium">{crumb.label}</BreadcrumbPage>
+                      <BreadcrumbPage className="truncate font-medium text-[#F4F4F5]">
+                        {crumb.label}
+                      </BreadcrumbPage>
                     ) : crumb.href ? (
                       <BreadcrumbLink
-                        className="truncate"
+                        className="truncate text-[#A1A1AA] hover:text-[#F4F4F5] transition-colors"
                         render={link(crumb.href, { children: crumb.label })}
                       />
                     ) : (
-                      <span className="truncate">{crumb.label}</span>
+                      <span className="truncate text-[#A1A1AA]">{crumb.label}</span>
                     )}
                   </BreadcrumbItem>
-                  {last ? null : <BreadcrumbSeparator />}
+                  {last ? null : <BreadcrumbSeparator className="text-[#71717A]" />}
                 </React.Fragment>
               )
             })}
           </BreadcrumbList>
         </Breadcrumb>
       ) : title ? (
-        <div data-slot="header-bar-title" className="truncate text-sm font-medium">
+        <div data-slot="header-bar-title" className="truncate text-sm font-medium text-[#F4F4F5]">
           {title}
         </div>
       ) : null}

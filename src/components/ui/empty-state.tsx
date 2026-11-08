@@ -1,70 +1,52 @@
 import * as React from "react"
 import { cva, type VariantProps } from "class-variance-authority"
-
 import { cn } from "@/lib/utils"
-import {
-  Empty,
-  EmptyContent,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@/components/ui/empty"
 
-const emptyStateVariants = cva("", {
-  variants: {
-    variant: {
-      // Nothing of its own: the surrounding card or table already frames it.
-      default: "",
-      dashed: "rounded-lg border border-dashed border-border",
+const emptyStateVariants = cva(
+  "flex flex-col items-center justify-center text-center",
+  {
+    variants: {
+      variant: {
+        default: "",
+        dashed: "rounded-[16px] border border-dashed border-[var(--border)] bg-[#0E0E11]/60",
+      },
+      size: {
+        default: "gap-4 py-12 px-6",
+        sm: "gap-3 py-8 px-4",
+      },
     },
-    size: {
-      default: "gap-4 p-8",
-      sm: "gap-3 p-5",
-    },
-  },
-  defaultVariants: { variant: "default", size: "default" },
-})
+    defaultVariants: { variant: "default", size: "default" },
+  }
+)
 
-const emptyStateMediaVariants = cva("", {
-  variants: {
-    size: {
-      default: "",
-      sm: "size-7 [&_svg:not([class*='size-'])]:size-3.5",
-    },
-  },
-  defaultVariants: { size: "default" },
-})
-
-// On the face's own spacing: the upstream title tightens it, and nothing at or
-// under 16px carries negative tracking in this kit.
-const emptyStateTitleVariants = cva("tracking-normal", {
-  variants: {
-    size: { default: "text-base", sm: "text-sm" },
-  },
-  defaultVariants: { size: "default" },
-})
-
-const emptyStateDescriptionVariants = cva("", {
-  variants: {
-    size: { default: "", sm: "text-xs" },
-  },
-  defaultVariants: { size: "default" },
-})
-
-// `title` is content here, not the HTML tooltip attribute, so it replaces it.
 export type EmptyStateProps = Omit<React.ComponentProps<"div">, "title"> & {
-  /** Sits in a muted tile above the title. Sized to 4 unless it sets its own size. */
   icon?: React.ReactNode
   title: React.ReactNode
   description?: React.ReactNode
-  /** The one thing to do next — a button, a link. */
   action?: React.ReactNode
-  /** A quieter way out, placed beside the action. */
   secondaryAction?: React.ReactNode
   size?: NonNullable<VariantProps<typeof emptyStateVariants>["size"]>
-  /** dashed draws its own placeholder frame, for a region that has no card of its own. */
   variant?: NonNullable<VariantProps<typeof emptyStateVariants>["variant"]>
+}
+
+function SoftSkeletonIllustration() {
+  return (
+    <div
+      aria-hidden="true"
+      className="flex flex-col gap-2 w-44 p-3 rounded-[10px] border border-[var(--border)] bg-[#141417]/70 mb-1"
+    >
+      <div className="flex items-center gap-2">
+        <div className="size-5 rounded-md bg-white/[0.06] shrink-0" />
+        <div className="h-2.5 w-20 rounded-full bg-white/[0.08]" />
+        <div className="ms-auto h-2.5 w-8 rounded-full bg-[var(--accent)]/25" />
+      </div>
+      <div className="flex items-center gap-2 opacity-60">
+        <div className="size-5 rounded-md bg-white/[0.05] shrink-0" />
+        <div className="h-2.5 w-16 rounded-full bg-white/[0.06]" />
+        <div className="ms-auto h-2.5 w-6 rounded-full bg-white/[0.06]" />
+      </div>
+    </div>
+  )
 }
 
 function EmptyState({
@@ -82,37 +64,39 @@ function EmptyState({
   const hasActions = Boolean(action) || Boolean(secondaryAction)
 
   return (
-    <Empty
+    <div
       data-slot="empty-state"
       data-variant={variant}
       data-size={size}
       className={cn(emptyStateVariants({ variant, size }), className)}
       {...props}
     >
-      <EmptyHeader>
-        {icon ? (
-          <EmptyMedia variant="icon" className={cn(emptyStateMediaVariants({ size }))}>
-            {icon}
-          </EmptyMedia>
-        ) : null}
-        <EmptyTitle className={cn(emptyStateTitleVariants({ size }))}>{title}</EmptyTitle>
+      {icon ? (
+        <div className="flex items-center justify-center text-[#A1A1AA] [&_svg]:size-5 mb-1">
+          {icon}
+        </div>
+      ) : (
+        <SoftSkeletonIllustration />
+      )}
+      <div className="space-y-1 max-w-md">
+        <h3 className="text-[16px] leading-6 font-semibold text-[#F4F4F5] tracking-normal">
+          {title}
+        </h3>
         {description ? (
-          <EmptyDescription className={cn(emptyStateDescriptionVariants({ size }))}>
+          <p className="text-[13px] leading-5 font-normal text-[#A1A1AA]">
             {description}
-          </EmptyDescription>
+          </p>
         ) : null}
-      </EmptyHeader>
-
+      </div>
       {hasActions ? (
-        <EmptyContent className="flex-row flex-wrap items-center justify-center gap-2">
+        <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
           {action}
           {secondaryAction}
-        </EmptyContent>
+        </div>
       ) : null}
-
       {children}
-    </Empty>
+    </div>
   )
 }
 
-export { EmptyState, emptyStateVariants }
+export { EmptyState }
