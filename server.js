@@ -13,6 +13,12 @@ import { query as dbQuery, isPostgresConnected } from './db.js';
 
 dotenv.config();
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Startup diagnostics (printed immediately)
+console.log(`[CONNECTINGERLC STARTUP] Entry: ${__filename} | Node: ${process.version} | Platform: ${process.platform} | CWD: ${process.cwd()}`);
+
 // Startup validation in production mode (Round 13 Section 1 & 8)
 const envValidation = validateProductionEnvironment(process.env);
 if (!envValidation.valid) {
@@ -20,11 +26,8 @@ if (!envValidation.valid) {
   process.exit(1);
 }
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
 const app = express();
-const PORT = process.env.PORT || process.env.SERVER_PORT || 3001;
+const PORT = process.env.PORT || 3000;
 
 // Railway and most hosts sit behind a proxy: needed for secure cookies and real client IPs.
 app.set('trust proxy', 1);
@@ -123,7 +126,7 @@ app.use((err, req, res, _next) => {
 });
 
 const server = app.listen(PORT, () => {
-  console.log(`[CONNECTINGERLC WEB API] Dashboard backend listening on http://localhost:${PORT}`);
+  console.log(`[CONNECTINGERLC WEB API] Dashboard backend listening on port ${PORT}`);
 
   // Start 24/7 Discord Gateway presence for ConnectingERLC bot
   const botToken = (process.env.CONNECTINGERLC_BOT_TOKEN || process.env.DISCORD_BOT_TOKEN || process.env.DISCORD_TOKEN || '').trim();
