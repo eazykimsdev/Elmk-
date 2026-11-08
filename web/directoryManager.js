@@ -14,7 +14,7 @@ if (!fs.existsSync(DATA_DIR)) {
   fs.mkdirSync(DATA_DIR, { recursive: true });
 }
 
-function loadDirectoryData() {
+export function loadDirectoryData() {
   try {
     if (fs.existsSync(DIRECTORY_FILE)) {
       const raw = fs.readFileSync(DIRECTORY_FILE, 'utf-8');
@@ -53,7 +53,7 @@ function loadDirectoryData() {
   return { servers: [], userBalances: {}, userJoins: {}, userJoinRecords: {}, bumpCooldowns: {} };
 }
 
-function saveDirectoryData(data) {
+export function saveDirectoryData(data) {
   try {
     const tmp = `${DIRECTORY_FILE}.tmp`;
     fs.writeFileSync(tmp, JSON.stringify(data, null, 2), 'utf-8');

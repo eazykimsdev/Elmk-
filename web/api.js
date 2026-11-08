@@ -1,4 +1,4 @@
-import { getBotGatewayStatus } from './botGateway.js';
+import { getBotGatewayStatus } from '../botGateway.js';
 import { siteUrl } from './shared/siteUrl.js';
 import 'dotenv/config';
 import crypto, { randomBytes } from 'node:crypto';

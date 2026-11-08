@@ -16,7 +16,7 @@ import {
   updateBotCustomization,
   DEFAULT_CUSTOMIZATIONS,
   MASTER_BOT_ID
-} from '../botManager.js';
+} from './botManager.js';
 import {
   getPromotedServers,
   upsertPromotedServer,

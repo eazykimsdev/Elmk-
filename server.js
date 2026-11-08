@@ -6,7 +6,7 @@ import fs from 'fs';
 import cors from 'cors';
 import { fileURLToPath } from 'url';
 
-import { createDashboardRouter, createDiscordCallbackRouter, handleBotGatewayEvent, fetchRealBotGuilds } from './web/api.js';
+import { createDashboardRouter, createDiscordCallbackRouter, handleBotGatewayEvent, fetchRealBotGuilds } from './api.js';
 import { startBotGateway } from './botGateway.js';
 import { validateProductionEnvironment } from './shared/productionCheck.js';
 import { query as dbQuery, isPostgresConnected } from './db.js';
