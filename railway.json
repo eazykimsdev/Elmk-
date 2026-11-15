@@ -7,7 +7,7 @@
   "deploy": {
     "startCommand": "node bootstrap.js",
     "healthcheckPath": "/healthz",
-    "healthcheckTimeout": 15,
+    "healthcheckTimeout": 100,
     "restartPolicyType": "ALWAYS"
   }
 }

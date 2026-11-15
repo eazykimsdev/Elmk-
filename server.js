@@ -37,7 +37,7 @@ if (!envValidation.valid) {
 }
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8080;
 
 // Railway and most hosts sit behind a proxy: needed for secure cookies and real client IPs.
 app.set('trust proxy', 1);
@@ -216,8 +216,8 @@ app.use((err, req, res, _next) => {
   res.status(500).json({ error: 'Something went wrong on our side. Try again.' });
 });
 
-const server = app.listen(PORT, () => {
-  console.log(`[CONNECTINGERLC WEB API] Dashboard backend listening on port ${PORT}`);
+const server = app.listen(PORT, '0.0.0.0', () => {
+  console.log(`[CONNECTINGERLC WEB API] Dashboard backend listening on 0.0.0.0:${PORT}`);
 
   // Start 24/7 Discord Gateway presence for ConnectingERLC#0281 bot
   const primaryToken = (process.env.CONNECTINGERLC_BOT_TOKEN || process.env.DISCORD_BOT_TOKEN || process.env.DISCORD_TOKEN || '').trim();

@@ -17,8 +17,15 @@ import { restoreDataDir, startDataSync } from './dataSync.js';
 import { importD1IfRequested } from './importD1.js';
 import { runLegacyKeysMigration } from './scripts/migrate_strip_legacy_keys.mjs';
 
-await restoreDataDir();
-runLegacyKeysMigration();
-await importD1IfRequested();
-startDataSync();
+try {
+  await Promise.race([
+    restoreDataDir(),
+    new Promise((r) => setTimeout(r, 6000))
+  ]);
+} catch (err) {
+  console.warn('[BOOTSTRAP] Data restore notice:', err.message);
+}
+try { runLegacyKeysMigration(); } catch {}
+try { await importD1IfRequested(); } catch {}
+try { startDataSync(); } catch {}
 await import('./server.js');
