@@ -1,80 +1,794 @@
 [
   {
-    "id": "1564982083598680132",
-    "userId": "1564982083598680132",
-    "source": "legacy_config_changes",
-    "firstSeen": 1794035440235,
-    "username": "! Linkyn",
-    "avatar": "https://cdn.discordapp.com/avatars/1564982083598680132/9ec908b404ea270a310776e047e860c2.png"
-  },
-  {
     "id": "1400351264415682621",
     "userId": "1400351264415682621",
-    "source": "legacy_credit_ledger",
+    "username": "zyvro48",
+    "displayName": "Zyvro48",
+    "avatar": "https://cdn.discordapp.com/avatars/1400351264415682621/fbec10569fb327b2283ee1e9e4235006.png?size=64",
     "firstSeen": 1794035440235,
-    "username": "Zyvro48",
-    "avatar": "https://cdn.discordapp.com/avatars/1400351264415682621/fd873329bec4e176733cd1335dfac71e.png"
+    "source": "discord_verified"
   },
   {
     "id": "1492251574804680778",
     "userId": "1492251574804680778",
-    "source": "legacy_known_users",
     "username": "vortx_",
     "displayName": "vortx_",
     "avatar": "https://cdn.discordapp.com/avatars/1492251574804680778/438d43cf2336242af24beaf9118207a4.png",
-    "firstSeen": 1793601530330
+    "firstSeen": 1793601530330,
+    "source": "discord_verified"
   },
   {
     "id": "1561439865957122066",
     "userId": "1561439865957122066",
-    "source": "legacy_known_users",
     "username": "Astro",
     "displayName": "Astro",
     "avatar": "https://cdn.discordapp.com/avatars/1561439865957122066/86347d20567886b38a538ce64c2efbe3.png",
-    "firstSeen": 1793617787469
+    "firstSeen": 1793617787469,
+    "source": "discord_verified"
   },
   {
     "id": "1324885614570635264",
     "userId": "1324885614570635264",
-    "source": "legacy_known_users",
-    "username": "Mason",
+    "username": "masonkeller0474",
     "displayName": "Mason",
-    "avatar": "https://cdn.discordapp.com/avatars/1324885614570635264/6bb40e87017cfcf0f0afb964d8051da1.png",
-    "firstSeen": 1793620535624
+    "avatar": "https://cdn.discordapp.com/avatars/1324885614570635264/a_a8140ca22a60f4d71afb2fdedad33536.gif?size=64",
+    "firstSeen": 1793620535624,
+    "source": "discord_verified"
+  },
+  {
+    "id": "1564982083598680132",
+    "userId": "1564982083598680132",
+    "username": "theotherlinkynn",
+    "displayName": "! Linkyn",
+    "avatar": "https://cdn.discordapp.com/avatars/1564982083598680132/35c512c4975ef4034417fa2c12f0fb66.png?size=64",
+    "firstSeen": 1794035440235,
+    "source": "discord_verified"
   },
   {
     "id": "1323048559624585279",
     "userId": "1323048559624585279",
-    "source": "legacy_known_users",
-    "username": "TikTok Rynotech",
+    "username": "kairiri_1",
     "displayName": "TikTok Rynotech",
-    "avatar": "https://cdn.discordapp.com/avatars/1323048559624585279/1a6a7b4a3953b5fd7176e4ec58033c28.png",
-    "firstSeen": 1793732485591
+    "avatar": "https://cdn.discordapp.com/avatars/1323048559624585279/0e0f3c3acd2a671ca157d0c2535c102c.png?size=64",
+    "firstSeen": 1793732485591,
+    "source": "discord_verified"
   },
   {
     "id": "1363298843999076392",
     "userId": "1363298843999076392",
-    "source": "legacy_known_users",
     "username": "DamianJay",
     "displayName": "DamianJay",
     "avatar": "https://cdn.discordapp.com/avatars/1363298843999076392/a_ddbbfd3142ecf9d6d0a0ef4796950de7.png",
-    "firstSeen": 1793838452921
+    "firstSeen": 1793838452921,
+    "source": "discord_verified"
   },
   {
     "id": "523693281541095424",
     "userId": "523693281541095424",
-    "source": "legacy_known_users",
-    "username": "Eazykims",
+    "username": "kims3166",
     "displayName": "Eazykims",
-    "avatar": "https://cdn.discordapp.com/avatars/523693281541095424/b7fc5bd1ca84c56c9144b7a02ba4e904.png",
-    "firstSeen": 1793936481499
+    "avatar": "https://cdn.discordapp.com/avatars/523693281541095424/b7fc5bd1ca84c56c9144b7a02ba4e904.png?size=64",
+    "firstSeen": 1793936481499,
+    "source": "discord_verified"
   },
   {
+    "id": "1317231689361133650",
     "userId": "1317231689361133650",
     "username": "y0ur_loss",
     "displayName": "⁶𓅓",
     "avatar": "https://cdn.discordapp.com/avatars/1317231689361133650/f068fda80be655faa59ec43123230b06.png",
     "firstSeen": 1794123747001,
-    "source": "community_executive"
+    "source": "discord_verified"
+  },
+  {
+    "id": "888777666555444333",
+    "userId": "888777666555444333",
+    "username": "SelfBanTester",
+    "displayName": "SelfBanTester",
+    "avatar": null,
+    "firstSeen": 1794774821508,
+    "source": "discord_verified"
+  },
+  {
+    "id": "777666555444333222",
+    "userId": "777666555444333222",
+    "username": "testfriend_1794247058197",
+    "displayName": "testfriend_1794247058197",
+    "avatar": null,
+    "firstSeen": 1794774821508,
+    "source": "discord_verified"
+  },
+  {
+    "id": "1028818023571792002",
+    "userId": "1028818023571792002",
+    "username": "austing3128",
+    "displayName": "AustinTG109",
+    "avatar": "https://cdn.discordapp.com/avatars/1028818023571792002/d8695ea8b09abd273d5891f4fdfe8cf5.png?size=64",
+    "firstSeen": 1794284268117,
+    "source": "discord_verified"
+  },
+  {
+    "id": "1057505570560671775",
+    "userId": "1057505570560671775",
+    "username": "kj_ramsey",
+    "displayName": "Mrgrimm",
+    "avatar": "https://cdn.discordapp.com/avatars/1057505570560671775/132ea2afb5b69d0425b847b1db339297.png?size=64",
+    "firstSeen": 1794284268124,
+    "source": "discord_verified"
+  },
+  {
+    "id": "1150436432264048771",
+    "userId": "1150436432264048771",
+    "username": "isak0782",
+    "displayName": "Isak",
+    "avatar": "https://cdn.discordapp.com/avatars/1150436432264048771/faf3914e2213cf4516ab2651d7cd4f1f.png?size=64",
+    "firstSeen": 1794284268127,
+    "source": "discord_verified"
+  },
+  {
+    "id": "692103756606865418",
+    "userId": "692103756606865418",
+    "username": ".nade0",
+    "displayName": "Nade",
+    "avatar": "https://cdn.discordapp.com/avatars/692103756606865418/51b2da648f233f02cd8be435a25d14fb.png",
+    "firstSeen": 1794284268136,
+    "source": "discord_verified"
+  },
+  {
+    "id": "1524965918470443145",
+    "userId": "1524965918470443145",
+    "username": "isaac_wyd",
+    "displayName": "Isaac",
+    "avatar": "https://cdn.discordapp.com/avatars/1524965918470443145/f3ccac007360fbaf63a77b6aa26ebf5e.png",
+    "firstSeen": 1794284268139,
+    "source": "discord_verified"
+  },
+  {
+    "id": "544533907647758347",
+    "userId": "544533907647758347",
+    "username": "kiviweni",
+    "displayName": "kiviweni",
+    "avatar": "https://cdn.discordapp.com/avatars/544533907647758347/cc2b75e87548c95e78988d8b8ca25ae2.png",
+    "firstSeen": 1794284268142,
+    "source": "discord_verified"
+  },
+  {
+    "id": "1551362533666062425",
+    "userId": "1551362533666062425",
+    "username": "officerfreedom27",
+    "displayName": "Freedom09",
+    "avatar": "https://cdn.discordapp.com/avatars/1551362533666062425/fab0b5bbf7f269a8da86479a0a6204e0.png",
+    "firstSeen": 1794284268145,
+    "source": "discord_verified"
+  },
+  {
+    "id": "1529265411579973692",
+    "userId": "1529265411579973692",
+    "username": "tatemcrae01.",
+    "displayName": "𝓉𝒶𝓉𝑒𝓂𝒸𝓇𝒶𝑒☃",
+    "avatar": "https://cdn.discordapp.com/avatars/1529265411579973692/ec99d4c809fb4d82bfcbc0f99ffe8426.png",
+    "firstSeen": 1794284268148,
+    "source": "discord_verified"
+  },
+  {
+    "id": "463071037953933323",
+    "userId": "463071037953933323",
+    "username": ".orjginal",
+    "displayName": "Orjginal",
+    "avatar": "https://cdn.discordapp.com/avatars/463071037953933323/24e81b09d4744679cf7fecec46e06b17.png",
+    "firstSeen": 1794284268152,
+    "source": "discord_verified"
+  },
+  {
+    "id": "1472285854004154630",
+    "userId": "1472285854004154630",
+    "username": "kadence.kaden2",
+    "displayName": "Kaden Booze-Cook",
+    "avatar": "https://cdn.discordapp.com/avatars/1472285854004154630/c4222def2012a1cde457e43a3816c8a9.png",
+    "firstSeen": 1794284268155,
+    "source": "discord_verified"
+  },
+  {
+    "id": "1213418965846462476",
+    "userId": "1213418965846462476",
+    "username": "og1230671",
+    "displayName": "Gold",
+    "avatar": "https://cdn.discordapp.com/avatars/1213418965846462476/ce46bed17e8882a3bc23eb171df3a477.png",
+    "firstSeen": 1794284268157,
+    "source": "discord_verified"
+  },
+  {
+    "id": "971230955194966016",
+    "userId": "971230955194966016",
+    "username": ".cr1px",
+    "displayName": "Cr1px",
+    "avatar": "https://cdn.discordapp.com/avatars/971230955194966016/1bae8a08a2eec1bea45df277999cfd5a.png",
+    "firstSeen": 1794284268160,
+    "source": "discord_verified"
+  },
+  {
+    "id": "692113532975710338",
+    "userId": "692113532975710338",
+    "username": "black_rose_88",
+    "displayName": "Foxy",
+    "avatar": "https://cdn.discordapp.com/avatars/692113532975710338/e70ac50d83c68cfe44d59cb8e0cd04a7.png",
+    "firstSeen": 1794284268162,
+    "source": "discord_verified"
+  },
+  {
+    "id": "1364222497385480253",
+    "userId": "1364222497385480253",
+    "username": "splizy_1",
+    "displayName": "Xyzb",
+    "avatar": "https://cdn.discordapp.com/avatars/1364222497385480253/d8e679f5b7b5d9c9c620f62ad8de9922.png",
+    "firstSeen": 1794284268164,
+    "source": "discord_verified"
+  },
+  {
+    "id": "1531001263221899407",
+    "userId": "1531001263221899407",
+    "username": "haha_lol1",
+    "displayName": "Steve",
+    "avatar": "https://cdn.discordapp.com/avatars/1531001263221899407/2dcc4032ac9f50d8b0c926a33ebf8d6f.png",
+    "firstSeen": 1794284268167,
+    "source": "discord_verified"
+  },
+  {
+    "id": "1330154021092327434",
+    "userId": "1330154021092327434",
+    "username": "kenzy121246",
+    "displayName": "Kenzy121246",
+    "avatar": "https://cdn.discordapp.com/avatars/1330154021092327434/fe4e8a05f44f86c4750a0d89bcb46346.png",
+    "firstSeen": 1794284268169,
+    "source": "discord_verified"
+  },
+  {
+    "id": "1200999738657488939",
+    "userId": "1200999738657488939",
+    "username": "isaacplayz0",
+    "displayName": "Isaacplayz",
+    "avatar": "https://cdn.discordapp.com/avatars/1200999738657488939/4b8af4c1871fac271579bd66aab84015.png",
+    "firstSeen": 1794284268172,
+    "source": "discord_verified"
+  },
+  {
+    "id": "849043349629698048",
+    "userId": "849043349629698048",
+    "username": "tapgamer1",
+    "displayName": "Tapgamer",
+    "avatar": "https://cdn.discordapp.com/avatars/849043349629698048/039c23e9cc16c230779a8f9c0a44fb6a.png",
+    "firstSeen": 1794284268175,
+    "source": "discord_verified"
+  },
+  {
+    "id": "540220381517053963",
+    "userId": "540220381517053963",
+    "username": "e4n01.",
+    "displayName": "e4n01.",
+    "avatar": "https://cdn.discordapp.com/avatars/540220381517053963/60f102f0845f93eb3de813c8d169ac8a.png",
+    "firstSeen": 1794774821510,
+    "source": "discord_verified"
+  },
+  {
+    "id": "1316381167817199639",
+    "userId": "1316381167817199639",
+    "username": ".1austin",
+    "displayName": "thezack",
+    "avatar": "https://cdn.discordapp.com/avatars/1316381167817199639/f0dd1ac943587e6da91dcfda5eb56ca8.png",
+    "firstSeen": 1794774821510,
+    "source": "discord_verified"
+  },
+  {
+    "id": "1476689123325776084",
+    "userId": "1476689123325776084",
+    "username": "capnogood_.",
+    "displayName": "𝓢𝓹𝓵𝓪𝓼𝓱𝔂𝓫𝓸𝓲",
+    "avatar": "https://cdn.discordapp.com/avatars/1476689123325776084/14e0430ed64b03ccdb2bdb0f390f438e.png",
+    "firstSeen": 1794774821510,
+    "source": "discord_verified"
+  },
+  {
+    "id": "111222333444555666",
+    "userId": "111222333444555666",
+    "username": "User_5666",
+    "displayName": "User_5666",
+    "avatar": null,
+    "firstSeen": 1794774897649,
+    "source": "discord_verified"
+  },
+  {
+    "id": "555444333222111000",
+    "userId": "555444333222111000",
+    "username": "User_1000",
+    "displayName": "User_1000",
+    "avatar": null,
+    "firstSeen": 1794774897649,
+    "source": "discord_verified"
+  },
+  {
+    "id": "991122334455667790",
+    "userId": "991122334455667790",
+    "username": "User_7790",
+    "displayName": "User_7790",
+    "avatar": null,
+    "firstSeen": 1794774897649,
+    "source": "discord_verified"
+  },
+  {
+    "id": "992772662166254259",
+    "userId": "992772662166254259",
+    "username": "User_4259",
+    "displayName": "User_4259",
+    "avatar": null,
+    "firstSeen": 1794774897649,
+    "source": "discord_verified"
+  },
+  {
+    "id": "992744059029174187",
+    "userId": "992744059029174187",
+    "username": "User_4187",
+    "displayName": "User_4187",
+    "avatar": null,
+    "firstSeen": 1794774897649,
+    "source": "discord_verified"
+  },
+  {
+    "id": "155999999999999004",
+    "userId": "155999999999999004",
+    "username": "User_9004",
+    "displayName": "User_9004",
+    "avatar": null,
+    "firstSeen": 1794774897649,
+    "source": "discord_verified"
+  },
+  {
+    "id": "665409743180271514",
+    "userId": "665409743180271514",
+    "username": "User_1514",
+    "displayName": "User_1514",
+    "avatar": null,
+    "firstSeen": 1794774897649,
+    "source": "discord_verified"
+  },
+  {
+    "id": "887464451559058588",
+    "userId": "887464451559058588",
+    "username": "User_8588",
+    "displayName": "User_8588",
+    "avatar": null,
+    "firstSeen": 1794774897649,
+    "source": "discord_verified"
+  },
+  {
+    "id": "889581304699132200",
+    "userId": "889581304699132200",
+    "username": "User_2200",
+    "displayName": "User_2200",
+    "avatar": null,
+    "firstSeen": 1794774897649,
+    "source": "discord_verified"
+  },
+  {
+    "id": "889636344992380888",
+    "userId": "889636344992380888",
+    "username": "User_0888",
+    "displayName": "User_0888",
+    "avatar": null,
+    "firstSeen": 1794774897649,
+    "source": "discord_verified"
+  },
+  {
+    "id": "889796084330988496",
+    "userId": "889796084330988496",
+    "username": "User_8496",
+    "displayName": "User_8496",
+    "avatar": null,
+    "firstSeen": 1794774897649,
+    "source": "discord_verified"
+  },
+  {
+    "id": "887481594980100457",
+    "userId": "887481594980100457",
+    "username": "User_0457",
+    "displayName": "User_0457",
+    "avatar": null,
+    "firstSeen": 1794774897649,
+    "source": "discord_verified"
+  },
+  {
+    "id": "884950241647361718",
+    "userId": "884950241647361718",
+    "username": "User_1718",
+    "displayName": "User_1718",
+    "avatar": null,
+    "firstSeen": 1794774897649,
+    "source": "discord_verified"
+  },
+  {
+    "id": "888514136007309112",
+    "userId": "888514136007309112",
+    "username": "User_9112",
+    "displayName": "User_9112",
+    "avatar": null,
+    "firstSeen": 1794774897649,
+    "source": "discord_verified"
+  },
+  {
+    "id": "886648427948975652",
+    "userId": "886648427948975652",
+    "username": "User_5652",
+    "displayName": "User_5652",
+    "avatar": null,
+    "firstSeen": 1794774897649,
+    "source": "discord_verified"
+  },
+  {
+    "id": "886163148107908924",
+    "userId": "886163148107908924",
+    "username": "User_8924",
+    "displayName": "User_8924",
+    "avatar": null,
+    "firstSeen": 1794774897649,
+    "source": "discord_verified"
+  },
+  {
+    "id": "882195375564527042",
+    "userId": "882195375564527042",
+    "username": "User_7042",
+    "displayName": "User_7042",
+    "avatar": null,
+    "firstSeen": 1794774897649,
+    "source": "discord_verified"
+  },
+  {
+    "id": "881800668059109854",
+    "userId": "881800668059109854",
+    "username": "User_9854",
+    "displayName": "User_9854",
+    "avatar": null,
+    "firstSeen": 1794774897649,
+    "source": "discord_verified"
+  },
+  {
+    "id": "889275422357012146",
+    "userId": "889275422357012146",
+    "username": "User_2146",
+    "displayName": "User_2146",
+    "avatar": null,
+    "firstSeen": 1794774897649,
+    "source": "discord_verified"
+  },
+  {
+    "id": "889985983149918744",
+    "userId": "889985983149918744",
+    "username": "User_8744",
+    "displayName": "User_8744",
+    "avatar": null,
+    "firstSeen": 1794774897649,
+    "source": "discord_verified"
+  },
+  {
+    "id": "886082681083415005",
+    "userId": "886082681083415005",
+    "username": "User_5005",
+    "displayName": "User_5005",
+    "avatar": null,
+    "firstSeen": 1794774897649,
+    "source": "discord_verified"
+  },
+  {
+    "id": "889145225058302960",
+    "userId": "889145225058302960",
+    "username": "User_2960",
+    "displayName": "User_2960",
+    "avatar": null,
+    "firstSeen": 1794774897649,
+    "source": "discord_verified"
+  },
+  {
+    "id": "883837664417290454",
+    "userId": "883837664417290454",
+    "username": "User_0454",
+    "displayName": "User_0454",
+    "avatar": null,
+    "firstSeen": 1794774897649,
+    "source": "discord_verified"
+  },
+  {
+    "id": "663550720180536926",
+    "userId": "663550720180536926",
+    "username": "User_6926",
+    "displayName": "User_6926",
+    "avatar": null,
+    "firstSeen": 1794774897649,
+    "source": "discord_verified"
+  },
+  {
+    "id": "999757933927014484",
+    "userId": "999757933927014484",
+    "username": "User_4484",
+    "displayName": "User_4484",
+    "avatar": null,
+    "firstSeen": 1794774897649,
+    "source": "discord_verified"
+  },
+  {
+    "id": "998893774008304493",
+    "userId": "998893774008304493",
+    "username": "User_4493",
+    "displayName": "User_4493",
+    "avatar": null,
+    "firstSeen": 1794774897649,
+    "source": "discord_verified"
+  },
+  {
+    "id": "994523211258768936",
+    "userId": "994523211258768936",
+    "username": "User_8936",
+    "displayName": "User_8936",
+    "avatar": null,
+    "firstSeen": 1794774897649,
+    "source": "discord_verified"
+  },
+  {
+    "id": "665446542885779252",
+    "userId": "665446542885779252",
+    "username": "User_9252",
+    "displayName": "User_9252",
+    "avatar": null,
+    "firstSeen": 1794774897649,
+    "source": "discord_verified"
+  },
+  {
+    "id": "998727312837820757",
+    "userId": "998727312837820757",
+    "username": "User_0757",
+    "displayName": "User_0757",
+    "avatar": null,
+    "firstSeen": 1794774897649,
+    "source": "discord_verified"
+  },
+  {
+    "id": "991440099352687672",
+    "userId": "991440099352687672",
+    "username": "User_7672",
+    "displayName": "User_7672",
+    "avatar": null,
+    "firstSeen": 1794774897649,
+    "source": "discord_verified"
+  },
+  {
+    "id": "994914512583564896",
+    "userId": "994914512583564896",
+    "username": "User_4896",
+    "displayName": "User_4896",
+    "avatar": null,
+    "firstSeen": 1794774897649,
+    "source": "discord_verified"
+  },
+  {
+    "id": "991122334455667789",
+    "userId": "991122334455667789",
+    "username": "User_7789",
+    "displayName": "User_7789",
+    "avatar": null,
+    "firstSeen": 1794774897649,
+    "source": "discord_verified"
+  },
+  {
+    "id": "881122334455667702",
+    "userId": "881122334455667702",
+    "username": "User_7702",
+    "displayName": "User_7702",
+    "avatar": null,
+    "firstSeen": 1794774897649,
+    "source": "discord_verified"
+  },
+  {
+    "id": "665258781970039379",
+    "userId": "665258781970039379",
+    "username": "User_9379",
+    "displayName": "User_9379",
+    "avatar": null,
+    "firstSeen": 1794774897649,
+    "source": "discord_verified"
+  },
+  {
+    "id": "661047030960366122",
+    "userId": "661047030960366122",
+    "username": "User_6122",
+    "displayName": "User_6122",
+    "avatar": null,
+    "firstSeen": 1794774897649,
+    "source": "discord_verified"
+  },
+  {
+    "id": "663315861404324309",
+    "userId": "663315861404324309",
+    "username": "User_4309",
+    "displayName": "User_4309",
+    "avatar": null,
+    "firstSeen": 1794774897649,
+    "source": "discord_verified"
+  },
+  {
+    "id": "668999328648155288",
+    "userId": "668999328648155288",
+    "username": "User_5288",
+    "displayName": "User_5288",
+    "avatar": null,
+    "firstSeen": 1794774897649,
+    "source": "discord_verified"
+  },
+  {
+    "id": "662501122565548638",
+    "userId": "662501122565548638",
+    "username": "User_8638",
+    "displayName": "User_8638",
+    "avatar": null,
+    "firstSeen": 1794774897649,
+    "source": "discord_verified"
+  },
+  {
+    "id": "661855942979691980",
+    "userId": "661855942979691980",
+    "username": "User_1980",
+    "displayName": "User_1980",
+    "avatar": null,
+    "firstSeen": 1794774897649,
+    "source": "discord_verified"
+  },
+  {
+    "id": "664193987565270537",
+    "userId": "664193987565270537",
+    "username": "User_0537",
+    "displayName": "User_0537",
+    "avatar": null,
+    "firstSeen": 1794774897649,
+    "source": "discord_verified"
+  },
+  {
+    "id": "661036717238662972",
+    "userId": "661036717238662972",
+    "username": "User_2972",
+    "displayName": "User_2972",
+    "avatar": null,
+    "firstSeen": 1794774897649,
+    "source": "discord_verified"
+  },
+  {
+    "id": "662734893896535993",
+    "userId": "662734893896535993",
+    "username": "User_5993",
+    "displayName": "User_5993",
+    "avatar": null,
+    "firstSeen": 1794774897649,
+    "source": "discord_verified"
+  },
+  {
+    "id": "664492011369569571",
+    "userId": "664492011369569571",
+    "username": "User_9571",
+    "displayName": "User_9571",
+    "avatar": null,
+    "firstSeen": 1794774897649,
+    "source": "discord_verified"
+  },
+  {
+    "id": "668184655969246096",
+    "userId": "668184655969246096",
+    "username": "User_6096",
+    "displayName": "User_6096",
+    "avatar": null,
+    "firstSeen": 1794774897649,
+    "source": "discord_verified"
+  },
+  {
+    "id": "885242050998351806",
+    "userId": "885242050998351806",
+    "username": "User_1806",
+    "displayName": "User_1806",
+    "avatar": null,
+    "firstSeen": 1794774897649,
+    "source": "discord_verified"
+  },
+  {
+    "id": "1558391194508071003",
+    "userId": "1558391194508071003",
+    "username": "officiallycat",
+    "displayName": "Cat",
+    "avatar": "https://cdn.discordapp.com/avatars/1558391194508071003/c808ef3fa33f1d1efc0ccd7433866532.png",
+    "firstSeen": 1794774899304,
+    "source": "discord_verified"
+  },
+  {
+    "id": "796146369312194622",
+    "userId": "796146369312194622",
+    "username": "blayne8006",
+    "displayName": "Blayne",
+    "avatar": "https://cdn.discordapp.com/avatars/796146369312194622/833d2bc9a7b3a77268471aa24f949344.png",
+    "firstSeen": 1794774899633,
+    "source": "discord_verified"
+  },
+  {
+    "id": "1079549748291313675",
+    "userId": "1079549748291313675",
+    "username": "scoffle",
+    "displayName": "Scoffle ⭐",
+    "avatar": "https://cdn.discordapp.com/avatars/1079549748291313675/e3c229dcb21f126d6dc6e362843c0796.png",
+    "firstSeen": 1794774899979,
+    "source": "discord_verified"
+  },
+  {
+    "id": "1487621002774188146",
+    "userId": "1487621002774188146",
+    "username": "thetigergaming120",
+    "displayName": "TheTigerGaming120",
+    "avatar": "https://cdn.discordapp.com/avatars/1487621002774188146/c071a2c5f99c88c3fd23582cec1336d7.png",
+    "firstSeen": 1794774901482,
+    "source": "discord_verified"
+  },
+  {
+    "id": "1188866580344471592",
+    "userId": "1188866580344471592",
+    "username": "fw.adzy",
+    "displayName": "𝓐𝓭𝔃𝔂",
+    "avatar": "https://cdn.discordapp.com/avatars/1188866580344471592/0eb3744a046a9ce3c696639025ba4e56.png",
+    "firstSeen": 1794774902511,
+    "source": "discord_verified"
+  },
+  {
+    "id": "1414440794181468325",
+    "userId": "1414440794181468325",
+    "username": "kngorilla",
+    "displayName": "KN-GORILLA4AA",
+    "avatar": "https://cdn.discordapp.com/avatars/1414440794181468325/0e5df8c523704b74c5038f5a2f3ebec5.png",
+    "firstSeen": 1794774903301,
+    "source": "discord_verified"
+  },
+  {
+    "id": "1330735227848626227",
+    "userId": "1330735227848626227",
+    "username": "cfitz72865_",
+    "displayName": "Therealplayserlc",
+    "avatar": "https://cdn.discordapp.com/avatars/1330735227848626227/b5049a9fda983bf422f8b7d0af7a0b91.png",
+    "firstSeen": 1794774905584,
+    "source": "discord_verified"
+  },
+  {
+    "id": "1534987132211429537",
+    "userId": "1534987132211429537",
+    "username": "busy_fox_27743",
+    "displayName": "𝕶𝖆𝖞𝖉𝖊𝖓 🏎️✝️🔥",
+    "avatar": "https://cdn.discordapp.com/avatars/1534987132211429537/0434a14bcf2d6c92f6462228012c93de.png",
+    "firstSeen": 1794774906604,
+    "source": "discord_verified"
+  },
+  {
+    "id": "1226879343964192768",
+    "userId": "1226879343964192768",
+    "username": "captainchris41",
+    "displayName": "ChrisValues",
+    "avatar": "https://cdn.discordapp.com/avatars/1226879343964192768/afeeb4505bb6af60ed445985847d49c2.png",
+    "firstSeen": 1794774908158,
+    "source": "discord_verified"
+  },
+  {
+    "id": "1151318218980478986",
+    "userId": "1151318218980478986",
+    "username": "v3rnage",
+    "displayName": "Jay",
+    "avatar": "https://cdn.discordapp.com/avatars/1151318218980478986/901c403a51ff678bf15fa58a9517c6a7.png",
+    "firstSeen": 1794774910633,
+    "source": "discord_verified"
+  },
+  {
+    "id": "1535998488456859678",
+    "userId": "1535998488456859678",
+    "username": "eazyn3166",
+    "displayName": "Eazyn",
+    "avatar": "https://cdn.discordapp.com/avatars/1535998488456859678/425178588e8b453094ac35eeb09bb9d2.png",
+    "firstSeen": 1794774912126,
+    "source": "discord_verified"
   }
 ]

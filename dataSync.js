@@ -85,16 +85,59 @@ export async function restoreDataDir() {
   } catch (err) {
     console.error('[DATA SYNC] Restore failed, continuing with local files:', err.message);
   } finally {
-    // Seed fallback: ensure crucial initial files (users, servers, changelog) exist
+    // Seed fallback & merge: ensure all real users and servers from seeds are merged
     const seedDir = path.join(process.cwd(), 'seeds');
     if (fs.existsSync(seedDir)) {
       for (const entry of fs.readdirSync(seedDir)) {
         if (!entry.endsWith('.json')) continue;
         const target = path.join(DATA_DIR, entry);
+        const seedPath = path.join(seedDir, entry);
         if (!fs.existsSync(target) || fs.statSync(target).size === 0) {
           try {
-            fs.copyFileSync(path.join(seedDir, entry), target);
+            fs.copyFileSync(seedPath, target);
             console.log(`[DATA SYNC] Seeded default ${entry} from seeds/`);
+          } catch {}
+        } else if (entry === 'known_users.json' || entry === 'known_accounts.json') {
+          try {
+            const current = JSON.parse(fs.readFileSync(target, 'utf8') || '[]');
+            const seeds = JSON.parse(fs.readFileSync(seedPath, 'utf8') || '[]');
+            const idKey = entry === 'known_users.json' ? 'userId' : 'id';
+            const existingIds = new Set(current.map(x => String(x[idKey] || x.id || x.userId)));
+            let added = 0;
+            for (const s of seeds) {
+              const sid = String(s[idKey] || s.id || s.userId);
+              if (sid && !existingIds.has(sid)) {
+                current.push(s);
+                existingIds.add(sid);
+                added++;
+              }
+            }
+            if (added > 0) {
+              fs.writeFileSync(target, JSON.stringify(current, null, 2), 'utf8');
+              console.log(`[DATA SYNC] Merged ${added} missing records from seeds into ${entry}`);
+            }
+          } catch {}
+        } else if (entry === 'promoted_servers.json') {
+          try {
+            const current = JSON.parse(fs.readFileSync(target, 'utf8') || '{}');
+            const seeds = JSON.parse(fs.readFileSync(seedPath, 'utf8') || '{}');
+            let currentServers = Array.isArray(current.servers) ? current.servers : Object.values(current.servers || {});
+            const seedServers = Array.isArray(seeds.servers) ? seeds.servers : Object.values(seeds.servers || {});
+            const existingServerIds = new Set(currentServers.map(s => String(s.id || s.guildId)));
+            let addedServers = 0;
+            for (const ss of seedServers) {
+              const sid = String(ss.id || ss.guildId);
+              if (sid && !existingServerIds.has(sid)) {
+                currentServers.push(ss);
+                existingServerIds.add(sid);
+                addedServers++;
+              }
+            }
+            if (addedServers > 0) {
+              current.servers = currentServers;
+              fs.writeFileSync(target, JSON.stringify(current, null, 2), 'utf8');
+              console.log(`[DATA SYNC] Merged ${addedServers} missing servers from seeds into promoted_servers.json`);
+            }
           } catch {}
         }
       }

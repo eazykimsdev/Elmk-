@@ -1,16 +1,19 @@
 [
   {
     "userId": "1400351264415682621",
-    "username": "Zyvro48",
-    "avatarUrl": "https://cdn.discordapp.com/avatars/1400351264415682621/fd873329bec4e176733cd1335dfac71e.png",
-    "lastSeen": 1793587144296,
+    "username": "zyvro48",
+    "displayName": "Zyvro48",
+    "avatarUrl": "https://cdn.discordapp.com/avatars/1400351264415682621/fbec10569fb327b2283ee1e9e4235006.png?size=64",
+    "lastSeen": 1794035440235,
     "roles": [
-      "User"
+      "User",
+      "Server Owner"
     ]
   },
   {
     "userId": "1492251574804680778",
     "username": "vortx_",
+    "displayName": "vortx_",
     "avatarUrl": "https://cdn.discordapp.com/avatars/1492251574804680778/438d43cf2336242af24beaf9118207a4.png",
     "lastSeen": 1793601530330,
     "roles": [
@@ -20,6 +23,7 @@
   {
     "userId": "1561439865957122066",
     "username": "Astro",
+    "displayName": "Astro",
     "avatarUrl": "https://cdn.discordapp.com/avatars/1561439865957122066/86347d20567886b38a538ce64c2efbe3.png",
     "lastSeen": 1793617787469,
     "roles": [
@@ -28,34 +32,42 @@
   },
   {
     "userId": "1324885614570635264",
-    "username": "Mason",
-    "avatarUrl": "https://cdn.discordapp.com/avatars/1324885614570635264/6bb40e87017cfcf0f0afb964d8051da1.png",
+    "username": "masonkeller0474",
+    "displayName": "Mason",
+    "avatarUrl": "https://cdn.discordapp.com/avatars/1324885614570635264/a_a8140ca22a60f4d71afb2fdedad33536.gif?size=64",
     "lastSeen": 1793620535624,
     "roles": [
-      "User"
+      "User",
+      "Server Owner"
     ]
   },
   {
     "userId": "1564982083598680132",
-    "username": "! Linkyn",
-    "avatarUrl": "https://cdn.discordapp.com/avatars/1564982083598680132/9ec908b404ea270a310776e047e860c2.png",
-    "lastSeen": 1793654905854,
+    "username": "theotherlinkynn",
+    "displayName": "! Linkyn",
+    "avatarUrl": "https://cdn.discordapp.com/avatars/1564982083598680132/35c512c4975ef4034417fa2c12f0fb66.png?size=64",
+    "lastSeen": 1794035440235,
     "roles": [
-      "User"
+      "User",
+      "Server Owner",
+      "Bot Owner"
     ]
   },
   {
     "userId": "1323048559624585279",
-    "username": "TikTok Rynotech",
-    "avatarUrl": "https://cdn.discordapp.com/avatars/1323048559624585279/1a6a7b4a3953b5fd7176e4ec58033c28.png",
+    "username": "kairiri_1",
+    "displayName": "TikTok Rynotech",
+    "avatarUrl": "https://cdn.discordapp.com/avatars/1323048559624585279/0e0f3c3acd2a671ca157d0c2535c102c.png?size=64",
     "lastSeen": 1793732485591,
     "roles": [
-      "User"
+      "User",
+      "Server Owner"
     ]
   },
   {
     "userId": "1363298843999076392",
     "username": "DamianJay",
+    "displayName": "DamianJay",
     "avatarUrl": "https://cdn.discordapp.com/avatars/1363298843999076392/a_ddbbfd3142ecf9d6d0a0ef4796950de7.png",
     "lastSeen": 1793838452921,
     "roles": [
@@ -64,11 +76,14 @@
   },
   {
     "userId": "523693281541095424",
-    "username": "Eazykims",
-    "avatarUrl": "https://cdn.discordapp.com/avatars/523693281541095424/b7fc5bd1ca84c56c9144b7a02ba4e904.png",
+    "username": "kims3166",
+    "displayName": "Eazykims",
+    "avatarUrl": "https://cdn.discordapp.com/avatars/523693281541095424/b7fc5bd1ca84c56c9144b7a02ba4e904.png?size=64",
     "lastSeen": 1793936481499,
     "roles": [
-      "User"
+      "User",
+      "Owner",
+      "Server Owner"
     ]
   },
   {
@@ -76,10 +91,878 @@
     "username": "y0ur_loss",
     "displayName": "⁶𓅓",
     "avatarUrl": "https://cdn.discordapp.com/avatars/1317231689361133650/f068fda80be655faa59ec43123230b06.png",
-    "lastSeen": 1794123746990,
+    "lastSeen": 1794123747001,
     "roles": [
+      "User",
       "Executive Board",
       "Staff"
+    ]
+  },
+  {
+    "userId": "888777666555444333",
+    "username": "SelfBanTester",
+    "displayName": "SelfBanTester",
+    "avatarUrl": null,
+    "lastSeen": 1794774821508,
+    "roles": [
+      "User",
+      "Owner"
+    ]
+  },
+  {
+    "userId": "777666555444333222",
+    "username": "testfriend_1794247058197",
+    "displayName": "testfriend_1794247058197",
+    "avatarUrl": null,
+    "lastSeen": 1794774821508,
+    "roles": [
+      "User",
+      "Moderator"
+    ]
+  },
+  {
+    "userId": "1028818023571792002",
+    "username": "austing3128",
+    "displayName": "AustinTG109",
+    "avatarUrl": "https://cdn.discordapp.com/avatars/1028818023571792002/d8695ea8b09abd273d5891f4fdfe8cf5.png?size=64",
+    "lastSeen": 1794284268117,
+    "roles": [
+      "User",
+      "Server Owner"
+    ]
+  },
+  {
+    "userId": "1057505570560671775",
+    "username": "kj_ramsey",
+    "displayName": "Mrgrimm",
+    "avatarUrl": "https://cdn.discordapp.com/avatars/1057505570560671775/132ea2afb5b69d0425b847b1db339297.png?size=64",
+    "lastSeen": 1794284268124,
+    "roles": [
+      "User",
+      "Server Owner"
+    ]
+  },
+  {
+    "userId": "1150436432264048771",
+    "username": "isak0782",
+    "displayName": "Isak",
+    "avatarUrl": "https://cdn.discordapp.com/avatars/1150436432264048771/faf3914e2213cf4516ab2651d7cd4f1f.png?size=64",
+    "lastSeen": 1794284268127,
+    "roles": [
+      "User",
+      "Server Owner"
+    ]
+  },
+  {
+    "userId": "692103756606865418",
+    "username": ".nade0",
+    "displayName": "Nade",
+    "avatarUrl": "https://cdn.discordapp.com/avatars/692103756606865418/51b2da648f233f02cd8be435a25d14fb.png",
+    "lastSeen": 1794284268136,
+    "roles": [
+      "User",
+      "Server Owner"
+    ]
+  },
+  {
+    "userId": "1524965918470443145",
+    "username": "isaac_wyd",
+    "displayName": "Isaac",
+    "avatarUrl": "https://cdn.discordapp.com/avatars/1524965918470443145/f3ccac007360fbaf63a77b6aa26ebf5e.png",
+    "lastSeen": 1794284268139,
+    "roles": [
+      "User",
+      "Server Owner"
+    ]
+  },
+  {
+    "userId": "544533907647758347",
+    "username": "kiviweni",
+    "displayName": "kiviweni",
+    "avatarUrl": "https://cdn.discordapp.com/avatars/544533907647758347/cc2b75e87548c95e78988d8b8ca25ae2.png",
+    "lastSeen": 1794284268142,
+    "roles": [
+      "User",
+      "Server Owner"
+    ]
+  },
+  {
+    "userId": "1551362533666062425",
+    "username": "officerfreedom27",
+    "displayName": "Freedom09",
+    "avatarUrl": "https://cdn.discordapp.com/avatars/1551362533666062425/fab0b5bbf7f269a8da86479a0a6204e0.png",
+    "lastSeen": 1794284268145,
+    "roles": [
+      "User",
+      "Server Owner"
+    ]
+  },
+  {
+    "userId": "1529265411579973692",
+    "username": "tatemcrae01.",
+    "displayName": "𝓉𝒶𝓉𝑒𝓂𝒸𝓇𝒶𝑒☃",
+    "avatarUrl": "https://cdn.discordapp.com/avatars/1529265411579973692/ec99d4c809fb4d82bfcbc0f99ffe8426.png",
+    "lastSeen": 1794284268148,
+    "roles": [
+      "User",
+      "Server Owner"
+    ]
+  },
+  {
+    "userId": "463071037953933323",
+    "username": ".orjginal",
+    "displayName": "Orjginal",
+    "avatarUrl": "https://cdn.discordapp.com/avatars/463071037953933323/24e81b09d4744679cf7fecec46e06b17.png",
+    "lastSeen": 1794284268152,
+    "roles": [
+      "User",
+      "Server Owner"
+    ]
+  },
+  {
+    "userId": "1472285854004154630",
+    "username": "kadence.kaden2",
+    "displayName": "Kaden Booze-Cook",
+    "avatarUrl": "https://cdn.discordapp.com/avatars/1472285854004154630/c4222def2012a1cde457e43a3816c8a9.png",
+    "lastSeen": 1794284268155,
+    "roles": [
+      "User",
+      "Server Owner"
+    ]
+  },
+  {
+    "userId": "1213418965846462476",
+    "username": "og1230671",
+    "displayName": "Gold",
+    "avatarUrl": "https://cdn.discordapp.com/avatars/1213418965846462476/ce46bed17e8882a3bc23eb171df3a477.png",
+    "lastSeen": 1794284268157,
+    "roles": [
+      "User",
+      "Server Owner"
+    ]
+  },
+  {
+    "userId": "971230955194966016",
+    "username": ".cr1px",
+    "displayName": "Cr1px",
+    "avatarUrl": "https://cdn.discordapp.com/avatars/971230955194966016/1bae8a08a2eec1bea45df277999cfd5a.png",
+    "lastSeen": 1794284268160,
+    "roles": [
+      "User",
+      "Server Owner"
+    ]
+  },
+  {
+    "userId": "692113532975710338",
+    "username": "black_rose_88",
+    "displayName": "Foxy",
+    "avatarUrl": "https://cdn.discordapp.com/avatars/692113532975710338/e70ac50d83c68cfe44d59cb8e0cd04a7.png",
+    "lastSeen": 1794284268162,
+    "roles": [
+      "User",
+      "Server Owner"
+    ]
+  },
+  {
+    "userId": "1364222497385480253",
+    "username": "splizy_1",
+    "displayName": "Xyzb",
+    "avatarUrl": "https://cdn.discordapp.com/avatars/1364222497385480253/d8e679f5b7b5d9c9c620f62ad8de9922.png",
+    "lastSeen": 1794284268164,
+    "roles": [
+      "User",
+      "Server Owner"
+    ]
+  },
+  {
+    "userId": "1531001263221899407",
+    "username": "haha_lol1",
+    "displayName": "Steve",
+    "avatarUrl": "https://cdn.discordapp.com/avatars/1531001263221899407/2dcc4032ac9f50d8b0c926a33ebf8d6f.png",
+    "lastSeen": 1794284268167,
+    "roles": [
+      "User",
+      "Server Owner"
+    ]
+  },
+  {
+    "userId": "1330154021092327434",
+    "username": "kenzy121246",
+    "displayName": "Kenzy121246",
+    "avatarUrl": "https://cdn.discordapp.com/avatars/1330154021092327434/fe4e8a05f44f86c4750a0d89bcb46346.png",
+    "lastSeen": 1794284268169,
+    "roles": [
+      "User",
+      "Server Owner"
+    ]
+  },
+  {
+    "userId": "1200999738657488939",
+    "username": "isaacplayz0",
+    "displayName": "Isaacplayz",
+    "avatarUrl": "https://cdn.discordapp.com/avatars/1200999738657488939/4b8af4c1871fac271579bd66aab84015.png",
+    "lastSeen": 1794284268172,
+    "roles": [
+      "User",
+      "Server Owner"
+    ]
+  },
+  {
+    "userId": "849043349629698048",
+    "username": "tapgamer1",
+    "displayName": "Tapgamer",
+    "avatarUrl": "https://cdn.discordapp.com/avatars/849043349629698048/039c23e9cc16c230779a8f9c0a44fb6a.png",
+    "lastSeen": 1794284268175,
+    "roles": [
+      "User",
+      "Server Owner"
+    ]
+  },
+  {
+    "userId": "540220381517053963",
+    "username": "e4n01.",
+    "displayName": "e4n01.",
+    "avatarUrl": "https://cdn.discordapp.com/avatars/540220381517053963/60f102f0845f93eb3de813c8d169ac8a.png",
+    "lastSeen": 1794774821510,
+    "roles": [
+      "User",
+      "Server Owner"
+    ]
+  },
+  {
+    "userId": "1316381167817199639",
+    "username": ".1austin",
+    "displayName": "thezack",
+    "avatarUrl": "https://cdn.discordapp.com/avatars/1316381167817199639/f0dd1ac943587e6da91dcfda5eb56ca8.png",
+    "lastSeen": 1794774821510,
+    "roles": [
+      "User",
+      "Server Owner"
+    ]
+  },
+  {
+    "userId": "1476689123325776084",
+    "username": "capnogood_.",
+    "displayName": "𝓢𝓹𝓵𝓪𝓼𝓱𝔂𝓫𝓸𝓲",
+    "avatarUrl": "https://cdn.discordapp.com/avatars/1476689123325776084/14e0430ed64b03ccdb2bdb0f390f438e.png",
+    "lastSeen": 1794774821510,
+    "roles": [
+      "User",
+      "Server Owner"
+    ]
+  },
+  {
+    "userId": "111222333444555666",
+    "username": "User_5666",
+    "displayName": "User_5666",
+    "avatarUrl": null,
+    "lastSeen": 1794774897649,
+    "roles": [
+      "User",
+      "Bot Owner"
+    ]
+  },
+  {
+    "userId": "555444333222111000",
+    "username": "User_1000",
+    "displayName": "User_1000",
+    "avatarUrl": null,
+    "lastSeen": 1794774897649,
+    "roles": [
+      "User"
+    ]
+  },
+  {
+    "userId": "991122334455667790",
+    "username": "User_7790",
+    "displayName": "User_7790",
+    "avatarUrl": null,
+    "lastSeen": 1794774897649,
+    "roles": [
+      "User",
+      "Server Owner"
+    ]
+  },
+  {
+    "userId": "992772662166254259",
+    "username": "User_4259",
+    "displayName": "User_4259",
+    "avatarUrl": null,
+    "lastSeen": 1794774897649,
+    "roles": [
+      "User",
+      "Server Owner"
+    ]
+  },
+  {
+    "userId": "992744059029174187",
+    "username": "User_4187",
+    "displayName": "User_4187",
+    "avatarUrl": null,
+    "lastSeen": 1794774897649,
+    "roles": [
+      "User",
+      "Server Owner"
+    ]
+  },
+  {
+    "userId": "155999999999999004",
+    "username": "User_9004",
+    "displayName": "User_9004",
+    "avatarUrl": null,
+    "lastSeen": 1794774897649,
+    "roles": [
+      "User"
+    ]
+  },
+  {
+    "userId": "665409743180271514",
+    "username": "User_1514",
+    "displayName": "User_1514",
+    "avatarUrl": null,
+    "lastSeen": 1794774897649,
+    "roles": [
+      "User",
+      "Server Owner"
+    ]
+  },
+  {
+    "userId": "887464451559058588",
+    "username": "User_8588",
+    "displayName": "User_8588",
+    "avatarUrl": null,
+    "lastSeen": 1794774897649,
+    "roles": [
+      "User",
+      "Server Owner"
+    ]
+  },
+  {
+    "userId": "889581304699132200",
+    "username": "User_2200",
+    "displayName": "User_2200",
+    "avatarUrl": null,
+    "lastSeen": 1794774897649,
+    "roles": [
+      "User",
+      "Server Owner"
+    ]
+  },
+  {
+    "userId": "889636344992380888",
+    "username": "User_0888",
+    "displayName": "User_0888",
+    "avatarUrl": null,
+    "lastSeen": 1794774897649,
+    "roles": [
+      "User",
+      "Server Owner"
+    ]
+  },
+  {
+    "userId": "889796084330988496",
+    "username": "User_8496",
+    "displayName": "User_8496",
+    "avatarUrl": null,
+    "lastSeen": 1794774897649,
+    "roles": [
+      "User",
+      "Server Owner"
+    ]
+  },
+  {
+    "userId": "887481594980100457",
+    "username": "User_0457",
+    "displayName": "User_0457",
+    "avatarUrl": null,
+    "lastSeen": 1794774897649,
+    "roles": [
+      "User",
+      "Server Owner"
+    ]
+  },
+  {
+    "userId": "884950241647361718",
+    "username": "User_1718",
+    "displayName": "User_1718",
+    "avatarUrl": null,
+    "lastSeen": 1794774897649,
+    "roles": [
+      "User",
+      "Server Owner"
+    ]
+  },
+  {
+    "userId": "888514136007309112",
+    "username": "User_9112",
+    "displayName": "User_9112",
+    "avatarUrl": null,
+    "lastSeen": 1794774897649,
+    "roles": [
+      "User",
+      "Server Owner"
+    ]
+  },
+  {
+    "userId": "886648427948975652",
+    "username": "User_5652",
+    "displayName": "User_5652",
+    "avatarUrl": null,
+    "lastSeen": 1794774897649,
+    "roles": [
+      "User",
+      "Server Owner"
+    ]
+  },
+  {
+    "userId": "886163148107908924",
+    "username": "User_8924",
+    "displayName": "User_8924",
+    "avatarUrl": null,
+    "lastSeen": 1794774897649,
+    "roles": [
+      "User",
+      "Server Owner"
+    ]
+  },
+  {
+    "userId": "882195375564527042",
+    "username": "User_7042",
+    "displayName": "User_7042",
+    "avatarUrl": null,
+    "lastSeen": 1794774897649,
+    "roles": [
+      "User",
+      "Server Owner"
+    ]
+  },
+  {
+    "userId": "881800668059109854",
+    "username": "User_9854",
+    "displayName": "User_9854",
+    "avatarUrl": null,
+    "lastSeen": 1794774897649,
+    "roles": [
+      "User",
+      "Server Owner"
+    ]
+  },
+  {
+    "userId": "889275422357012146",
+    "username": "User_2146",
+    "displayName": "User_2146",
+    "avatarUrl": null,
+    "lastSeen": 1794774897649,
+    "roles": [
+      "User",
+      "Server Owner"
+    ]
+  },
+  {
+    "userId": "889985983149918744",
+    "username": "User_8744",
+    "displayName": "User_8744",
+    "avatarUrl": null,
+    "lastSeen": 1794774897649,
+    "roles": [
+      "User",
+      "Server Owner"
+    ]
+  },
+  {
+    "userId": "886082681083415005",
+    "username": "User_5005",
+    "displayName": "User_5005",
+    "avatarUrl": null,
+    "lastSeen": 1794774897649,
+    "roles": [
+      "User",
+      "Server Owner"
+    ]
+  },
+  {
+    "userId": "889145225058302960",
+    "username": "User_2960",
+    "displayName": "User_2960",
+    "avatarUrl": null,
+    "lastSeen": 1794774897649,
+    "roles": [
+      "User",
+      "Server Owner"
+    ]
+  },
+  {
+    "userId": "883837664417290454",
+    "username": "User_0454",
+    "displayName": "User_0454",
+    "avatarUrl": null,
+    "lastSeen": 1794774897649,
+    "roles": [
+      "User",
+      "Server Owner"
+    ]
+  },
+  {
+    "userId": "663550720180536926",
+    "username": "User_6926",
+    "displayName": "User_6926",
+    "avatarUrl": null,
+    "lastSeen": 1794774897649,
+    "roles": [
+      "User",
+      "Server Owner"
+    ]
+  },
+  {
+    "userId": "999757933927014484",
+    "username": "User_4484",
+    "displayName": "User_4484",
+    "avatarUrl": null,
+    "lastSeen": 1794774897649,
+    "roles": [
+      "User",
+      "Server Owner"
+    ]
+  },
+  {
+    "userId": "998893774008304493",
+    "username": "User_4493",
+    "displayName": "User_4493",
+    "avatarUrl": null,
+    "lastSeen": 1794774897649,
+    "roles": [
+      "User",
+      "Server Owner"
+    ]
+  },
+  {
+    "userId": "994523211258768936",
+    "username": "User_8936",
+    "displayName": "User_8936",
+    "avatarUrl": null,
+    "lastSeen": 1794774897649,
+    "roles": [
+      "User",
+      "Server Owner"
+    ]
+  },
+  {
+    "userId": "665446542885779252",
+    "username": "User_9252",
+    "displayName": "User_9252",
+    "avatarUrl": null,
+    "lastSeen": 1794774897649,
+    "roles": [
+      "User",
+      "Server Owner"
+    ]
+  },
+  {
+    "userId": "998727312837820757",
+    "username": "User_0757",
+    "displayName": "User_0757",
+    "avatarUrl": null,
+    "lastSeen": 1794774897649,
+    "roles": [
+      "User",
+      "Server Owner"
+    ]
+  },
+  {
+    "userId": "991440099352687672",
+    "username": "User_7672",
+    "displayName": "User_7672",
+    "avatarUrl": null,
+    "lastSeen": 1794774897649,
+    "roles": [
+      "User",
+      "Server Owner"
+    ]
+  },
+  {
+    "userId": "994914512583564896",
+    "username": "User_4896",
+    "displayName": "User_4896",
+    "avatarUrl": null,
+    "lastSeen": 1794774897649,
+    "roles": [
+      "User",
+      "Server Owner"
+    ]
+  },
+  {
+    "userId": "991122334455667789",
+    "username": "User_7789",
+    "displayName": "User_7789",
+    "avatarUrl": null,
+    "lastSeen": 1794774897649,
+    "roles": [
+      "User",
+      "Server Owner"
+    ]
+  },
+  {
+    "userId": "881122334455667702",
+    "username": "User_7702",
+    "displayName": "User_7702",
+    "avatarUrl": null,
+    "lastSeen": 1794774897649,
+    "roles": [
+      "User",
+      "Server Owner"
+    ]
+  },
+  {
+    "userId": "665258781970039379",
+    "username": "User_9379",
+    "displayName": "User_9379",
+    "avatarUrl": null,
+    "lastSeen": 1794774897649,
+    "roles": [
+      "User",
+      "Server Owner"
+    ]
+  },
+  {
+    "userId": "661047030960366122",
+    "username": "User_6122",
+    "displayName": "User_6122",
+    "avatarUrl": null,
+    "lastSeen": 1794774897649,
+    "roles": [
+      "User",
+      "Server Owner"
+    ]
+  },
+  {
+    "userId": "663315861404324309",
+    "username": "User_4309",
+    "displayName": "User_4309",
+    "avatarUrl": null,
+    "lastSeen": 1794774897649,
+    "roles": [
+      "User",
+      "Server Owner"
+    ]
+  },
+  {
+    "userId": "668999328648155288",
+    "username": "User_5288",
+    "displayName": "User_5288",
+    "avatarUrl": null,
+    "lastSeen": 1794774897649,
+    "roles": [
+      "User",
+      "Server Owner"
+    ]
+  },
+  {
+    "userId": "662501122565548638",
+    "username": "User_8638",
+    "displayName": "User_8638",
+    "avatarUrl": null,
+    "lastSeen": 1794774897649,
+    "roles": [
+      "User",
+      "Server Owner"
+    ]
+  },
+  {
+    "userId": "661855942979691980",
+    "username": "User_1980",
+    "displayName": "User_1980",
+    "avatarUrl": null,
+    "lastSeen": 1794774897649,
+    "roles": [
+      "User",
+      "Server Owner"
+    ]
+  },
+  {
+    "userId": "664193987565270537",
+    "username": "User_0537",
+    "displayName": "User_0537",
+    "avatarUrl": null,
+    "lastSeen": 1794774897649,
+    "roles": [
+      "User",
+      "Server Owner"
+    ]
+  },
+  {
+    "userId": "661036717238662972",
+    "username": "User_2972",
+    "displayName": "User_2972",
+    "avatarUrl": null,
+    "lastSeen": 1794774897649,
+    "roles": [
+      "User",
+      "Server Owner"
+    ]
+  },
+  {
+    "userId": "662734893896535993",
+    "username": "User_5993",
+    "displayName": "User_5993",
+    "avatarUrl": null,
+    "lastSeen": 1794774897649,
+    "roles": [
+      "User",
+      "Server Owner"
+    ]
+  },
+  {
+    "userId": "664492011369569571",
+    "username": "User_9571",
+    "displayName": "User_9571",
+    "avatarUrl": null,
+    "lastSeen": 1794774897649,
+    "roles": [
+      "User",
+      "Server Owner"
+    ]
+  },
+  {
+    "userId": "668184655969246096",
+    "username": "User_6096",
+    "displayName": "User_6096",
+    "avatarUrl": null,
+    "lastSeen": 1794774897649,
+    "roles": [
+      "User",
+      "Server Owner"
+    ]
+  },
+  {
+    "userId": "885242050998351806",
+    "username": "User_1806",
+    "displayName": "User_1806",
+    "avatarUrl": null,
+    "lastSeen": 1794774897649,
+    "roles": [
+      "User",
+      "Server Owner"
+    ]
+  },
+  {
+    "userId": "1558391194508071003",
+    "username": "officiallycat",
+    "displayName": "Cat",
+    "avatarUrl": "https://cdn.discordapp.com/avatars/1558391194508071003/c808ef3fa33f1d1efc0ccd7433866532.png",
+    "lastSeen": 1794774899304,
+    "roles": [
+      "User",
+      "Server Owner"
+    ]
+  },
+  {
+    "userId": "796146369312194622",
+    "username": "blayne8006",
+    "displayName": "Blayne",
+    "avatarUrl": "https://cdn.discordapp.com/avatars/796146369312194622/833d2bc9a7b3a77268471aa24f949344.png",
+    "lastSeen": 1794774899633,
+    "roles": [
+      "User",
+      "Server Owner"
+    ]
+  },
+  {
+    "userId": "1079549748291313675",
+    "username": "scoffle",
+    "displayName": "Scoffle ⭐",
+    "avatarUrl": "https://cdn.discordapp.com/avatars/1079549748291313675/e3c229dcb21f126d6dc6e362843c0796.png",
+    "lastSeen": 1794774899979,
+    "roles": [
+      "User",
+      "Server Owner"
+    ]
+  },
+  {
+    "userId": "1487621002774188146",
+    "username": "thetigergaming120",
+    "displayName": "TheTigerGaming120",
+    "avatarUrl": "https://cdn.discordapp.com/avatars/1487621002774188146/c071a2c5f99c88c3fd23582cec1336d7.png",
+    "lastSeen": 1794774901482,
+    "roles": [
+      "User",
+      "Server Owner"
+    ]
+  },
+  {
+    "userId": "1188866580344471592",
+    "username": "fw.adzy",
+    "displayName": "𝓐𝓭𝔃𝔂",
+    "avatarUrl": "https://cdn.discordapp.com/avatars/1188866580344471592/0eb3744a046a9ce3c696639025ba4e56.png",
+    "lastSeen": 1794774902511,
+    "roles": [
+      "User",
+      "Server Owner"
+    ]
+  },
+  {
+    "userId": "1414440794181468325",
+    "username": "kngorilla",
+    "displayName": "KN-GORILLA4AA",
+    "avatarUrl": "https://cdn.discordapp.com/avatars/1414440794181468325/0e5df8c523704b74c5038f5a2f3ebec5.png",
+    "lastSeen": 1794774903301,
+    "roles": [
+      "User",
+      "Server Owner"
+    ]
+  },
+  {
+    "userId": "1330735227848626227",
+    "username": "cfitz72865_",
+    "displayName": "Therealplayserlc",
+    "avatarUrl": "https://cdn.discordapp.com/avatars/1330735227848626227/b5049a9fda983bf422f8b7d0af7a0b91.png",
+    "lastSeen": 1794774905584,
+    "roles": [
+      "User",
+      "Server Owner"
+    ]
+  },
+  {
+    "userId": "1534987132211429537",
+    "username": "busy_fox_27743",
+    "displayName": "𝕶𝖆𝖞𝖉𝖊𝖓 🏎️✝️🔥",
+    "avatarUrl": "https://cdn.discordapp.com/avatars/1534987132211429537/0434a14bcf2d6c92f6462228012c93de.png",
+    "lastSeen": 1794774906604,
+    "roles": [
+      "User",
+      "Server Owner"
+    ]
+  },
+  {
+    "userId": "1226879343964192768",
+    "username": "captainchris41",
+    "displayName": "ChrisValues",
+    "avatarUrl": "https://cdn.discordapp.com/avatars/1226879343964192768/afeeb4505bb6af60ed445985847d49c2.png",
+    "lastSeen": 1794774908158,
+    "roles": [
+      "User",
+      "Server Owner"
+    ]
+  },
+  {
+    "userId": "1151318218980478986",
+    "username": "v3rnage",
+    "displayName": "Jay",
+    "avatarUrl": "https://cdn.discordapp.com/avatars/1151318218980478986/901c403a51ff678bf15fa58a9517c6a7.png",
+    "lastSeen": 1794774910633,
+    "roles": [
+      "User",
+      "Server Owner"
+    ]
+  },
+  {
+    "userId": "1535998488456859678",
+    "username": "eazyn3166",
+    "displayName": "Eazyn",
+    "avatarUrl": "https://cdn.discordapp.com/avatars/1535998488456859678/425178588e8b453094ac35eeb09bb9d2.png",
+    "lastSeen": 1794774912126,
+    "roles": [
+      "User",
+      "Server Owner"
     ]
   }
 ]

@@ -3970,11 +3970,12 @@ export function createDashboardRouter() {
           if ((!existing.globalName || existing.globalName === 'Name unavailable') && (s.ownerDisplayName || s.ownerUsername)) {
             existing.globalName = s.ownerDisplayName || s.ownerUsername;
           }
-        } else if (s.ownerUsername && s.ownerUsername !== 'Name unavailable') {
+        } else {
+          const fallbackName = s.ownerUsername || s.owner_display_name || `User ${oId.slice(-4)}`;
           userMap.set(oId, {
             id: oId,
-            username: s.ownerUsername,
-            globalName: s.ownerDisplayName || s.ownerUsername,
+            username: fallbackName,
+            globalName: s.owner_display_name || fallbackName,
             avatar: s.ownerAvatar || null,
             joinedAt: s.createdAt || new Date().toISOString(),
             isSignedIn: false
@@ -3990,13 +3991,17 @@ export function createDashboardRouter() {
     } catch {}
 
     for (const b of botList) {
-      const bOwner = b?.ownerUserId;
+      let bOwner = b?.ownerUserId;
+      if (bOwner && typeof bOwner === 'object') {
+        bOwner = bOwner.ownerUserId;
+      }
       if (bOwner && typeof bOwner === 'string' && /^\d{17,20}$/.test(bOwner) && !userMap.has(bOwner)) {
         if (!knownServerIds.has(bOwner)) {
+          const botOwnerName = b.owner_username || b.ownerDiscordTag || `User ${bOwner.slice(-4)}`;
           userMap.set(bOwner, {
             id: bOwner,
-            username: b.owner_username || 'Server Owner',
-            globalName: b.owner_username || 'Server Owner',
+            username: botOwnerName,
+            globalName: botOwnerName,
             avatar: null,
             joinedAt: b.createdAt || new Date().toISOString(),
             isSignedIn: false
@@ -4009,7 +4014,13 @@ export function createDashboardRouter() {
     return Array.from(userMap.values())
       .filter(u => {
         if (!u.id || knownServerIds.has(String(u.id))) return false;
-        if (!u.username || u.username === 'Name unavailable' || u.username === 'null') return false;
+        if (!u.username || u.username === 'Name unavailable' || u.username === 'null') {
+          if (/^\d{17,20}$/.test(String(u.id))) {
+            u.username = u.globalName || `User ${String(u.id).slice(-4)}`;
+          } else {
+            return false;
+          }
+        }
         return true;
       })
       .map(u => {
