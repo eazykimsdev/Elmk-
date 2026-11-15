@@ -214,42 +214,45 @@ export async function handleInteraction(interaction, token) {
   const callerId = callerUser?.id || '';
 
   // ─── Maintenance Mode Interceptor ──────────────────────────────────────────
-  // While platform is under construction, reply ephemerally (only caller sees it) with live relative timestamp
-  const targetFile = path.join(process.cwd(), 'data', 'construction_target.json');
-  let targetMs = 0;
-  try {
-    if (fs.existsSync(targetFile)) {
-      const parsed = JSON.parse(fs.readFileSync(targetFile, 'utf8'));
-      if (parsed?.targetMs && Number(parsed.targetMs) > Date.now()) {
-        targetMs = Number(parsed.targetMs);
-      }
-    }
-  } catch {}
-
-  if (!targetMs) {
-    targetMs = Date.now() + 24 * 60 * 60 * 1000;
+  // When maintenance is turned on via Admin Portal, reply ephemerally with live relative timestamp
+  const maint = isMaintenanceActive();
+  if (maint && maint.active) {
+    const targetFile = path.join(process.cwd(), 'data', 'construction_target.json');
+    let targetMs = 0;
     try {
-      if (!fs.existsSync(path.join(process.cwd(), 'data'))) {
-        fs.mkdirSync(path.join(process.cwd(), 'data'), { recursive: true });
+      if (fs.existsSync(targetFile)) {
+        const parsed = JSON.parse(fs.readFileSync(targetFile, 'utf8'));
+        if (parsed?.targetMs && Number(parsed.targetMs) > Date.now()) {
+          targetMs = Number(parsed.targetMs);
+        }
       }
-      fs.writeFileSync(targetFile, JSON.stringify({ targetMs }), 'utf8');
     } catch {}
+
+    if (!targetMs) {
+      targetMs = Date.now() + 24 * 60 * 60 * 1000;
+      try {
+        if (!fs.existsSync(path.join(process.cwd(), 'data'))) {
+          fs.mkdirSync(path.join(process.cwd(), 'data'), { recursive: true });
+        }
+        fs.writeFileSync(targetFile, JSON.stringify({ targetMs }), 'utf8');
+      } catch {}
+    }
+
+    const targetUnix = Math.floor(targetMs / 1000);
+
+    // Return ephemeral response (flags: 64 = visible only to caller)
+    return fetch(`https://discord.com/api/v10/interactions/${id}/${interactionToken}/callback`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: 4, // CHANNEL_MESSAGE_WITH_SOURCE
+        data: {
+          content: `⚠️ **ConnectingERLC is currently under maintenance.**\nCommands are temporarily paused while platform upgrades are finalized.\n\n**Estimated completion:** <t:${targetUnix}:R> (<t:${targetUnix}:F>)\n**Updates:** https://connectingerlc.xyz`,
+          flags: 64 // Ephemeral: only the user who ran the command can see this
+        }
+      })
+    }).catch((err) => console.error('[DISCORD BOT] Error sending maintenance response:', err.message));
   }
-
-  const targetUnix = Math.floor(targetMs / 1000);
-
-  // Return ephemeral response (flags: 64 = visible only to caller)
-  return fetch(`https://discord.com/api/v10/interactions/${id}/${interactionToken}/callback`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      type: 4, // CHANNEL_MESSAGE_WITH_SOURCE
-      data: {
-        content: `⚠️ **ConnectingERLC is currently under maintenance.**\nCommands are temporarily paused while platform upgrades are finalized.\n\n**Estimated completion:** <t:${targetUnix}:R> (<t:${targetUnix}:F>)\n**Updates:** https://www.connectingerlc.xyz`,
-        flags: 64 // Ephemeral: only the user who ran the command can see this
-      }
-    })
-  }).catch((err) => console.error('[DISCORD BOT] Error sending maintenance response:', err.message));
 
   // ─── Handle Button Clicks (Components V2 interaction type 3) ───────────────
   if (interaction.type === 3) {
@@ -658,12 +661,12 @@ export async function handleInteraction(interaction, token) {
   }
 
   // Maintenance check: if maintenance active, respond immediately and pause bumps/joins
-  const maint = isMaintenanceActive();
-  if (maint.active) {
+  const cmdMaint = isMaintenanceActive();
+  if (cmdMaint.active) {
     return respond({
       type: 4,
       data: {
-        content: `ConnectingERLC is currently undergoing scheduled platform upgrades. ${maint.message || 'All services will resume shortly.'}`,
+        content: `ConnectingERLC is currently undergoing scheduled platform upgrades. ${cmdMaint.message || 'All services will resume shortly.'}`,
         flags: 64
       }
     });

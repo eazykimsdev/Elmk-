@@ -402,7 +402,7 @@ const router = createBrowserRouter(
         }
       />
       <Route path="/banned" element={<BannedPage />} />
-      <Route path="/maintenance" element={<MaintenancePage />} />
+      <Route path="/maintenance" element={<UnderConstructionPage />} />
       <Route path="/404" element={<NotFoundPage />} />
       <Route
         path="/dashboard"
@@ -468,6 +468,7 @@ function AppContent() {
   }, [user, loading]);
 
   const [connectionTrouble, setConnectionTrouble] = React.useState(false);
+  const [maintenanceInfo, setMaintenanceInfo] = React.useState<any>(null);
 
   React.useEffect(() => {
     let timer: ReturnType<typeof setTimeout>;
@@ -479,6 +480,17 @@ function AppContent() {
             setConnectionTrouble(true);
           } else {
             setConnectionTrouble(false);
+          }
+          return r.ok ? r.json() : null;
+        })
+        .then((data) => {
+          if (data && data.maintenance) {
+            const isMaint = Boolean(
+              data.maintenance.active === true ||
+              data.maintenance.mode === 'maintenance' ||
+              data.maintenance.maintenance_on === true
+            );
+            setMaintenanceInfo(isMaint ? data.maintenance : null);
           }
         })
         .catch(() => {
@@ -510,9 +522,9 @@ function AppContent() {
     return <BannedPage banDetails={banDetails} />;
   }
 
-  // Under Construction Gate: blocks public website until launch, with a live 1-day countdown
-  if (!isAdminPath && !isStatusPath && !isPreview) {
-    return <UnderConstructionPage />;
+  // Under Construction Gate: blocks public website ONLY when maintenance is active in Admin Portal
+  if (maintenanceInfo && !isAdminPath && !isStatusPath && !isPreview) {
+    return <UnderConstructionPage maintenance={maintenanceInfo} />;
   }
 
   // Server is the single source of truth. Router is ALWAYS mounted so all pages and navigation links work.

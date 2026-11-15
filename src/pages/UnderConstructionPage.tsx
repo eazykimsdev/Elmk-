@@ -10,7 +10,16 @@ interface TimeLeft {
   totalMs: number;
 }
 
-export function UnderConstructionPage() {
+export interface UnderConstructionPageProps {
+  maintenance?: {
+    active?: boolean;
+    title?: string;
+    message?: string;
+    eta?: string | null;
+  };
+}
+
+export function UnderConstructionPage({ maintenance }: UnderConstructionPageProps = {}) {
   const [timeLeft, setTimeLeft] = useState<TimeLeft>(() => calculateTimeLeft());
 
   function calculateTimeLeft(): TimeLeft {
@@ -18,12 +27,21 @@ export function UnderConstructionPage() {
     const ONE_DAY_MS = 24 * 60 * 60 * 1000;
     
     let target = 0;
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        target = parseInt(stored, 10);
+    if (maintenance?.eta) {
+      const etaTime = new Date(maintenance.eta).getTime();
+      if (!isNaN(etaTime) && etaTime > Date.now()) {
+        target = etaTime;
       }
-    } catch {}
+    }
+
+    if (!target) {
+      try {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (stored) {
+          target = parseInt(stored, 10);
+        }
+      } catch {}
+    }
 
     const now = Date.now();
     // If not set, invalid, or already expired in the past, initialize a fresh 1-day countdown
@@ -56,7 +74,7 @@ export function UnderConstructionPage() {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, []);
+  }, [maintenance?.eta]);
 
   const formatNum = (num: number) => String(num).padStart(2, '0');
 
@@ -81,12 +99,12 @@ export function UnderConstructionPage() {
 
         {/* Primary Headline */}
         <h1 className="text-3xl sm:text-5xl md:text-6xl font-black tracking-tight text-white leading-tight sm:leading-none">
-          We&apos;re currently under construction.
+          {maintenance?.title || "We're currently under construction."}
         </h1>
 
         {/* Subtitle */}
         <p className="mt-4 text-sm sm:text-base text-zinc-400 max-w-lg leading-relaxed">
-          ConnectingERLC is undergoing infrastructure updates, OAuth integrations, and security hardening. Public access is temporarily paused until setup is complete.
+          {maintenance?.message || "ConnectingERLC is undergoing infrastructure updates, OAuth integrations, and security hardening. Public access is temporarily paused until setup is complete."}
         </p>
 
         {/* Flush Countdown Timer: NO heavy embed / card boxes behind numbers */}
