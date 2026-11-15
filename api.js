@@ -720,18 +720,21 @@ function oauthClientId() {
   if (process.env.DISCORD_OAUTH_CLIENT_ID) {
     return process.env.DISCORD_OAUTH_CLIENT_ID.trim();
   }
+  if (process.env.DISCORD_CLIENT_ID) {
+    return process.env.DISCORD_CLIENT_ID.trim();
+  }
   // The registered OAuth application with https://connectingerlc.xyz/auth/discord/callback is strictly 1552165138017165372.
   return '1552165138017165372';
 }
 
 function appOrigin(req) {
-  const defaultOrigin = (process.env.SITE_URL || process.env.APP_ORIGIN || 'https://connectingerlc.xyz').replace(/\/$/, '');
+  const defaultOrigin = (process.env.SITE_URL || process.env.APP_ORIGIN || 'https://www.connectingerlc.xyz').replace(/\/$/, '');
   if (req) {
     const fHost = (req.get('x-forwarded-host') || '').split(',')[0].trim();
     const hostHeader = (req.get('host') || '').trim();
     const cand = fHost || hostHeader;
     // Only accept allowlisted domain names to prevent host header injection / cache poisoning
-    if (cand && (cand === 'connectingerlc.xyz' || cand === 'www.connectingerlc.xyz' || cand.startsWith('localhost:') || cand === 'localhost' || cand.startsWith('127.0.0.1:') || cand === '127.0.0.1')) {
+    if (cand && (cand === 'connectingerlc.xyz' || cand === 'www.connectingerlc.xyz' || cand.endsWith('.up.railway.app') || cand.startsWith('localhost:') || cand === 'localhost' || cand.startsWith('127.0.0.1:') || cand === '127.0.0.1')) {
       const isLocal = cand.includes('localhost') || cand.includes('127.0.0.1');
       const proto = req.secure || req.get('x-forwarded-proto') === 'https' ? 'https' : (isLocal ? 'http' : 'https');
       return `${proto}://${cand}`;
@@ -741,14 +744,13 @@ function appOrigin(req) {
 }
 
 function callbackUrl(req) {
+  const origin = appOrigin(req);
+  if (origin && (origin.includes('connectingerlc.xyz') || origin.includes('localhost') || origin.includes('127.0.0.1') || origin.includes('.up.railway.app'))) {
+    return `${origin}/auth/discord/callback`;
+  }
   const envUri = (process.env.DISCORD_REDIRECT_URI || '').trim();
   if (envUri && !envUri.includes('trycloudflare') && !envUri.includes('ngrok') && !envUri.includes('loca.lt')) {
     return envUri;
-  }
-  const origin = appOrigin(req);
-  if (!origin.includes('localhost') && !origin.includes('127.0.0.1')) {
-    // In production, Discord OAuth requires the exact registered callback URI
-    return 'https://connectingerlc.xyz/auth/discord/callback';
   }
   return `${origin}/auth/discord/callback`;
 }
@@ -8294,8 +8296,10 @@ async function completeDiscordAuth(req, res) {
   // Determine candidate redirect URIs to handle both localhost and production gracefully
   let candidateRedirectUris = [];
   if (pending?.redirectUri) candidateRedirectUris.push(pending.redirectUri);
-  if (process.env.DISCORD_REDIRECT_URI) candidateRedirectUris.push(process.env.DISCORD_REDIRECT_URI);
+  candidateRedirectUris.push('https://www.connectingerlc.xyz/auth/discord/callback');
   candidateRedirectUris.push('https://connectingerlc.xyz/auth/discord/callback');
+  if (process.env.DISCORD_REDIRECT_URI) candidateRedirectUris.push(process.env.DISCORD_REDIRECT_URI);
+  candidateRedirectUris.push('https://www.connectingerlc.xyz/api/auth/discord/callback');
   candidateRedirectUris.push('https://connectingerlc.xyz/api/auth/discord/callback');
   candidateRedirectUris.push(siteUrl('/auth/discord/callback'));
   if (currentOrigin && currentOrigin.startsWith('https://')) {
