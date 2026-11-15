@@ -1,0 +1,15 @@
+{
+  "maintenance": false,
+  "maintenance_on": false,
+  "mode": "operational",
+  "title": "",
+  "message": "",
+  "eta": null,
+  "starts_at": null,
+  "ends_at": null,
+  "affectedServices": [],
+  "allowedUserIds": [],
+  "updated_at": "2026-11-09T00:00:00.000Z",
+  "updated_by": "System Seed"
+}
+

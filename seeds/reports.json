@@ -1,0 +1,42 @@
+[
+  {
+    "id": "rep_1794121587223",
+    "review_id": "rev_1794121587127_tyw82",
+    "server_id": "1347902300324368414",
+    "author_id": "1567797226468540516",
+    "review_text": "Updated feedback: patrolling is still good and responsive.",
+    "reporter_user_id": "999999999999999999",
+    "reason": "Spam review",
+    "created_at": "2026-11-08T07:06:27.223Z",
+    "status": "pending"
+  },
+  {
+    "id": "rep_1794121430843",
+    "review_id": "rev_1794121430812_60lz4",
+    "server_id": "1347902300324368414",
+    "author_id": "1567796571041431652",
+    "review_text": "Updated feedback: patrolling is still good and responsive.",
+    "reporter_user_id": "999999999999999999",
+    "reason": "Spam review",
+    "created_at": "2026-11-08T07:03:50.843Z",
+    "status": "pending"
+  },
+  {
+    "id": "rep_1794098707909_0ju2m",
+    "reporterId": "523693281541095424",
+    "reporterTag": "Eazykims",
+    "targetType": "owner",
+    "targetId": "1564982083598680132",
+    "serverId": "1559401689553834054",
+    "reason": "Scam or fraud",
+    "details": "TESTTING IT!!!",
+    "snapshot": {},
+    "status": "dismissed",
+    "internalNotes": "",
+    "assignee": null,
+    "createdAt": "2026-11-08T00:45:07.909Z",
+    "updatedAt": "2026-11-08T04:55:13.269Z",
+    "adminNotes": "Report resolved",
+    "updatedBy": "kims3166"
+  }
+]

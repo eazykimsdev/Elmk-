@@ -1,0 +1,506 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "@fontsource/poppins/400.css";
+@import "@fontsource/poppins/500.css";
+@import "@fontsource/poppins/600.css";
+@import "@fontsource-variable/geist-mono";
+
+@custom-variant dark (&:is(.dark *));
+
+/* ── MAVELY DESIGN SYSTEM TOKENS (ROUND 4) ──────────────────────────────────
+   Calm, dark, spacious, precise.
+   Font: Poppins (400, 500, 600) for all UI; Geist Mono for IDs/codes.
+   Letter-spacing: 0 everywhere.
+   Minimum font size: 12px.
+   Single brand accent: Mavely green var(--accent).
+   Near-black palette: #09090B page/sidebar, #0E0E11 cards, #141417 raised, #19191D hover.
+──────────────────────────────────────────────────────────────────────────── */
+
+:root,
+.dark,
+[data-theme="default"] {
+  --radius: 16px;
+  --top-banner-height: 0px;
+  --app-corner-radius: 0px;
+  --top-banner-bg: var(--background);
+  --platform-color: var(--accent);
+  --background: #09090B;
+  --sidebar: #09090B;
+  --surface: #0E0E11;
+  --raised: #141417;
+  --hover: #19191D;
+
+  --foreground: #F4F4F5;
+  --card: #0E0E11;
+  --card-foreground: #F4F4F5;
+  --popover: #0E0E11;
+  --popover-foreground: #F4F4F5;
+
+  --primary: #F4F4F5;
+  --primary-foreground: #09090B;
+  --secondary: #141417;
+  --secondary-foreground: #F4F4F5;
+  --muted: #141417;
+  --muted-foreground: #A1A1AA;
+  --faint-foreground: #71717A;
+  --text-muted: #71717A;
+
+  --accent: #F97316;
+  --accent-hover: #FB8A3C;
+  --accent-foreground: #1C0A00;
+  --accent-soft: rgba(249, 115, 22, 0.12);
+  --accent-border: rgba(249, 115, 22, 0.35);
+
+  --brand: #F97316;
+  --brand-hover: #FB8A3C;
+  --brand-foreground: #1C0A00;
+  --brand-muted: rgba(249, 115, 22, 0.12);
+  --brand-soft: rgba(249, 115, 22, 0.12);
+  --brand-border: rgba(249, 115, 22, 0.35);
+
+  --success: #F97316;
+  --success-foreground: #1C0A00;
+  --success-muted: rgba(249, 115, 22, 0.12);
+
+  --warning: #FACC15;
+  --warning-foreground: #09090B;
+  --warning-muted: rgba(250, 204, 21, 0.12);
+
+  --danger: #F87171;
+  --danger-foreground: #09090B;
+  --danger-muted: rgba(248, 113, 113, 0.12);
+  --destructive: #F87171;
+  --destructive-foreground: #09090B;
+
+  --border: rgba(255, 255, 255, 0.07);
+  --border-strong: rgba(255, 255, 255, 0.13);
+  --rule: rgba(255, 255, 255, 0.07);
+  --input: #141417;
+  --ring: #F97316;
+
+  /* Button CSS variables for themes */
+  --primary-btn-bg: #F4F4F5;
+  --primary-btn-fg: #09090B;
+  --primary-btn-hover: #FFFFFF;
+  --primary-btn-focus: var(--accent);
+  --secondary-btn-bg: #141417;
+  --secondary-btn-fg: #F4F4F5;
+  --secondary-btn-hover: #19191D;
+  --secondary-btn-border: rgba(255, 255, 255, 0.07);
+  --secondary-btn-focus: var(--accent);
+
+  /* Countdown colors: default theme uses orange accent */
+  --countdown-seconds: #F97316;
+
+  --sidebar-foreground: #A1A1AA;
+  --sidebar-primary: #F97316;
+  --sidebar-primary-foreground: #1C0A00;
+  --sidebar-accent: #141417;
+  --sidebar-accent-foreground: #F4F4F5;
+  --sidebar-border: rgba(255, 255, 255, 0.07);
+  --sidebar-ring: #F97316;
+
+  --chart-grid: rgba(255, 255, 255, 0.05);
+  --overlay: rgba(0, 0, 0, 0.7);
+  --shadow-sheet: none;
+  --shadow-float: 0 12px 32px -4px rgba(0, 0, 0, 0.6);
+  --shadow-modal: 0 24px 48px -12px rgba(0, 0, 0, 0.8);
+
+  --chart-1: #F97316;
+  --chart-2: #A1A1AA;
+  --chart-3: #FACC15;
+  --chart-4: #71717A;
+  --chart-5: #141417;
+  --chart-positive: var(--accent);
+  --chart-negative: var(--danger);
+  --chart-neutral: var(--muted-foreground);
+  --chart-axis: var(--text-muted);
+
+  --duration-fast: 150ms;
+  --duration-base: 180ms;
+  --duration-slow: 200ms;
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+}
+
+@theme inline {
+  --font-sans: "Poppins", "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-display: "Poppins", "Inter", system-ui, -apple-system, sans-serif;
+  --font-mono: "Geist Mono Variable", "Geist Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 16px;
+
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-raised: var(--raised);
+  --color-hover: var(--hover);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-faint-foreground: var(--faint-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-rule: var(--rule);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-brand: var(--brand);
+  --color-brand-foreground: var(--brand-foreground);
+  --color-brand-muted: var(--brand-muted);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-success-muted: var(--success-muted);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-warning-muted: var(--warning-muted);
+  --color-danger: var(--danger);
+  --color-danger-foreground: var(--danger-foreground);
+  --color-danger-muted: var(--danger-muted);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+
+  /* Precise typographic scale - Section 2 */
+  --text-2xs: 12px;
+  --text-2xs--line-height: 16px;
+  --text-xs: 12px;
+  --text-xs--line-height: 16px;
+  --text-label: 13px;
+  --text-label--line-height: 18px;
+  --text-sm: 14px;
+  --text-sm--line-height: 20px;
+  --text-base: 14px;
+  --text-base--line-height: 20px;
+  --text-md: 15px;
+  --text-md--line-height: 22px;
+  --text-lg: 16px;
+  --text-lg--line-height: 24px;
+  --text-xl: 18px;
+  --text-xl--line-height: 26px;
+  --text-2xl: 24px;
+  --text-2xl--line-height: 32px;
+  --text-3xl: 28px;
+  --text-3xl--line-height: 36px;
+  --text-4xl: 36px;
+  --text-4xl--line-height: 44px;
+
+  --tracking-display: 0em;
+  --tracking-heading: 0em;
+  --tracking-numeral: 0em;
+  --tracking-eyebrow: 0em;
+  --tracking-tight: 0em;
+  --tracking-tighter: 0em;
+
+  --chart-axis: var(--chart-axis);
+  --chart-neutral: var(--chart-neutral);
+  --chart-negative: var(--chart-negative);
+  --chart-positive: var(--chart-positive);
+  --shadow-modal: var(--shadow-modal);
+  --shadow-float: var(--shadow-float);
+  --shadow-sheet: var(--shadow-sheet);
+  --color-overlay: var(--overlay);
+  --color-chart-grid: var(--chart-grid);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    color-scheme: dark;
+    -webkit-text-size-adjust: 100%;
+    font-family: var(--font-sans);
+    letter-spacing: 0em;
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    font-size: 14px;
+    line-height: 20px;
+    font-weight: 400;
+    letter-spacing: 0em;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    min-height: 100dvh;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-sans);
+    letter-spacing: 0em !important;
+    font-weight: 600;
+  }
+
+  /* Accessible visible focus ring using orange accent (#F97316), never white */
+  :focus-visible {
+    outline: 2px solid var(--ring) !important;
+    outline-offset: 2px;
+  }
+
+  /* Remove white outline on mouse/touch click across all clickable elements and Recharts SVGs */
+  *:focus:not(:focus-visible) {
+    outline: none !important;
+    box-shadow: none !important;
+  }
+
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .recharts-wrapper,
+  .recharts-wrapper *,
+  .recharts-surface,
+  .recharts-layer,
+  svg:focus,
+  g:focus,
+  path:focus,
+  rect:focus {
+    outline: none !important;
+    box-shadow: none !important;
+  }
+
+  ::selection {
+    background: var(--accent);
+    color: #F4F4F5;
+  }
+
+  /* Global thin dark scrollbars (Round 5 Section 1) */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #2A2A30 transparent;
+  }
+
+  *::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background-color: #2A2A30;
+    border-radius: 8px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    background-color: #3A3A42;
+  }
+
+  *::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+
+  td, th, kbd, [data-slot$="value"], [data-slot$="number"], .recharts-text {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Hide native number spinner arrows everywhere */
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  input[type="number"] {
+    -moz-appearance: textfield;
+  }
+}
+
+/* Base card styling: clean 1px border, 16px radius, no glow, no shadow */
+[data-slot="card"],
+.card,
+.panel,
+.frame,
+.surface-card {
+  border-radius: 16px;
+  border-width: 1px;
+  border-color: var(--border);
+  background-color: var(--surface);
+  transition: border-color var(--duration-fast) var(--ease-standard);
+}
+
+.clickable-card {
+  cursor: pointer;
+  transition: border-color var(--duration-fast) var(--ease-standard);
+}
+
+.clickable-card:hover {
+  border-color: var(--border-strong);
+}
+
+/* Skeleton pulse animation */
+@keyframes shimmer-pulse {
+  0%, 100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 0.25;
+  }
+}
+
+.shimmer {
+  background-color: var(--raised);
+  animation: shimmer-pulse 1.8s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shimmer {
+    animation: none;
+    opacity: 0.4;
+  }
+}
+
+/* ── Anchor Sliding Server Cards Track ── */
+@keyframes slide-track-left {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+@keyframes slide-track-right {
+  0% { transform: translateX(-50%); }
+  100% { transform: translateX(0); }
+}
+
+.animate-slide-track-left {
+  display: flex;
+  width: max-content;
+  animation: slide-track-left 70s linear infinite;
+  will-change: transform;
+}
+
+.animate-slide-track-right {
+  display: flex;
+  width: max-content;
+  animation: slide-track-right 70s linear infinite;
+  will-change: transform;
+}
+
+.slide-track:hover {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-slide-track-left,
+  .animate-slide-track-right {
+    animation: none;
+  }
+}
+
+
+
+/* ─────────────────────────────────────────────────────────────
+   THEMES. All colors come from the variables above.
+   "default" = the original orange theme (the :root values).
+   "christmas" swaps the accent to red. No green anywhere.
+   !important is required because theme-provider writes the
+   orange accent inline on <html>.
+   Switch: THEME=default|christmas (server) or admin portal > System.
+   ───────────────────────────────────────────────────────────── */
+:root { --snow-color: 255, 255, 255; }
+
+[data-theme="christmas"] {
+  --accent: #C42B35 !important;
+  --accent-hover: #D93843 !important;
+  --accent-foreground: #FFFFFF !important;
+  --accent-soft: rgba(196, 43, 53, 0.16) !important;
+  --accent-border: rgba(196, 43, 53, 0.35) !important;
+  --accent-pine: #144D34 !important;
+  --brand: #C42B35 !important;
+  --brand-hover: #D93843 !important;
+  --brand-foreground: #FFFFFF !important;
+  --brand-muted: rgba(196, 43, 53, 0.16) !important;
+  --brand-soft: rgba(196, 43, 53, 0.16) !important;
+  --brand-border: rgba(196, 43, 53, 0.35) !important;
+  --success: #144D34 !important;
+  --success-foreground: #FFFFFF !important;
+  --success-muted: rgba(20, 77, 52, 0.25) !important;
+  --ring: #C42B35 !important;
+  --sidebar-primary: #C42B35 !important;
+  --sidebar-primary-foreground: #FFFFFF !important;
+  --sidebar-ring: #C42B35 !important;
+  --chart-1: #C42B35 !important;
+  --chart-2: #144D34 !important;
+  --chart-3: #144D34 !important;
+
+  /* Button CSS variables for Christmas theme: red main buttons, green secondary buttons */
+  --primary-btn-bg: #C42B35 !important;
+  --primary-btn-fg: #FFFFFF !important;
+  --primary-btn-hover: #D93843 !important;
+  --primary-btn-focus: #F87171 !important;
+  --secondary-btn-bg: #144D34 !important;
+  --secondary-btn-fg: #FFFFFF !important;
+  --secondary-btn-hover: #1B6343 !important;
+  --secondary-btn-border: rgba(20, 77, 52, 0.6) !important;
+  --secondary-btn-focus: #34D399 !important;
+
+  /* Countdown colors: Christmas theme uses green seconds */
+  --countdown-seconds: #144D34 !important;
+
+  /* Christmas theme gold accents (CE verification / snow on / badge inspiration) */
+  --christmas-gold: #C5A059 !important;
+  --christmas-gold-border: rgba(197, 160, 89, 0.65) !important;
+  --christmas-tag-bg: #2A0E14 !important;
+  --platform-color: #34D399 !important;
+}
+
+[data-theme="christmas"] .snow-toggle {
+  border-color: rgba(197, 160, 89, 0.75) !important;
+  color: #F4F4F5 !important;
+}
+
+[data-theme="christmas"] .badge,
+[data-theme="christmas"] [data-slot="badge"],
+[data-theme="christmas"] .tag-pill {
+  border-color: rgba(197, 160, 89, 0.55) !important;
+}
+
+/* Snow: never blocks clicks, sits under modals */
+.snow-canvas {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 40;
+}
+.snow-toggle {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 45;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(14, 14, 17, 0.85);
+  backdrop-filter: blur(8px);
+  color: var(--muted-foreground, #A1A1AA);
+  font-size: 12px;
+  cursor: pointer;
+}
+.snow-toggle:hover { color: #F4F4F5; }
+@media (max-width: 767px) { .snow-toggle { bottom: 76px; } }
+@media (prefers-reduced-motion: reduce) { .snow-canvas { display: none; } }

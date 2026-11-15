@@ -1,0 +1,13 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "connectingerlc-migration",
+  "account_id": "6f093b5125ac78a0f94cbaf0910b50c5",
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "connectingerlc-db",
+      "database_id": "e85ea670-4a55-4f9b-86b4-8fab50604167"
+    }
+  ]
+}
+

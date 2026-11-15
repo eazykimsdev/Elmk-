@@ -1,0 +1,105 @@
+{
+  "transactions": [
+    {
+      "id": "d1_4",
+      "guildId": "1517130661306171472",
+      "amount": 5,
+      "type": "bump",
+      "description": "1 bump",
+      "userId": "NULL",
+      "timestamp": "2026-11-06T17:44:29.563Z"
+    },
+    {
+      "id": "d1_3",
+      "guildId": "1517130661306171472",
+      "amount": 5,
+      "type": "bump",
+      "description": "1 bump",
+      "userId": "NULL",
+      "timestamp": "2026-11-06T16:23:15.321Z"
+    },
+    {
+      "id": "d1_2",
+      "guildId": "1347902300324368414",
+      "amount": 5,
+      "type": "bump",
+      "description": "1 bump",
+      "userId": "NULL",
+      "timestamp": "2026-11-06T16:23:15.321Z"
+    },
+    {
+      "id": "d1_1",
+      "guildId": "1347902300324368414",
+      "amount": 10,
+      "type": "checkin",
+      "description": "Day 1 streak",
+      "userId": "1400351264415682621",
+      "timestamp": "2026-11-06T16:20:51.630Z"
+    },
+    {
+      "id": "tx_1793936599366_ojmq",
+      "userId": "guild_1999111222333444555",
+      "timestamp": 1793936599366,
+      "type": "earned",
+      "amount": 10,
+      "balanceAfter": 10,
+      "reason": "Alliance established with Target Server",
+      "description": "Alliance established with Target Server",
+      "guildId": "1999111222333444555",
+      "guildName": null,
+      "guildIconUrl": null,
+      "triggeredBy": "You (Discord OAuth)",
+      "status": "posted",
+      "relatedTxId": null
+    },
+    {
+      "id": "tx_1793936599425_8zll",
+      "userId": "guild_1999222333444555666",
+      "timestamp": 1793936599425,
+      "type": "earned",
+      "amount": 10,
+      "balanceAfter": 10,
+      "reason": "Alliance established with ConnectingERLC Community",
+      "description": "Alliance established with ConnectingERLC Community",
+      "guildId": "1999222333444555666",
+      "guildName": null,
+      "guildIconUrl": null,
+      "triggeredBy": "You (Discord OAuth)",
+      "status": "posted",
+      "relatedTxId": null
+    },
+    {
+      "id": "tx_1793940070916_djpc",
+      "userId": "guild_1347902300324368414",
+      "timestamp": 1793940070916,
+      "type": "earned",
+      "amount": 10,
+      "balanceAfter": 10,
+      "reason": "Alliance established with Liberty County Police Dept",
+      "description": "Alliance established with Liberty County Police Dept",
+      "guildId": "1347902300324368414",
+      "guildName": null,
+      "guildIconUrl": null,
+      "triggeredBy": "You (Discord OAuth)",
+      "status": "posted",
+      "relatedTxId": null
+    },
+    {
+      "id": "tx_1793940070919_ue4i",
+      "userId": "guild_1329922695995068526",
+      "timestamp": 1793940070919,
+      "type": "earned",
+      "amount": 10,
+      "balanceAfter": 10,
+      "reason": "Alliance established with @ConnectingERLC",
+      "description": "Alliance established with @ConnectingERLC",
+      "guildId": "1329922695995068526",
+      "guildName": null,
+      "guildIconUrl": null,
+      "triggeredBy": "You (Discord OAuth)",
+      "status": "posted",
+      "relatedTxId": null
+    }
+  ],
+  "pending": []
+}
