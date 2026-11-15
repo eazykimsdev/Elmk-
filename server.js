@@ -7,7 +7,7 @@ import cors from 'cors';
 import { fileURLToPath } from 'url';
 
 import { createDashboardRouter, createDiscordCallbackRouter, handleBotGatewayEvent, fetchRealBotGuilds } from './api.js';
-import { startBotGateway } from './botGateway.js';
+import { startBotGateway, normalizeBotToken } from './botGateway.js';
 import { processMaturePendingJoins } from './directoryManager.js';
 import { validateProductionEnvironment } from './shared/productionCheck.js';
 import { query as dbQuery, isPostgresConnected } from './db.js';
@@ -23,10 +23,11 @@ const __dirname = path.dirname(__filename);
 console.log(`[CONNECTINGERLC STARTUP] Entry: ${__filename} | Node: ${process.version} | Platform: ${process.platform} | CWD: ${process.cwd()}`);
 
 // Normalize bot token and client credentials aliases across process.env
-const startupBotToken = (process.env.DISCORD_BOT_TOKEN || process.env.DISCORD_TOKEN || process.env.BOT_TOKEN || process.env.CONNECTINGERLC_BOT_TOKEN || '').trim();
+const startupBotToken = normalizeBotToken(process.env.DISCORD_BOT_TOKEN || process.env.DISCORD_TOKEN || process.env.BOT_TOKEN || process.env.CONNECTINGERLC_BOT_TOKEN || '');
 if (startupBotToken) {
   process.env.DISCORD_BOT_TOKEN = startupBotToken;
   process.env.DISCORD_TOKEN = startupBotToken;
+  process.env.CONNECTINGERLC_BOT_TOKEN = startupBotToken;
 }
 
 // Startup validation in production mode (Round 13 Section 1 & 8)
@@ -221,7 +222,7 @@ const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`[CONNECTINGERLC WEB API] Dashboard backend listening on 0.0.0.0:${PORT}`);
 
   // Start 24/7 Discord Gateway presence for ConnectingERLC#0281 bot
-  const primaryToken = (process.env.CONNECTINGERLC_BOT_TOKEN || process.env.DISCORD_BOT_TOKEN || process.env.DISCORD_TOKEN || '').trim();
+  const primaryToken = normalizeBotToken(process.env.CONNECTINGERLC_BOT_TOKEN || process.env.DISCORD_BOT_TOKEN || process.env.DISCORD_TOKEN || process.env.BOT_TOKEN || '');
   const knownTokens = [
     primaryToken
   ].filter(Boolean);

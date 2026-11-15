@@ -24,6 +24,18 @@ export function getLiveStatsPresenceString() {
   return 'https://connectingerlc.xyz';
 }
 
+export function normalizeBotToken(raw) {
+  if (!raw) return '';
+  let tok = String(raw).trim();
+  // Strip quotes if user pasted with quotes
+  tok = tok.replace(/^["'`]|["'`]$/g, '').trim();
+  // Strip "Bot " prefix if present
+  tok = tok.replace(/^Bot\s+/i, '').trim();
+  // Strip quotes again just in case
+  tok = tok.replace(/^["'`]|["'`]$/g, '').trim();
+  return tok;
+}
+
 export function getBotGatewayStatus() {
   const instances = Array.from(activeGateways.values());
   const connected = instances.some(i => i.botConnected);
@@ -105,7 +117,7 @@ export function startBotGateway(token, onGuildEvent) {
     return null;
   }
 
-  const cleanToken = token.trim().replace(/^Bot\s+/i, '');
+  const cleanToken = normalizeBotToken(token);
   if (activeGateways.has(cleanToken)) {
     return activeGateways.get(cleanToken);
   }
@@ -167,8 +179,9 @@ export function startBotGateway(token, onGuildEvent) {
       clearInterval(inst.heartbeatTimer);
       if (!inst.isShuttingDown) {
         if (event.code === 4004) {
-          console.error('[DISCORD BOT] FATAL: Invalid bot token (4004). Stopping gateway.');
+          console.error('[DISCORD BOT] Gateway 4004 Authentication Failed. Retrying in 10s in case token is being updated...');
           inst.botLastError = 'Invalid bot token (code 4004)';
+          setTimeout(connect, 10000);
           return;
         }
         inst.botLastError = event.reason || `Gateway closed with code ${event.code}`;
