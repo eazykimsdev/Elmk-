@@ -11,6 +11,8 @@
  * Uses Discord Components V2 (ActionRow, Buttons, Rich Embeds, Container).
  */
 
+import fs from 'fs';
+import path from 'path';
 import crypto from 'crypto';
 import {
   getPromotedServers,
@@ -210,6 +212,44 @@ export async function handleInteraction(interaction, token) {
   const { id, token: interactionToken, data, guild_id, member, user } = interaction;
   const callerUser = member?.user || user;
   const callerId = callerUser?.id || '';
+
+  // ─── Maintenance Mode Interceptor ──────────────────────────────────────────
+  // While platform is under construction, reply ephemerally (only caller sees it) with live relative timestamp
+  const targetFile = path.join(process.cwd(), 'data', 'construction_target.json');
+  let targetMs = 0;
+  try {
+    if (fs.existsSync(targetFile)) {
+      const parsed = JSON.parse(fs.readFileSync(targetFile, 'utf8'));
+      if (parsed?.targetMs && Number(parsed.targetMs) > Date.now()) {
+        targetMs = Number(parsed.targetMs);
+      }
+    }
+  } catch {}
+
+  if (!targetMs) {
+    targetMs = Date.now() + 24 * 60 * 60 * 1000;
+    try {
+      if (!fs.existsSync(path.join(process.cwd(), 'data'))) {
+        fs.mkdirSync(path.join(process.cwd(), 'data'), { recursive: true });
+      }
+      fs.writeFileSync(targetFile, JSON.stringify({ targetMs }), 'utf8');
+    } catch {}
+  }
+
+  const targetUnix = Math.floor(targetMs / 1000);
+
+  // Return ephemeral response (flags: 64 = visible only to caller)
+  return fetch(`https://discord.com/api/v10/interactions/${id}/${interactionToken}/callback`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      type: 4, // CHANNEL_MESSAGE_WITH_SOURCE
+      data: {
+        content: `### ⚠️ ConnectingERLC is Under Construction\nConnectingERLC is currently undergoing scheduled platform upgrades, OAuth integrations, and database migrations. All bot commands and public tools are temporarily paused while our development team completes setup.\n\n⏳ **Estimated Completion:** <t:${targetUnix}:R> (<t:${targetUnix}:F>)\n🌐 **Live Updates:** https://connectingerlc.xyz`,
+        flags: 64 // Ephemeral: only the user who ran the command can see this
+      }
+    })
+  }).catch((err) => console.error('[DISCORD BOT] Error sending maintenance response:', err.message));
 
   // ─── Handle Button Clicks (Components V2 interaction type 3) ───────────────
   if (interaction.type === 3) {
