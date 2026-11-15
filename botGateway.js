@@ -21,7 +21,7 @@ let globalSchedulerTimer = null;
 let lastKnownPresenceString = 'https://connectingerlc.xyz';
 
 export function getLiveStatsPresenceString() {
-  return 'https://connectingerlc.xyz';
+  return 'https://www.connectingerlc.xyz';
 }
 
 export function normalizeBotToken(raw) {

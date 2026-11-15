@@ -245,7 +245,7 @@ export async function handleInteraction(interaction, token) {
     body: JSON.stringify({
       type: 4, // CHANNEL_MESSAGE_WITH_SOURCE
       data: {
-        content: `### ⚠️ ConnectingERLC is Under Construction\nConnectingERLC is currently undergoing scheduled platform upgrades, OAuth integrations, and database migrations. All bot commands and public tools are temporarily paused while our development team completes setup.\n\n⏳ **Estimated Completion:** <t:${targetUnix}:R> (<t:${targetUnix}:F>)\n🌐 **Live Updates:** https://connectingerlc.xyz`,
+        content: `### ⚠️ ConnectingERLC is Under Construction\nConnectingERLC is currently undergoing scheduled platform upgrades, OAuth integrations, and database migrations. All bot commands and public tools are temporarily paused while our development team completes setup.\n\n⏳ **Estimated Completion:** <t:${targetUnix}:R> (<t:${targetUnix}:F>)\n🌐 **Live Updates:** https://www.connectingerlc.xyz`,
         flags: 64 // Ephemeral: only the user who ran the command can see this
       }
     })
