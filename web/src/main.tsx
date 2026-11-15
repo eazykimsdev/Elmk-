@@ -19,6 +19,7 @@ import { PricingPage } from './pages/PricingPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { BannedPage } from './pages/BannedPage';
 import { MaintenancePage } from './pages/MaintenancePage';
+import { UnderConstructionPage } from './pages/UnderConstructionPage';
 import { AdminPortalPage } from './pages/AdminPortalPage';
 import { PublicServerListingPage } from './pages/PublicServerListingPage';
 import { DiscoveryInvitePage } from './pages/DiscoveryInvitePage';
@@ -491,13 +492,27 @@ function AppContent() {
     return () => clearTimeout(timer);
   }, []);
 
+  // Admin portal & staff routes are always accessible
+  const path = window.location.pathname;
+  const isAdminPath = path.startsWith('/admin-portal') || path.startsWith('/admin-panel');
+  const isStatusPath = path.startsWith('/status') || path.startsWith('/uptime');
+  const isPreview = window.location.search.includes('preview=true') || localStorage.getItem('erlc_preview') === 'true';
+
+  if (window.location.search.includes('preview=true')) {
+    try { localStorage.setItem('erlc_preview', 'true'); } catch {}
+  }
+
   // Section 10: Banned user sees BannedPage, but administrators can access /admin-portal to manage bans
   if ((user as any)?.isBanned || banDetails) {
-    const path = window.location.pathname;
-    if (path.startsWith('/admin-portal') || path.startsWith('/admin-panel')) {
+    if (isAdminPath) {
       return <RouterProvider router={router} />;
     }
     return <BannedPage banDetails={banDetails} />;
+  }
+
+  // Under Construction Gate: blocks public website until launch, with a live 1-day countdown
+  if (!isAdminPath && !isStatusPath && !isPreview) {
+    return <UnderConstructionPage />;
   }
 
   // Server is the single source of truth. Router is ALWAYS mounted so all pages and navigation links work.
