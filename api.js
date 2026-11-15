@@ -728,7 +728,7 @@ function oauthClientId() {
 }
 
 function appOrigin(req) {
-  const defaultOrigin = (process.env.SITE_URL || process.env.APP_ORIGIN || 'https://www.connectingerlc.xyz').replace(/\/$/, '');
+  const defaultOrigin = (process.env.SITE_URL || process.env.APP_ORIGIN || 'https://connectingerlc.xyz').replace(/\/$/, '');
   if (req) {
     const fHost = (req.get('x-forwarded-host') || '').split(',')[0].trim();
     const hostHeader = (req.get('host') || '').trim();

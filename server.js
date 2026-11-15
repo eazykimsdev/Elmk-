@@ -43,19 +43,11 @@ const PORT = process.env.PORT || 8080;
 app.set('trust proxy', 1);
 app.disable('x-powered-by');
 
-// Redirect apex connectingerlc.xyz to www.connectingerlc.xyz
-app.use((req, res, next) => {
-  const host = (req.get('x-forwarded-host') || req.get('host') || '').split(':')[0].toLowerCase();
-  if (host === 'connectingerlc.xyz') {
-    return res.redirect(301, `https://www.connectingerlc.xyz${req.originalUrl || req.url}`);
-  }
-  next();
-});
-
 // Strict CORS configuration with credentials support (Section 1.3 / Security Round 2 Item 24)
 const ALLOWED_ORIGINS = new Set([
   'https://connectingerlc.xyz',
   'https://www.connectingerlc.xyz',
+  'https://web-production-24b30e62.up.railway.app',
   'http://localhost:3000',
   'http://localhost:5173',
   'http://127.0.0.1:3000',
