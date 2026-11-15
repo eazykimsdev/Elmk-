@@ -187,14 +187,19 @@ export function ServerDetailsTab({
     user?.id ||
     '';
 
-  const resolvedOwnerName =
+  const rawOwnerCandidate =
     serverProfile?.owner?.name ||
     ((guild as any)?.owner || (guild as any)?.ownerId === user?.id
       ? user?.globalName || (user as any)?.displayName || user?.username
       : null) ||
     serverProfile?.server?.owner_display_name ||
     serverProfile?.server?.ownerUsername ||
-    'Community Owner';
+    null;
+
+  const resolvedOwnerName =
+    rawOwnerCandidate && rawOwnerCandidate !== 'Community Owner' && rawOwnerCandidate !== 'unclaimed'
+      ? rawOwnerCandidate
+      : (serverName ? `${serverName} Owner` : 'Server Owner');
 
   const resolvedOwnerAvatar =
     serverProfile?.owner?.avatar ||

@@ -1,0 +1,7002 @@
+[
+  {
+    "id": "aud_1794634720218_pl1bo",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "HeadAdmin"
+    },
+    "action": "user_unban",
+    "target": "987654321098765432",
+    "targetType": "user",
+    "reason": "Pardoned by administration after appeal",
+    "before": "banned (Permanent)",
+    "after": "active",
+    "timestamp": "2026-11-14T05:38:40.218Z"
+  },
+  {
+    "id": "aud_1794634719911_u3976",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "HeadAdmin"
+    },
+    "action": "blacklist_add",
+    "target": "987654321098765432",
+    "targetType": "discord_id",
+    "reason": "Account suspension and blacklist",
+    "before": null,
+    "after": "Permanent",
+    "timestamp": "2026-11-14T05:38:39.911Z"
+  },
+  {
+    "id": "aud_1794634719903_jgy3j",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "HeadAdmin"
+    },
+    "action": "user_ban",
+    "target": "987654321098765432",
+    "targetType": "user",
+    "reason": "Violating community guidelines and advertisement rules",
+    "before": "active",
+    "after": "banned (Permanent)",
+    "timestamp": "2026-11-14T05:38:39.903Z"
+  },
+  {
+    "id": "aud_1794634718984_cw04t",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_rejected",
+    "target": "bug_1794634717993_667b6a",
+    "targetType": "bug_report",
+    "reason": "Works as designed.",
+    "before": "pending",
+    "after": "rejected",
+    "timestamp": "2026-11-14T05:38:38.984Z"
+  },
+  {
+    "id": "aud_1794634718765_avl3t",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_duplicate",
+    "target": "bug_1794634717989_672149",
+    "targetType": "bug_report",
+    "reason": "Duplicate of existing ticket.",
+    "before": "pending",
+    "after": "duplicate",
+    "timestamp": "2026-11-14T05:38:38.765Z"
+  },
+  {
+    "id": "aud_1794634718561_s7lll",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_accepted",
+    "target": "bug_1794634718275_2a16ca",
+    "targetType": "bug_report",
+    "reason": "Staff clicked again",
+    "before": "accepted",
+    "after": "accepted",
+    "timestamp": "2026-11-14T05:38:38.561Z"
+  },
+  {
+    "id": "aud_1794634718292_0mowh",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_accepted",
+    "target": "bug_1794634718275_2a16ca",
+    "targetType": "bug_report",
+    "reason": "Great catch! Awarding 50 credits to your server.",
+    "before": "pending",
+    "after": "accepted",
+    "timestamp": "2026-11-14T05:38:38.292Z"
+  },
+  {
+    "id": "aud_1794634718005_jzxd6",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_accepted",
+    "target": "bug_1794634717986_fee701",
+    "targetType": "bug_report",
+    "reason": "Verified and queued for patch. Thank you!",
+    "before": "pending",
+    "after": "accepted",
+    "timestamp": "2026-11-14T05:38:38.005Z"
+  },
+  {
+    "id": "aud_1794634717590_nomtt",
+    "actor": {
+      "id": "system",
+      "username": "Cleanup"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "maintenance",
+    "after": "operational",
+    "timestamp": "2026-11-14T05:38:37.590Z"
+  },
+  {
+    "id": "aud_1794634716282_fmqrw",
+    "actor": {
+      "id": "system",
+      "username": "AdminTester"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Stuck Flag",
+    "before": "operational",
+    "after": "maintenance",
+    "timestamp": "2026-11-14T05:38:36.282Z"
+  },
+  {
+    "id": "aud_1794634715028_a26qk",
+    "actor": {
+      "id": "system",
+      "username": "AdminTester"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "maintenance",
+    "after": "operational",
+    "timestamp": "2026-11-14T05:38:35.028Z"
+  },
+  {
+    "id": "aud_1794634714974_23oxw",
+    "actor": {
+      "id": "system",
+      "username": "AdminTester"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Database Migration",
+    "before": "operational",
+    "after": "maintenance",
+    "timestamp": "2026-11-14T05:38:34.974Z"
+  },
+  {
+    "id": "aud_1794634713126_i84sq",
+    "actor": {
+      "id": "system",
+      "username": "TestRunner"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "operational",
+    "after": "operational",
+    "timestamp": "2026-11-14T05:38:33.126Z"
+  },
+  {
+    "id": "aud_1794634711990_30dnn",
+    "actor": {
+      "id": "523693281541095424",
+      "username": "kims3166"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "maintenance",
+    "after": "operational",
+    "timestamp": "2026-11-14T05:38:31.991Z"
+  },
+  {
+    "id": "aud_1794634711572_is17s",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Scheduled Upgrade",
+    "before": "maintenance",
+    "after": "maintenance",
+    "timestamp": "2026-11-14T05:38:31.572Z"
+  },
+  {
+    "id": "aud_1794634711560_mog15",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to ON",
+    "before": "OFF",
+    "after": "ON",
+    "timestamp": "2026-11-14T05:38:31.560Z"
+  },
+  {
+    "id": "aud_1794634711555_68ow9",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to OFF",
+    "before": "OFF",
+    "after": "OFF",
+    "timestamp": "2026-11-14T05:38:31.555Z"
+  },
+  {
+    "id": "aud_1794634711549_2ldie",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to OFF",
+    "before": "OFF",
+    "after": "OFF",
+    "timestamp": "2026-11-14T05:38:31.549Z"
+  },
+  {
+    "id": "aud_1794634711544_3td84",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to OFF",
+    "before": "OFF",
+    "after": "OFF",
+    "timestamp": "2026-11-14T05:38:31.544Z"
+  },
+  {
+    "id": "aud_1794634710992_8tc97",
+    "actor": {
+      "id": "system",
+      "username": "SystemTest"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "operational",
+    "after": "operational",
+    "timestamp": "2026-11-14T05:38:30.993Z"
+  },
+  {
+    "id": "aud_1794634298627_2jde1",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "HeadAdmin"
+    },
+    "action": "user_unban",
+    "target": "987654321098765432",
+    "targetType": "user",
+    "reason": "Pardoned by administration after appeal",
+    "before": "banned (Permanent)",
+    "after": "active",
+    "timestamp": "2026-11-14T05:31:38.627Z"
+  },
+  {
+    "id": "aud_1794634298275_a22mm",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "HeadAdmin"
+    },
+    "action": "blacklist_add",
+    "target": "987654321098765432",
+    "targetType": "discord_id",
+    "reason": "Account suspension and blacklist",
+    "before": null,
+    "after": "Permanent",
+    "timestamp": "2026-11-14T05:31:38.275Z"
+  },
+  {
+    "id": "aud_1794634298267_85bj1",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "HeadAdmin"
+    },
+    "action": "user_ban",
+    "target": "987654321098765432",
+    "targetType": "user",
+    "reason": "Violating community guidelines and advertisement rules",
+    "before": "active",
+    "after": "banned (Permanent)",
+    "timestamp": "2026-11-14T05:31:38.267Z"
+  },
+  {
+    "id": "aud_1794634296947_j56jj",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_rejected",
+    "target": "bug_1794634295891_698600",
+    "targetType": "bug_report",
+    "reason": "Works as designed.",
+    "before": "pending",
+    "after": "rejected",
+    "timestamp": "2026-11-14T05:31:36.947Z"
+  },
+  {
+    "id": "aud_1794634296710_o7y4h",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_duplicate",
+    "target": "bug_1794634295887_41e357",
+    "targetType": "bug_report",
+    "reason": "Duplicate of existing ticket.",
+    "before": "pending",
+    "after": "duplicate",
+    "timestamp": "2026-11-14T05:31:36.710Z"
+  },
+  {
+    "id": "aud_1794634296529_jvlxj",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_accepted",
+    "target": "bug_1794634296220_b56d7a",
+    "targetType": "bug_report",
+    "reason": "Staff clicked again",
+    "before": "accepted",
+    "after": "accepted",
+    "timestamp": "2026-11-14T05:31:36.529Z"
+  },
+  {
+    "id": "aud_1794634296241_l41es",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_accepted",
+    "target": "bug_1794634296220_b56d7a",
+    "targetType": "bug_report",
+    "reason": "Great catch! Awarding 50 credits to your server.",
+    "before": "pending",
+    "after": "accepted",
+    "timestamp": "2026-11-14T05:31:36.241Z"
+  },
+  {
+    "id": "aud_1794634295924_fa7si",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_accepted",
+    "target": "bug_1794634295881_c2646b",
+    "targetType": "bug_report",
+    "reason": "Verified and queued for patch. Thank you!",
+    "before": "pending",
+    "after": "accepted",
+    "timestamp": "2026-11-14T05:31:35.924Z"
+  },
+  {
+    "id": "aud_1794634295076_3xqxw",
+    "actor": {
+      "id": "system",
+      "username": "Cleanup"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "maintenance",
+    "after": "operational",
+    "timestamp": "2026-11-14T05:31:35.076Z"
+  },
+  {
+    "id": "aud_1794634293107_26bg8",
+    "actor": {
+      "id": "system",
+      "username": "AdminTester"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Stuck Flag",
+    "before": "operational",
+    "after": "maintenance",
+    "timestamp": "2026-11-14T05:31:33.108Z"
+  },
+  {
+    "id": "aud_1794634291459_ah9rr",
+    "actor": {
+      "id": "system",
+      "username": "AdminTester"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "maintenance",
+    "after": "operational",
+    "timestamp": "2026-11-14T05:31:31.459Z"
+  },
+  {
+    "id": "aud_1794634291408_gxz4h",
+    "actor": {
+      "id": "system",
+      "username": "AdminTester"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Database Migration",
+    "before": "operational",
+    "after": "maintenance",
+    "timestamp": "2026-11-14T05:31:31.408Z"
+  },
+  {
+    "id": "aud_1794634289112_altvd",
+    "actor": {
+      "id": "system",
+      "username": "TestRunner"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "operational",
+    "after": "operational",
+    "timestamp": "2026-11-14T05:31:29.112Z"
+  },
+  {
+    "id": "aud_1794634287347_psqgj",
+    "actor": {
+      "id": "523693281541095424",
+      "username": "kims3166"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "maintenance",
+    "after": "operational",
+    "timestamp": "2026-11-14T05:31:27.347Z"
+  },
+  {
+    "id": "aud_1794634286661_xrnne",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Scheduled Upgrade",
+    "before": "maintenance",
+    "after": "maintenance",
+    "timestamp": "2026-11-14T05:31:26.661Z"
+  },
+  {
+    "id": "aud_1794634286654_mge3i",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to ON",
+    "before": "OFF",
+    "after": "ON",
+    "timestamp": "2026-11-14T05:31:26.654Z"
+  },
+  {
+    "id": "aud_1794634286646_bz1py",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to OFF",
+    "before": "OFF",
+    "after": "OFF",
+    "timestamp": "2026-11-14T05:31:26.646Z"
+  },
+  {
+    "id": "aud_1794634286641_kh4uz",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to OFF",
+    "before": "OFF",
+    "after": "OFF",
+    "timestamp": "2026-11-14T05:31:26.641Z"
+  },
+  {
+    "id": "aud_1794634286634_ojim7",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to OFF",
+    "before": "OFF",
+    "after": "OFF",
+    "timestamp": "2026-11-14T05:31:26.634Z"
+  },
+  {
+    "id": "aud_1794634285914_wstpm",
+    "actor": {
+      "id": "system",
+      "username": "SystemTest"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "operational",
+    "after": "operational",
+    "timestamp": "2026-11-14T05:31:25.914Z"
+  },
+  {
+    "id": "aud_1794634011414_wzuhm",
+    "actor": {
+      "id": "991245483973843929",
+      "username": "AdminTester"
+    },
+    "action": "bug_report_accepted",
+    "target": "bug_1794634011400_b3576b",
+    "targetType": "bug_report",
+    "reason": "Confirmed bug",
+    "before": "pending",
+    "after": "accepted",
+    "timestamp": "2026-11-14T05:26:51.414Z"
+  },
+  {
+    "id": "aud_1794633591321_eejqd",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "HeadAdmin"
+    },
+    "action": "user_unban",
+    "target": "987654321098765432",
+    "targetType": "user",
+    "reason": "Pardoned by administration after appeal",
+    "before": "banned (Permanent)",
+    "after": "active",
+    "timestamp": "2026-11-14T05:19:51.321Z"
+  },
+  {
+    "id": "aud_1794633591037_0buha",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "HeadAdmin"
+    },
+    "action": "blacklist_add",
+    "target": "987654321098765432",
+    "targetType": "discord_id",
+    "reason": "Account suspension and blacklist",
+    "before": null,
+    "after": "Permanent",
+    "timestamp": "2026-11-14T05:19:51.037Z"
+  },
+  {
+    "id": "aud_1794633591032_dxpmy",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "HeadAdmin"
+    },
+    "action": "user_ban",
+    "target": "987654321098765432",
+    "targetType": "user",
+    "reason": "Violating community guidelines and advertisement rules",
+    "before": "active",
+    "after": "banned (Permanent)",
+    "timestamp": "2026-11-14T05:19:51.032Z"
+  },
+  {
+    "id": "aud_1794633590049_xnb32",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_rejected",
+    "target": "bug_1794633589107_f20e51",
+    "targetType": "bug_report",
+    "reason": "Works as designed.",
+    "before": "pending",
+    "after": "rejected",
+    "timestamp": "2026-11-14T05:19:50.049Z"
+  },
+  {
+    "id": "aud_1794633589877_or4gm",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_duplicate",
+    "target": "bug_1794633589104_693503",
+    "targetType": "bug_report",
+    "reason": "Duplicate of existing ticket.",
+    "before": "pending",
+    "after": "duplicate",
+    "timestamp": "2026-11-14T05:19:49.877Z"
+  },
+  {
+    "id": "aud_1794633589708_0yqnf",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_accepted",
+    "target": "bug_1794633589400_a0d2fa",
+    "targetType": "bug_report",
+    "reason": "Staff clicked again",
+    "before": "accepted",
+    "after": "accepted",
+    "timestamp": "2026-11-14T05:19:49.708Z"
+  },
+  {
+    "id": "aud_1794633589413_sxszw",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_accepted",
+    "target": "bug_1794633589400_a0d2fa",
+    "targetType": "bug_report",
+    "reason": "Great catch! Awarding 50 credits to your server.",
+    "before": "pending",
+    "after": "accepted",
+    "timestamp": "2026-11-14T05:19:49.413Z"
+  },
+  {
+    "id": "aud_1794633589118_31t4v",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_accepted",
+    "target": "bug_1794633589100_27efe2",
+    "targetType": "bug_report",
+    "reason": "Verified and queued for patch. Thank you!",
+    "before": "pending",
+    "after": "accepted",
+    "timestamp": "2026-11-14T05:19:49.118Z"
+  },
+  {
+    "id": "aud_1794633588641_nf0x4",
+    "actor": {
+      "id": "system",
+      "username": "Cleanup"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "maintenance",
+    "after": "operational",
+    "timestamp": "2026-11-14T05:19:48.641Z"
+  },
+  {
+    "id": "aud_1794633587831_d1nut",
+    "actor": {
+      "id": "system",
+      "username": "AdminTester"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Stuck Flag",
+    "before": "operational",
+    "after": "maintenance",
+    "timestamp": "2026-11-14T05:19:47.831Z"
+  },
+  {
+    "id": "aud_1794633587032_krgyt",
+    "actor": {
+      "id": "system",
+      "username": "AdminTester"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "maintenance",
+    "after": "operational",
+    "timestamp": "2026-11-14T05:19:47.032Z"
+  },
+  {
+    "id": "aud_1794633586976_a8rf5",
+    "actor": {
+      "id": "system",
+      "username": "AdminTester"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Database Migration",
+    "before": "operational",
+    "after": "maintenance",
+    "timestamp": "2026-11-14T05:19:46.976Z"
+  },
+  {
+    "id": "aud_1794633585706_y7nq0",
+    "actor": {
+      "id": "system",
+      "username": "TestRunner"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "operational",
+    "after": "operational",
+    "timestamp": "2026-11-14T05:19:45.706Z"
+  },
+  {
+    "id": "aud_1794633584747_h31ne",
+    "actor": {
+      "id": "523693281541095424",
+      "username": "kims3166"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "maintenance",
+    "after": "operational",
+    "timestamp": "2026-11-14T05:19:44.747Z"
+  },
+  {
+    "id": "aud_1794633584270_r4u4w",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Scheduled Upgrade",
+    "before": "maintenance",
+    "after": "maintenance",
+    "timestamp": "2026-11-14T05:19:44.270Z"
+  },
+  {
+    "id": "aud_1794633584264_dnyl6",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to ON",
+    "before": "OFF",
+    "after": "ON",
+    "timestamp": "2026-11-14T05:19:44.264Z"
+  },
+  {
+    "id": "aud_1794633584259_lm0do",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to OFF",
+    "before": "OFF",
+    "after": "OFF",
+    "timestamp": "2026-11-14T05:19:44.259Z"
+  },
+  {
+    "id": "aud_1794633584255_o18mo",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to OFF",
+    "before": "OFF",
+    "after": "OFF",
+    "timestamp": "2026-11-14T05:19:44.256Z"
+  },
+  {
+    "id": "aud_1794633584251_3jgtb",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to OFF",
+    "before": "OFF",
+    "after": "OFF",
+    "timestamp": "2026-11-14T05:19:44.251Z"
+  },
+  {
+    "id": "aud_1794633583126_oqsld",
+    "actor": {
+      "id": "system",
+      "username": "SystemTest"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "operational",
+    "after": "operational",
+    "timestamp": "2026-11-14T05:19:43.126Z"
+  },
+  {
+    "id": "aud_1794633577948_nd7pu",
+    "actor": {
+      "id": "998781974617940319",
+      "username": "AdminTester"
+    },
+    "action": "bug_report_accepted",
+    "target": "bug_1794633577938_d19dda",
+    "targetType": "bug_report",
+    "reason": "Confirmed bug",
+    "before": "pending",
+    "after": "accepted",
+    "timestamp": "2026-11-14T05:19:37.948Z"
+  },
+  {
+    "id": "aud_1794633554816_gdu7v",
+    "actor": {
+      "id": "111222333444555666",
+      "username": "AdminTester"
+    },
+    "action": "bug_report_accepted",
+    "target": "bug_1794633554803_f3b3e5",
+    "targetType": "bug_report",
+    "reason": "Confirmed bug",
+    "before": "pending",
+    "after": "accepted",
+    "timestamp": "2026-11-14T05:19:14.816Z"
+  },
+  {
+    "id": "aud_1794633542942_lz8au",
+    "actor": {
+      "id": "111222333444555666",
+      "username": "AdminTester"
+    },
+    "action": "bug_report_accepted",
+    "target": "bug_1794633542929_40f02c",
+    "targetType": "bug_report",
+    "reason": "Confirmed bug",
+    "before": "pending",
+    "after": "accepted",
+    "timestamp": "2026-11-14T05:19:02.942Z"
+  },
+  {
+    "id": "aud_1794633487877_lxxkk",
+    "actor": {
+      "id": "111222333444555666",
+      "username": "AdminTester"
+    },
+    "action": "bug_report_accepted",
+    "target": "bug_1794633487866_c17404",
+    "targetType": "bug_report",
+    "reason": "Confirmed bug",
+    "before": "pending",
+    "after": "accepted",
+    "timestamp": "2026-11-14T05:18:07.877Z"
+  },
+  {
+    "id": "aud_1794633475817_p8wiw",
+    "actor": {
+      "id": "111222333444555666",
+      "username": "AdminTester"
+    },
+    "action": "bug_report_accepted",
+    "target": "bug_1794633475807_af955f",
+    "targetType": "bug_report",
+    "reason": "Confirmed bug",
+    "before": "pending",
+    "after": "accepted",
+    "timestamp": "2026-11-14T05:17:55.817Z"
+  },
+  {
+    "id": "aud_1794633454376_2cvbe",
+    "actor": {
+      "id": "111222333444555666",
+      "username": "AdminTester"
+    },
+    "action": "bug_report_accepted",
+    "target": "bug_1794633454365_347880",
+    "targetType": "bug_report",
+    "reason": "Confirmed bug",
+    "before": "pending",
+    "after": "accepted",
+    "timestamp": "2026-11-14T05:17:34.376Z"
+  },
+  {
+    "id": "aud_1794633419250_7n6dv",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "HeadAdmin"
+    },
+    "action": "user_unban",
+    "target": "987654321098765432",
+    "targetType": "user",
+    "reason": "Pardoned by administration after appeal",
+    "before": "banned (Permanent)",
+    "after": "active",
+    "timestamp": "2026-11-14T05:16:59.250Z"
+  },
+  {
+    "id": "aud_1794633418964_o5z5i",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "HeadAdmin"
+    },
+    "action": "blacklist_add",
+    "target": "987654321098765432",
+    "targetType": "discord_id",
+    "reason": "Account suspension and blacklist",
+    "before": null,
+    "after": "Permanent",
+    "timestamp": "2026-11-14T05:16:58.964Z"
+  },
+  {
+    "id": "aud_1794633418960_oplx5",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "HeadAdmin"
+    },
+    "action": "user_ban",
+    "target": "987654321098765432",
+    "targetType": "user",
+    "reason": "Violating community guidelines and advertisement rules",
+    "before": "active",
+    "after": "banned (Permanent)",
+    "timestamp": "2026-11-14T05:16:58.960Z"
+  },
+  {
+    "id": "aud_1794633418107_pd9ud",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_rejected",
+    "target": "bug_1794633416479_0c695e",
+    "targetType": "bug_report",
+    "reason": "Works as designed.",
+    "before": "pending",
+    "after": "rejected",
+    "timestamp": "2026-11-14T05:16:58.107Z"
+  },
+  {
+    "id": "aud_1794633417922_9fs5w",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_duplicate",
+    "target": "bug_1794633416476_c82345",
+    "targetType": "bug_report",
+    "reason": "Duplicate of existing ticket.",
+    "before": "pending",
+    "after": "duplicate",
+    "timestamp": "2026-11-14T05:16:57.922Z"
+  },
+  {
+    "id": "aud_1794633417094_z7rtz",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_accepted",
+    "target": "bug_1794633416806_d19289",
+    "targetType": "bug_report",
+    "reason": "Staff clicked again",
+    "before": "accepted",
+    "after": "accepted",
+    "timestamp": "2026-11-14T05:16:57.094Z"
+  },
+  {
+    "id": "aud_1794633416821_8n9yf",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_accepted",
+    "target": "bug_1794633416806_d19289",
+    "targetType": "bug_report",
+    "reason": "Great catch! Awarding 50 credits to your server.",
+    "before": "pending",
+    "after": "accepted",
+    "timestamp": "2026-11-14T05:16:56.821Z"
+  },
+  {
+    "id": "aud_1794633416490_an0in",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_accepted",
+    "target": "bug_1794633416473_5452bc",
+    "targetType": "bug_report",
+    "reason": "Verified and queued for patch. Thank you!",
+    "before": "pending",
+    "after": "accepted",
+    "timestamp": "2026-11-14T05:16:56.490Z"
+  },
+  {
+    "id": "aud_1794633415971_l9d7u",
+    "actor": {
+      "id": "system",
+      "username": "Cleanup"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "maintenance",
+    "after": "operational",
+    "timestamp": "2026-11-14T05:16:55.971Z"
+  },
+  {
+    "id": "aud_1794633415317_l8oby",
+    "actor": {
+      "id": "system",
+      "username": "AdminTester"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Stuck Flag",
+    "before": "operational",
+    "after": "maintenance",
+    "timestamp": "2026-11-14T05:16:55.317Z"
+  },
+  {
+    "id": "aud_1794633414681_xzsdf",
+    "actor": {
+      "id": "system",
+      "username": "AdminTester"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "maintenance",
+    "after": "operational",
+    "timestamp": "2026-11-14T05:16:54.681Z"
+  },
+  {
+    "id": "aud_1794633414629_rgvhx",
+    "actor": {
+      "id": "system",
+      "username": "AdminTester"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Database Migration",
+    "before": "operational",
+    "after": "maintenance",
+    "timestamp": "2026-11-14T05:16:54.629Z"
+  },
+  {
+    "id": "aud_1794633413541_xjqhx",
+    "actor": {
+      "id": "system",
+      "username": "TestRunner"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "operational",
+    "after": "operational",
+    "timestamp": "2026-11-14T05:16:53.541Z"
+  },
+  {
+    "id": "aud_1794633412764_pctfl",
+    "actor": {
+      "id": "523693281541095424",
+      "username": "kims3166"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "maintenance",
+    "after": "operational",
+    "timestamp": "2026-11-14T05:16:52.764Z"
+  },
+  {
+    "id": "aud_1794633412281_vzblp",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Scheduled Upgrade",
+    "before": "maintenance",
+    "after": "maintenance",
+    "timestamp": "2026-11-14T05:16:52.281Z"
+  },
+  {
+    "id": "aud_1794633412274_uruua",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to ON",
+    "before": "OFF",
+    "after": "ON",
+    "timestamp": "2026-11-14T05:16:52.274Z"
+  },
+  {
+    "id": "aud_1794633412269_stb0w",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to OFF",
+    "before": "OFF",
+    "after": "OFF",
+    "timestamp": "2026-11-14T05:16:52.269Z"
+  },
+  {
+    "id": "aud_1794633412265_m6204",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to OFF",
+    "before": "OFF",
+    "after": "OFF",
+    "timestamp": "2026-11-14T05:16:52.265Z"
+  },
+  {
+    "id": "aud_1794633412260_h39p5",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to OFF",
+    "before": "OFF",
+    "after": "OFF",
+    "timestamp": "2026-11-14T05:16:52.260Z"
+  },
+  {
+    "id": "aud_1794633411747_ax2gx",
+    "actor": {
+      "id": "system",
+      "username": "SystemTest"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "operational",
+    "after": "operational",
+    "timestamp": "2026-11-14T05:16:51.747Z"
+  },
+  {
+    "id": "aud_1794633388348_pzyuj",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_accepted",
+    "target": "bug_1794633388331_1f03d3",
+    "targetType": "bug_report",
+    "reason": "Verified and queued for patch. Thank you!",
+    "before": "pending",
+    "after": "accepted",
+    "timestamp": "2026-11-14T05:16:28.348Z"
+  },
+  {
+    "id": "aud_1794633387850_xzqzq",
+    "actor": {
+      "id": "system",
+      "username": "Cleanup"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "maintenance",
+    "after": "operational",
+    "timestamp": "2026-11-14T05:16:27.850Z"
+  },
+  {
+    "id": "aud_1794633387187_sutvf",
+    "actor": {
+      "id": "system",
+      "username": "AdminTester"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Stuck Flag",
+    "before": "operational",
+    "after": "maintenance",
+    "timestamp": "2026-11-14T05:16:27.187Z"
+  },
+  {
+    "id": "aud_1794633386528_ixi6k",
+    "actor": {
+      "id": "system",
+      "username": "AdminTester"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "maintenance",
+    "after": "operational",
+    "timestamp": "2026-11-14T05:16:26.528Z"
+  },
+  {
+    "id": "aud_1794633386476_f9mgt",
+    "actor": {
+      "id": "system",
+      "username": "AdminTester"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Database Migration",
+    "before": "operational",
+    "after": "maintenance",
+    "timestamp": "2026-11-14T05:16:26.476Z"
+  },
+  {
+    "id": "aud_1794633385417_4c39p",
+    "actor": {
+      "id": "system",
+      "username": "TestRunner"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "operational",
+    "after": "operational",
+    "timestamp": "2026-11-14T05:16:25.417Z"
+  },
+  {
+    "id": "aud_1794633384647_ix1lv",
+    "actor": {
+      "id": "523693281541095424",
+      "username": "kims3166"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "maintenance",
+    "after": "operational",
+    "timestamp": "2026-11-14T05:16:24.647Z"
+  },
+  {
+    "id": "aud_1794633384178_5swru",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Scheduled Upgrade",
+    "before": "maintenance",
+    "after": "maintenance",
+    "timestamp": "2026-11-14T05:16:24.178Z"
+  },
+  {
+    "id": "aud_1794633384171_hohq4",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to ON",
+    "before": "OFF",
+    "after": "ON",
+    "timestamp": "2026-11-14T05:16:24.171Z"
+  },
+  {
+    "id": "aud_1794633384166_19i29",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to OFF",
+    "before": "OFF",
+    "after": "OFF",
+    "timestamp": "2026-11-14T05:16:24.166Z"
+  },
+  {
+    "id": "aud_1794633384161_pld3t",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to OFF",
+    "before": "OFF",
+    "after": "OFF",
+    "timestamp": "2026-11-14T05:16:24.161Z"
+  },
+  {
+    "id": "aud_1794633384156_hapxi",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to OFF",
+    "before": "OFF",
+    "after": "OFF",
+    "timestamp": "2026-11-14T05:16:24.156Z"
+  },
+  {
+    "id": "aud_1794633383615_cb19f",
+    "actor": {
+      "id": "system",
+      "username": "SystemTest"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "operational",
+    "after": "operational",
+    "timestamp": "2026-11-14T05:16:23.615Z"
+  },
+  {
+    "id": "aud_1794631157705_2xr9l",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "HeadAdmin"
+    },
+    "action": "user_unban",
+    "target": "987654321098765432",
+    "targetType": "user",
+    "reason": "Pardoned by administration after appeal",
+    "before": "banned (Permanent)",
+    "after": "active",
+    "timestamp": "2026-11-14T04:39:17.705Z"
+  },
+  {
+    "id": "aud_1794631157409_iwp4n",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "HeadAdmin"
+    },
+    "action": "blacklist_add",
+    "target": "987654321098765432",
+    "targetType": "discord_id",
+    "reason": "Account suspension and blacklist",
+    "before": null,
+    "after": "Permanent",
+    "timestamp": "2026-11-14T04:39:17.409Z"
+  },
+  {
+    "id": "aud_1794631157402_jbs5n",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "HeadAdmin"
+    },
+    "action": "user_ban",
+    "target": "987654321098765432",
+    "targetType": "user",
+    "reason": "Violating community guidelines and advertisement rules",
+    "before": "active",
+    "after": "banned (Permanent)",
+    "timestamp": "2026-11-14T04:39:17.402Z"
+  },
+  {
+    "id": "aud_1794631156346_s43b5",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_rejected",
+    "target": "bug_1794631155385_4f0ba3",
+    "targetType": "bug_report",
+    "reason": "Works as designed.",
+    "before": "pending",
+    "after": "rejected",
+    "timestamp": "2026-11-14T04:39:16.346Z"
+  },
+  {
+    "id": "aud_1794631156164_fmak1",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_duplicate",
+    "target": "bug_1794631155382_ecbde6",
+    "targetType": "bug_report",
+    "reason": "Duplicate of existing ticket.",
+    "before": "pending",
+    "after": "duplicate",
+    "timestamp": "2026-11-14T04:39:16.164Z"
+  },
+  {
+    "id": "aud_1794631155966_0wm9v",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_accepted",
+    "target": "bug_1794631155678_c23a25",
+    "targetType": "bug_report",
+    "reason": "Staff clicked again",
+    "before": "accepted",
+    "after": "accepted",
+    "timestamp": "2026-11-14T04:39:15.966Z"
+  },
+  {
+    "id": "aud_1794631155696_t726j",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_accepted",
+    "target": "bug_1794631155678_c23a25",
+    "targetType": "bug_report",
+    "reason": "Great catch! Awarding 50 credits to your server.",
+    "before": "pending",
+    "after": "accepted",
+    "timestamp": "2026-11-14T04:39:15.696Z"
+  },
+  {
+    "id": "aud_1794631155396_7ucy8",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_accepted",
+    "target": "bug_1794631155377_fcc190",
+    "targetType": "bug_report",
+    "reason": "Verified and queued for patch. Thank you!",
+    "before": "pending",
+    "after": "accepted",
+    "timestamp": "2026-11-14T04:39:15.396Z"
+  },
+  {
+    "id": "aud_1794631154880_45xt5",
+    "actor": {
+      "id": "system",
+      "username": "Cleanup"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "maintenance",
+    "after": "operational",
+    "timestamp": "2026-11-14T04:39:14.880Z"
+  },
+  {
+    "id": "aud_1794631154068_dkh3s",
+    "actor": {
+      "id": "system",
+      "username": "AdminTester"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Stuck Flag",
+    "before": "operational",
+    "after": "maintenance",
+    "timestamp": "2026-11-14T04:39:14.068Z"
+  },
+  {
+    "id": "aud_1794631153337_51fj5",
+    "actor": {
+      "id": "system",
+      "username": "AdminTester"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "maintenance",
+    "after": "operational",
+    "timestamp": "2026-11-14T04:39:13.337Z"
+  },
+  {
+    "id": "aud_1794631153285_rhc4u",
+    "actor": {
+      "id": "system",
+      "username": "AdminTester"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Database Migration",
+    "before": "operational",
+    "after": "maintenance",
+    "timestamp": "2026-11-14T04:39:13.285Z"
+  },
+  {
+    "id": "aud_1794631151987_6k4rn",
+    "actor": {
+      "id": "system",
+      "username": "TestRunner"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "operational",
+    "after": "operational",
+    "timestamp": "2026-11-14T04:39:11.987Z"
+  },
+  {
+    "id": "aud_1794631151265_lyqic",
+    "actor": {
+      "id": "523693281541095424",
+      "username": "kims3166"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "maintenance",
+    "after": "operational",
+    "timestamp": "2026-11-14T04:39:11.265Z"
+  },
+  {
+    "id": "aud_1794631150753_5tb5d",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Scheduled Upgrade",
+    "before": "maintenance",
+    "after": "maintenance",
+    "timestamp": "2026-11-14T04:39:10.753Z"
+  },
+  {
+    "id": "aud_1794631150745_7s59o",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to ON",
+    "before": "OFF",
+    "after": "ON",
+    "timestamp": "2026-11-14T04:39:10.745Z"
+  },
+  {
+    "id": "aud_1794631150738_2ca8l",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to OFF",
+    "before": "OFF",
+    "after": "OFF",
+    "timestamp": "2026-11-14T04:39:10.738Z"
+  },
+  {
+    "id": "aud_1794631150732_v9jnq",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to OFF",
+    "before": "OFF",
+    "after": "OFF",
+    "timestamp": "2026-11-14T04:39:10.732Z"
+  },
+  {
+    "id": "aud_1794631150724_8ch6d",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to OFF",
+    "before": "OFF",
+    "after": "OFF",
+    "timestamp": "2026-11-14T04:39:10.724Z"
+  },
+  {
+    "id": "aud_1794631150152_rul26",
+    "actor": {
+      "id": "system",
+      "username": "SystemTest"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "operational",
+    "after": "operational",
+    "timestamp": "2026-11-14T04:39:10.152Z"
+  },
+  {
+    "id": "aud_1794630623158_dagmq",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "HeadAdmin"
+    },
+    "action": "user_unban",
+    "target": "987654321098765432",
+    "targetType": "user",
+    "reason": "Pardoned by administration after appeal",
+    "before": "banned (Permanent)",
+    "after": "active",
+    "timestamp": "2026-11-14T04:30:23.158Z"
+  },
+  {
+    "id": "aud_1794630622846_r0ga9",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "HeadAdmin"
+    },
+    "action": "blacklist_add",
+    "target": "987654321098765432",
+    "targetType": "discord_id",
+    "reason": "Account suspension and blacklist",
+    "before": null,
+    "after": "Permanent",
+    "timestamp": "2026-11-14T04:30:22.846Z"
+  },
+  {
+    "id": "aud_1794630622838_br02z",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "HeadAdmin"
+    },
+    "action": "user_ban",
+    "target": "987654321098765432",
+    "targetType": "user",
+    "reason": "Violating community guidelines and advertisement rules",
+    "before": "active",
+    "after": "banned (Permanent)",
+    "timestamp": "2026-11-14T04:30:22.838Z"
+  },
+  {
+    "id": "aud_1794630621688_oh4vq",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_rejected",
+    "target": "bug_1794630620749_df79d8",
+    "targetType": "bug_report",
+    "reason": "Works as designed.",
+    "before": "pending",
+    "after": "rejected",
+    "timestamp": "2026-11-14T04:30:21.688Z"
+  },
+  {
+    "id": "aud_1794630621489_5ve5i",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_duplicate",
+    "target": "bug_1794630620745_19c3bf",
+    "targetType": "bug_report",
+    "reason": "Duplicate of existing ticket.",
+    "before": "pending",
+    "after": "duplicate",
+    "timestamp": "2026-11-14T04:30:21.489Z"
+  },
+  {
+    "id": "aud_1794630621310_aog6j",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_accepted",
+    "target": "bug_1794630621039_7f3ff8",
+    "targetType": "bug_report",
+    "reason": "Staff clicked again",
+    "before": "accepted",
+    "after": "accepted",
+    "timestamp": "2026-11-14T04:30:21.310Z"
+  },
+  {
+    "id": "aud_1794630621061_yhgt1",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_accepted",
+    "target": "bug_1794630621039_7f3ff8",
+    "targetType": "bug_report",
+    "reason": "Great catch! Awarding 50 credits to your server.",
+    "before": "pending",
+    "after": "accepted",
+    "timestamp": "2026-11-14T04:30:21.061Z"
+  },
+  {
+    "id": "aud_1794630620759_gl4o7",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_accepted",
+    "target": "bug_1794630620733_f83b8c",
+    "targetType": "bug_report",
+    "reason": "Verified and queued for patch. Thank you!",
+    "before": "pending",
+    "after": "accepted",
+    "timestamp": "2026-11-14T04:30:20.760Z"
+  },
+  {
+    "id": "aud_1794630620104_nq47m",
+    "actor": {
+      "id": "system",
+      "username": "Cleanup"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "maintenance",
+    "after": "operational",
+    "timestamp": "2026-11-14T04:30:20.104Z"
+  },
+  {
+    "id": "aud_1794630619131_v7w9c",
+    "actor": {
+      "id": "system",
+      "username": "AdminTester"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Stuck Flag",
+    "before": "operational",
+    "after": "maintenance",
+    "timestamp": "2026-11-14T04:30:19.131Z"
+  },
+  {
+    "id": "aud_1794630618177_i7rmh",
+    "actor": {
+      "id": "system",
+      "username": "AdminTester"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "maintenance",
+    "after": "operational",
+    "timestamp": "2026-11-14T04:30:18.177Z"
+  },
+  {
+    "id": "aud_1794630618092_zdyko",
+    "actor": {
+      "id": "system",
+      "username": "AdminTester"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Database Migration",
+    "before": "operational",
+    "after": "maintenance",
+    "timestamp": "2026-11-14T04:30:18.092Z"
+  },
+  {
+    "id": "aud_1794630616070_sg13n",
+    "actor": {
+      "id": "system",
+      "username": "TestRunner"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "operational",
+    "after": "operational",
+    "timestamp": "2026-11-14T04:30:16.070Z"
+  },
+  {
+    "id": "aud_1794630615036_hc68n",
+    "actor": {
+      "id": "523693281541095424",
+      "username": "kims3166"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "maintenance",
+    "after": "operational",
+    "timestamp": "2026-11-14T04:30:15.036Z"
+  },
+  {
+    "id": "aud_1794630614391_lmtt9",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Scheduled Upgrade",
+    "before": "maintenance",
+    "after": "maintenance",
+    "timestamp": "2026-11-14T04:30:14.391Z"
+  },
+  {
+    "id": "aud_1794630614385_psu28",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to ON",
+    "before": "OFF",
+    "after": "ON",
+    "timestamp": "2026-11-14T04:30:14.385Z"
+  },
+  {
+    "id": "aud_1794630614378_0pot3",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to OFF",
+    "before": "OFF",
+    "after": "OFF",
+    "timestamp": "2026-11-14T04:30:14.378Z"
+  },
+  {
+    "id": "aud_1794630614372_6gdum",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to OFF",
+    "before": "OFF",
+    "after": "OFF",
+    "timestamp": "2026-11-14T04:30:14.373Z"
+  },
+  {
+    "id": "aud_1794630614365_w3aa5",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to OFF",
+    "before": "OFF",
+    "after": "OFF",
+    "timestamp": "2026-11-14T04:30:14.365Z"
+  },
+  {
+    "id": "aud_1794630613735_4km8k",
+    "actor": {
+      "id": "system",
+      "username": "SystemTest"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "operational",
+    "after": "operational",
+    "timestamp": "2026-11-14T04:30:13.735Z"
+  },
+  {
+    "id": "aud_1794630312576_djavd",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "HeadAdmin"
+    },
+    "action": "user_unban",
+    "target": "987654321098765432",
+    "targetType": "user",
+    "reason": "Pardoned by administration after appeal",
+    "before": "banned (Permanent)",
+    "after": "active",
+    "timestamp": "2026-11-14T04:25:12.576Z"
+  },
+  {
+    "id": "aud_1794630312266_yh0mm",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "HeadAdmin"
+    },
+    "action": "blacklist_add",
+    "target": "987654321098765432",
+    "targetType": "discord_id",
+    "reason": "Account suspension and blacklist",
+    "before": null,
+    "after": "Permanent",
+    "timestamp": "2026-11-14T04:25:12.266Z"
+  },
+  {
+    "id": "aud_1794630312260_yl9b0",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "HeadAdmin"
+    },
+    "action": "user_ban",
+    "target": "987654321098765432",
+    "targetType": "user",
+    "reason": "Violating community guidelines and advertisement rules",
+    "before": "active",
+    "after": "banned (Permanent)",
+    "timestamp": "2026-11-14T04:25:12.260Z"
+  },
+  {
+    "id": "aud_1794630311312_nkox3",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_rejected",
+    "target": "bug_1794630310259_c709c9",
+    "targetType": "bug_report",
+    "reason": "Works as designed.",
+    "before": "pending",
+    "after": "rejected",
+    "timestamp": "2026-11-14T04:25:11.312Z"
+  },
+  {
+    "id": "aud_1794630311094_iawtr",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_duplicate",
+    "target": "bug_1794630310256_72397d",
+    "targetType": "bug_report",
+    "reason": "Duplicate of existing ticket.",
+    "before": "pending",
+    "after": "duplicate",
+    "timestamp": "2026-11-14T04:25:11.094Z"
+  },
+  {
+    "id": "aud_1794630310858_lye03",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_accepted",
+    "target": "bug_1794630310589_5bbfcf",
+    "targetType": "bug_report",
+    "reason": "Staff clicked again",
+    "before": "accepted",
+    "after": "accepted",
+    "timestamp": "2026-11-14T04:25:10.858Z"
+  },
+  {
+    "id": "aud_1794630310609_0r8ww",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_accepted",
+    "target": "bug_1794630310589_5bbfcf",
+    "targetType": "bug_report",
+    "reason": "Great catch! Awarding 50 credits to your server.",
+    "before": "pending",
+    "after": "accepted",
+    "timestamp": "2026-11-14T04:25:10.609Z"
+  },
+  {
+    "id": "aud_1794630310270_qqttd",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_accepted",
+    "target": "bug_1794630310253_a5a0d8",
+    "targetType": "bug_report",
+    "reason": "Verified and queued for patch. Thank you!",
+    "before": "pending",
+    "after": "accepted",
+    "timestamp": "2026-11-14T04:25:10.270Z"
+  },
+  {
+    "id": "aud_1794630309796_45fct",
+    "actor": {
+      "id": "system",
+      "username": "Cleanup"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "maintenance",
+    "after": "operational",
+    "timestamp": "2026-11-14T04:25:09.796Z"
+  },
+  {
+    "id": "aud_1794630309307_w7lxj",
+    "actor": {
+      "id": "system",
+      "username": "AdminTester"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Stuck Flag",
+    "before": "operational",
+    "after": "maintenance",
+    "timestamp": "2026-11-14T04:25:09.307Z"
+  },
+  {
+    "id": "aud_1794630308789_ja2vf",
+    "actor": {
+      "id": "system",
+      "username": "AdminTester"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "maintenance",
+    "after": "operational",
+    "timestamp": "2026-11-14T04:25:08.789Z"
+  },
+  {
+    "id": "aud_1794630308749_9gdh0",
+    "actor": {
+      "id": "system",
+      "username": "AdminTester"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Database Migration",
+    "before": "operational",
+    "after": "maintenance",
+    "timestamp": "2026-11-14T04:25:08.749Z"
+  },
+  {
+    "id": "aud_1794630307800_m43az",
+    "actor": {
+      "id": "system",
+      "username": "TestRunner"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "operational",
+    "after": "operational",
+    "timestamp": "2026-11-14T04:25:07.800Z"
+  },
+  {
+    "id": "aud_1794630307161_wje3h",
+    "actor": {
+      "id": "523693281541095424",
+      "username": "kims3166"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "maintenance",
+    "after": "operational",
+    "timestamp": "2026-11-14T04:25:07.161Z"
+  },
+  {
+    "id": "aud_1794630306677_6rtmf",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Scheduled Upgrade",
+    "before": "maintenance",
+    "after": "maintenance",
+    "timestamp": "2026-11-14T04:25:06.678Z"
+  },
+  {
+    "id": "aud_1794630306671_wkqk2",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to ON",
+    "before": "OFF",
+    "after": "ON",
+    "timestamp": "2026-11-14T04:25:06.671Z"
+  },
+  {
+    "id": "aud_1794630306665_rkldd",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to OFF",
+    "before": "OFF",
+    "after": "OFF",
+    "timestamp": "2026-11-14T04:25:06.665Z"
+  },
+  {
+    "id": "aud_1794630306660_14sn5",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to OFF",
+    "before": "OFF",
+    "after": "OFF",
+    "timestamp": "2026-11-14T04:25:06.660Z"
+  },
+  {
+    "id": "aud_1794630306654_oapzf",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to OFF",
+    "before": "OFF",
+    "after": "OFF",
+    "timestamp": "2026-11-14T04:25:06.654Z"
+  },
+  {
+    "id": "aud_1794630306115_k6bx0",
+    "actor": {
+      "id": "system",
+      "username": "SystemTest"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "operational",
+    "after": "operational",
+    "timestamp": "2026-11-14T04:25:06.115Z"
+  },
+  {
+    "id": "aud_1794629848659_8jc6u",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "HeadAdmin"
+    },
+    "action": "user_unban",
+    "target": "987654321098765432",
+    "targetType": "user",
+    "reason": "Pardoned by administration after appeal",
+    "before": "banned (Permanent)",
+    "after": "active",
+    "timestamp": "2026-11-14T04:17:28.659Z"
+  },
+  {
+    "id": "aud_1794629848296_swiyt",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "HeadAdmin"
+    },
+    "action": "blacklist_add",
+    "target": "987654321098765432",
+    "targetType": "discord_id",
+    "reason": "Account suspension and blacklist",
+    "before": null,
+    "after": "Permanent",
+    "timestamp": "2026-11-14T04:17:28.296Z"
+  },
+  {
+    "id": "aud_1794629848275_ymgkz",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "HeadAdmin"
+    },
+    "action": "user_ban",
+    "target": "987654321098765432",
+    "targetType": "user",
+    "reason": "Violating community guidelines and advertisement rules",
+    "before": "active",
+    "after": "banned (Permanent)",
+    "timestamp": "2026-11-14T04:17:28.275Z"
+  },
+  {
+    "id": "aud_1794629847000_s6afh",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_rejected",
+    "target": "bug_1794629845867_5f1d92",
+    "targetType": "bug_report",
+    "reason": "Works as designed.",
+    "before": "pending",
+    "after": "rejected",
+    "timestamp": "2026-11-14T04:17:27.000Z"
+  },
+  {
+    "id": "aud_1794629846748_gwbv5",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_duplicate",
+    "target": "bug_1794629845859_14482e",
+    "targetType": "bug_report",
+    "reason": "Duplicate of existing ticket.",
+    "before": "pending",
+    "after": "duplicate",
+    "timestamp": "2026-11-14T04:17:26.748Z"
+  },
+  {
+    "id": "aud_1794629846535_x5meu",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_accepted",
+    "target": "bug_1794629846194_39b283",
+    "targetType": "bug_report",
+    "reason": "Staff clicked again",
+    "before": "accepted",
+    "after": "accepted",
+    "timestamp": "2026-11-14T04:17:26.535Z"
+  },
+  {
+    "id": "aud_1794629846213_6wybo",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_accepted",
+    "target": "bug_1794629846194_39b283",
+    "targetType": "bug_report",
+    "reason": "Great catch! Awarding 50 credits to your server.",
+    "before": "pending",
+    "after": "accepted",
+    "timestamp": "2026-11-14T04:17:26.213Z"
+  },
+  {
+    "id": "aud_1794629845884_rkerg",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_accepted",
+    "target": "bug_1794629845853_e38925",
+    "targetType": "bug_report",
+    "reason": "Verified and queued for patch. Thank you!",
+    "before": "pending",
+    "after": "accepted",
+    "timestamp": "2026-11-14T04:17:25.884Z"
+  },
+  {
+    "id": "aud_1794629845223_htxqg",
+    "actor": {
+      "id": "system",
+      "username": "Cleanup"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "maintenance",
+    "after": "operational",
+    "timestamp": "2026-11-14T04:17:25.223Z"
+  },
+  {
+    "id": "aud_1794629844588_mgc6p",
+    "actor": {
+      "id": "system",
+      "username": "AdminTester"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Stuck Flag",
+    "before": "operational",
+    "after": "maintenance",
+    "timestamp": "2026-11-14T04:17:24.588Z"
+  },
+  {
+    "id": "aud_1794629843916_gd9pl",
+    "actor": {
+      "id": "system",
+      "username": "AdminTester"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "maintenance",
+    "after": "operational",
+    "timestamp": "2026-11-14T04:17:23.916Z"
+  },
+  {
+    "id": "aud_1794629843860_5y4du",
+    "actor": {
+      "id": "system",
+      "username": "AdminTester"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Database Migration",
+    "before": "operational",
+    "after": "maintenance",
+    "timestamp": "2026-11-14T04:17:23.860Z"
+  },
+  {
+    "id": "aud_1794629842588_f6doc",
+    "actor": {
+      "id": "system",
+      "username": "TestRunner"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "operational",
+    "after": "operational",
+    "timestamp": "2026-11-14T04:17:22.588Z"
+  },
+  {
+    "id": "aud_1794629841855_4n2r5",
+    "actor": {
+      "id": "523693281541095424",
+      "username": "kims3166"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "maintenance",
+    "after": "operational",
+    "timestamp": "2026-11-14T04:17:21.855Z"
+  },
+  {
+    "id": "aud_1794629841204_2bd7l",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Scheduled Upgrade",
+    "before": "maintenance",
+    "after": "maintenance",
+    "timestamp": "2026-11-14T04:17:21.204Z"
+  },
+  {
+    "id": "aud_1794629841184_jal11",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to ON",
+    "before": "OFF",
+    "after": "ON",
+    "timestamp": "2026-11-14T04:17:21.184Z"
+  },
+  {
+    "id": "aud_1794629841177_5i77i",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to OFF",
+    "before": "OFF",
+    "after": "OFF",
+    "timestamp": "2026-11-14T04:17:21.177Z"
+  },
+  {
+    "id": "aud_1794629841171_2yolw",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to OFF",
+    "before": "OFF",
+    "after": "OFF",
+    "timestamp": "2026-11-14T04:17:21.171Z"
+  },
+  {
+    "id": "aud_1794629841165_sn52f",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to OFF",
+    "before": "OFF",
+    "after": "OFF",
+    "timestamp": "2026-11-14T04:17:21.165Z"
+  },
+  {
+    "id": "aud_1794629840549_feo39",
+    "actor": {
+      "id": "system",
+      "username": "SystemTest"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "operational",
+    "after": "operational",
+    "timestamp": "2026-11-14T04:17:20.549Z"
+  },
+  {
+    "id": "aud_1794629834684_zp4p9",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "HeadAdmin"
+    },
+    "action": "user_unban",
+    "target": "987654321098765432",
+    "targetType": "user",
+    "reason": "Pardoned by administration after appeal",
+    "before": "banned (Permanent)",
+    "after": "active",
+    "timestamp": "2026-11-14T04:17:14.684Z"
+  },
+  {
+    "id": "aud_1794629834364_gvp0e",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "HeadAdmin"
+    },
+    "action": "blacklist_add",
+    "target": "987654321098765432",
+    "targetType": "discord_id",
+    "reason": "Account suspension and blacklist",
+    "before": null,
+    "after": "Permanent",
+    "timestamp": "2026-11-14T04:17:14.364Z"
+  },
+  {
+    "id": "aud_1794629834356_aedqh",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "HeadAdmin"
+    },
+    "action": "user_ban",
+    "target": "987654321098765432",
+    "targetType": "user",
+    "reason": "Violating community guidelines and advertisement rules",
+    "before": "active",
+    "after": "banned (Permanent)",
+    "timestamp": "2026-11-14T04:17:14.356Z"
+  },
+  {
+    "id": "aud_1794629815407_xgg2m",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "HeadAdmin"
+    },
+    "action": "user_unban",
+    "target": "987654321098765432",
+    "targetType": "user",
+    "reason": "Pardoned by administration after appeal",
+    "before": "banned (Permanent)",
+    "after": "active",
+    "timestamp": "2026-11-14T04:16:55.407Z"
+  },
+  {
+    "id": "aud_1794629815075_3si9d",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "HeadAdmin"
+    },
+    "action": "blacklist_add",
+    "target": "987654321098765432",
+    "targetType": "discord_id",
+    "reason": "Account suspension and blacklist",
+    "before": null,
+    "after": "Permanent",
+    "timestamp": "2026-11-14T04:16:55.075Z"
+  },
+  {
+    "id": "aud_1794629815066_q6syk",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "HeadAdmin"
+    },
+    "action": "user_ban",
+    "target": "987654321098765432",
+    "targetType": "user",
+    "reason": "Violating community guidelines and advertisement rules",
+    "before": "active",
+    "after": "banned (Permanent)",
+    "timestamp": "2026-11-14T04:16:55.066Z"
+  },
+  {
+    "id": "aud_1794629813833_0ckvk",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_rejected",
+    "target": "bug_1794629812172_d9a72a",
+    "targetType": "bug_report",
+    "reason": "Works as designed.",
+    "before": "pending",
+    "after": "rejected",
+    "timestamp": "2026-11-14T04:16:53.833Z"
+  },
+  {
+    "id": "aud_1794629813625_97g9z",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_duplicate",
+    "target": "bug_1794629812168_59a94c",
+    "targetType": "bug_report",
+    "reason": "Duplicate of existing ticket.",
+    "before": "pending",
+    "after": "duplicate",
+    "timestamp": "2026-11-14T04:16:53.625Z"
+  },
+  {
+    "id": "aud_1794629813436_nr8hu",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_accepted",
+    "target": "bug_1794629813165_6788f2",
+    "targetType": "bug_report",
+    "reason": "Staff clicked again",
+    "before": "accepted",
+    "after": "accepted",
+    "timestamp": "2026-11-14T04:16:53.436Z"
+  },
+  {
+    "id": "aud_1794629813183_iugww",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_accepted",
+    "target": "bug_1794629813165_6788f2",
+    "targetType": "bug_report",
+    "reason": "Great catch! Awarding 50 credits to your server.",
+    "before": "pending",
+    "after": "accepted",
+    "timestamp": "2026-11-14T04:16:53.183Z"
+  },
+  {
+    "id": "aud_1794629812188_ap2e6",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_accepted",
+    "target": "bug_1794629812163_44df0e",
+    "targetType": "bug_report",
+    "reason": "Verified and queued for patch. Thank you!",
+    "before": "pending",
+    "after": "accepted",
+    "timestamp": "2026-11-14T04:16:52.188Z"
+  },
+  {
+    "id": "aud_1794629811548_i39s3",
+    "actor": {
+      "id": "system",
+      "username": "Cleanup"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "maintenance",
+    "after": "operational",
+    "timestamp": "2026-11-14T04:16:51.548Z"
+  },
+  {
+    "id": "aud_1794629810941_3v8s4",
+    "actor": {
+      "id": "system",
+      "username": "AdminTester"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Stuck Flag",
+    "before": "operational",
+    "after": "maintenance",
+    "timestamp": "2026-11-14T04:16:50.941Z"
+  },
+  {
+    "id": "aud_1794629810404_sxxge",
+    "actor": {
+      "id": "system",
+      "username": "AdminTester"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "maintenance",
+    "after": "operational",
+    "timestamp": "2026-11-14T04:16:50.404Z"
+  },
+  {
+    "id": "aud_1794629810357_bh4fz",
+    "actor": {
+      "id": "system",
+      "username": "AdminTester"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Database Migration",
+    "before": "operational",
+    "after": "maintenance",
+    "timestamp": "2026-11-14T04:16:50.357Z"
+  },
+  {
+    "id": "aud_1794629809174_hgu72",
+    "actor": {
+      "id": "system",
+      "username": "TestRunner"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "operational",
+    "after": "operational",
+    "timestamp": "2026-11-14T04:16:49.174Z"
+  },
+  {
+    "id": "aud_1794629808436_zn6hv",
+    "actor": {
+      "id": "523693281541095424",
+      "username": "kims3166"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "maintenance",
+    "after": "operational",
+    "timestamp": "2026-11-14T04:16:48.436Z"
+  },
+  {
+    "id": "aud_1794629807778_jv3cl",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Scheduled Upgrade",
+    "before": "maintenance",
+    "after": "maintenance",
+    "timestamp": "2026-11-14T04:16:47.778Z"
+  },
+  {
+    "id": "aud_1794629807761_gypfc",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to ON",
+    "before": "OFF",
+    "after": "ON",
+    "timestamp": "2026-11-14T04:16:47.761Z"
+  },
+  {
+    "id": "aud_1794629807753_d2dut",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to OFF",
+    "before": "OFF",
+    "after": "OFF",
+    "timestamp": "2026-11-14T04:16:47.753Z"
+  },
+  {
+    "id": "aud_1794629807747_fy4yg",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to OFF",
+    "before": "OFF",
+    "after": "OFF",
+    "timestamp": "2026-11-14T04:16:47.747Z"
+  },
+  {
+    "id": "aud_1794629807741_e693r",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to OFF",
+    "before": "OFF",
+    "after": "OFF",
+    "timestamp": "2026-11-14T04:16:47.741Z"
+  },
+  {
+    "id": "aud_1794629805136_oehuk",
+    "actor": {
+      "id": "system",
+      "username": "SystemTest"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "operational",
+    "after": "operational",
+    "timestamp": "2026-11-14T04:16:45.136Z"
+  },
+  {
+    "id": "aud_1794629789901_xuff0",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_rejected",
+    "target": "bug_1794629788301_3562d4",
+    "targetType": "bug_report",
+    "reason": "Works as designed.",
+    "before": "pending",
+    "after": "rejected",
+    "timestamp": "2026-11-14T04:16:29.901Z"
+  },
+  {
+    "id": "aud_1794629789717_4pd0w",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_duplicate",
+    "target": "bug_1794629788297_6495e2",
+    "targetType": "bug_report",
+    "reason": "Duplicate of existing ticket.",
+    "before": "pending",
+    "after": "duplicate",
+    "timestamp": "2026-11-14T04:16:29.717Z"
+  },
+  {
+    "id": "aud_1794629789506_5p0xs",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_accepted",
+    "target": "bug_1794629788618_a69fed",
+    "targetType": "bug_report",
+    "reason": "Staff clicked again",
+    "before": "accepted",
+    "after": "accepted",
+    "timestamp": "2026-11-14T04:16:29.506Z"
+  },
+  {
+    "id": "aud_1794629788641_pecp0",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_accepted",
+    "target": "bug_1794629788618_a69fed",
+    "targetType": "bug_report",
+    "reason": "Great catch! Awarding 50 credits to your server.",
+    "before": "pending",
+    "after": "accepted",
+    "timestamp": "2026-11-14T04:16:28.641Z"
+  },
+  {
+    "id": "aud_1794629788316_ytqpb",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_accepted",
+    "target": "bug_1794629788293_803e77",
+    "targetType": "bug_report",
+    "reason": "Verified and queued for patch. Thank you!",
+    "before": "pending",
+    "after": "accepted",
+    "timestamp": "2026-11-14T04:16:28.316Z"
+  },
+  {
+    "id": "aud_1794629787616_sjddw",
+    "actor": {
+      "id": "system",
+      "username": "Cleanup"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "maintenance",
+    "after": "operational",
+    "timestamp": "2026-11-14T04:16:27.616Z"
+  },
+  {
+    "id": "aud_1794629787108_5qpc6",
+    "actor": {
+      "id": "system",
+      "username": "AdminTester"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Stuck Flag",
+    "before": "operational",
+    "after": "maintenance",
+    "timestamp": "2026-11-14T04:16:27.108Z"
+  },
+  {
+    "id": "aud_1794629786583_4ot2j",
+    "actor": {
+      "id": "system",
+      "username": "AdminTester"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "maintenance",
+    "after": "operational",
+    "timestamp": "2026-11-14T04:16:26.583Z"
+  },
+  {
+    "id": "aud_1794629786526_e8la2",
+    "actor": {
+      "id": "system",
+      "username": "AdminTester"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Database Migration",
+    "before": "operational",
+    "after": "maintenance",
+    "timestamp": "2026-11-14T04:16:26.526Z"
+  },
+  {
+    "id": "aud_1794629785467_ohe7s",
+    "actor": {
+      "id": "system",
+      "username": "TestRunner"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "operational",
+    "after": "operational",
+    "timestamp": "2026-11-14T04:16:25.467Z"
+  },
+  {
+    "id": "aud_1794629784802_ealo3",
+    "actor": {
+      "id": "523693281541095424",
+      "username": "kims3166"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "maintenance",
+    "after": "operational",
+    "timestamp": "2026-11-14T04:16:24.802Z"
+  },
+  {
+    "id": "aud_1794629784151_1uw4a",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Scheduled Upgrade",
+    "before": "maintenance",
+    "after": "maintenance",
+    "timestamp": "2026-11-14T04:16:24.151Z"
+  },
+  {
+    "id": "aud_1794629784140_18n8r",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to ON",
+    "before": "OFF",
+    "after": "ON",
+    "timestamp": "2026-11-14T04:16:24.140Z"
+  },
+  {
+    "id": "aud_1794629784134_ly81a",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to OFF",
+    "before": "OFF",
+    "after": "OFF",
+    "timestamp": "2026-11-14T04:16:24.134Z"
+  },
+  {
+    "id": "aud_1794629784129_3tegc",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to OFF",
+    "before": "OFF",
+    "after": "OFF",
+    "timestamp": "2026-11-14T04:16:24.129Z"
+  },
+  {
+    "id": "aud_1794629784122_iq7pu",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to OFF",
+    "before": "OFF",
+    "after": "OFF",
+    "timestamp": "2026-11-14T04:16:24.122Z"
+  },
+  {
+    "id": "aud_1794629783519_cwbsm",
+    "actor": {
+      "id": "system",
+      "username": "SystemTest"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "operational",
+    "after": "operational",
+    "timestamp": "2026-11-14T04:16:23.519Z"
+  },
+  {
+    "id": "aud_1794629745371_a9mdv",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_rejected",
+    "target": "bug_1794629744366_d62dff",
+    "targetType": "bug_report",
+    "reason": "Works as designed.",
+    "before": "pending",
+    "after": "rejected",
+    "timestamp": "2026-11-14T04:15:45.371Z"
+  },
+  {
+    "id": "aud_1794629745202_kzsw1",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_duplicate",
+    "target": "bug_1794629744361_a0a6f9",
+    "targetType": "bug_report",
+    "reason": "Duplicate of existing ticket.",
+    "before": "pending",
+    "after": "duplicate",
+    "timestamp": "2026-11-14T04:15:45.202Z"
+  },
+  {
+    "id": "aud_1794629745014_6nlcl",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_accepted",
+    "target": "bug_1794629744706_5b5ac4",
+    "targetType": "bug_report",
+    "reason": "Staff clicked again",
+    "before": "accepted",
+    "after": "accepted",
+    "timestamp": "2026-11-14T04:15:45.014Z"
+  },
+  {
+    "id": "aud_1794629744738_zgvzb",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_accepted",
+    "target": "bug_1794629744706_5b5ac4",
+    "targetType": "bug_report",
+    "reason": "Great catch! Awarding 50 credits to your server.",
+    "before": "pending",
+    "after": "accepted",
+    "timestamp": "2026-11-14T04:15:44.738Z"
+  },
+  {
+    "id": "aud_1794629744379_74r5b",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_accepted",
+    "target": "bug_1794629744356_43960a",
+    "targetType": "bug_report",
+    "reason": "Verified and queued for patch. Thank you!",
+    "before": "pending",
+    "after": "accepted",
+    "timestamp": "2026-11-14T04:15:44.379Z"
+  },
+  {
+    "id": "aud_1794629743783_s0hz7",
+    "actor": {
+      "id": "system",
+      "username": "Cleanup"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "maintenance",
+    "after": "operational",
+    "timestamp": "2026-11-14T04:15:43.783Z"
+  },
+  {
+    "id": "aud_1794629743360_fepi5",
+    "actor": {
+      "id": "system",
+      "username": "AdminTester"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Stuck Flag",
+    "before": "operational",
+    "after": "maintenance",
+    "timestamp": "2026-11-14T04:15:43.360Z"
+  },
+  {
+    "id": "aud_1794629742918_h0t0a",
+    "actor": {
+      "id": "system",
+      "username": "AdminTester"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "maintenance",
+    "after": "operational",
+    "timestamp": "2026-11-14T04:15:42.918Z"
+  },
+  {
+    "id": "aud_1794629742866_m52oj",
+    "actor": {
+      "id": "system",
+      "username": "AdminTester"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Database Migration",
+    "before": "operational",
+    "after": "maintenance",
+    "timestamp": "2026-11-14T04:15:42.866Z"
+  },
+  {
+    "id": "aud_1794629741871_aq38c",
+    "actor": {
+      "id": "system",
+      "username": "TestRunner"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "operational",
+    "after": "operational",
+    "timestamp": "2026-11-14T04:15:41.871Z"
+  },
+  {
+    "id": "aud_1794629741277_uslts",
+    "actor": {
+      "id": "523693281541095424",
+      "username": "kims3166"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "maintenance",
+    "after": "operational",
+    "timestamp": "2026-11-14T04:15:41.277Z"
+  },
+  {
+    "id": "aud_1794629740622_xybd9",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Scheduled Upgrade",
+    "before": "maintenance",
+    "after": "maintenance",
+    "timestamp": "2026-11-14T04:15:40.622Z"
+  },
+  {
+    "id": "aud_1794629740615_btftw",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to ON",
+    "before": "OFF",
+    "after": "ON",
+    "timestamp": "2026-11-14T04:15:40.615Z"
+  },
+  {
+    "id": "aud_1794629740609_9m9hh",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to OFF",
+    "before": "OFF",
+    "after": "OFF",
+    "timestamp": "2026-11-14T04:15:40.609Z"
+  },
+  {
+    "id": "aud_1794629740602_83zbv",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to OFF",
+    "before": "OFF",
+    "after": "OFF",
+    "timestamp": "2026-11-14T04:15:40.602Z"
+  },
+  {
+    "id": "aud_1794629740592_tirxt",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to OFF",
+    "before": "OFF",
+    "after": "OFF",
+    "timestamp": "2026-11-14T04:15:40.592Z"
+  },
+  {
+    "id": "aud_1794629739989_yfps6",
+    "actor": {
+      "id": "system",
+      "username": "SystemTest"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "operational",
+    "after": "operational",
+    "timestamp": "2026-11-14T04:15:39.989Z"
+  },
+  {
+    "id": "aud_1794629705775_chiom",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_rejected",
+    "target": "bug_1794629704763_2c9d96",
+    "targetType": "bug_report",
+    "reason": "Works as designed.",
+    "before": "pending",
+    "after": "rejected",
+    "timestamp": "2026-11-14T04:15:05.775Z"
+  },
+  {
+    "id": "aud_1794629705589_hg3xz",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_duplicate",
+    "target": "bug_1794629704758_d57907",
+    "targetType": "bug_report",
+    "reason": "Duplicate of existing ticket.",
+    "before": "pending",
+    "after": "duplicate",
+    "timestamp": "2026-11-14T04:15:05.589Z"
+  },
+  {
+    "id": "aud_1794629705389_xhzuj",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_accepted",
+    "target": "bug_1794629705068_aacabc",
+    "targetType": "bug_report",
+    "reason": "Staff clicked again",
+    "before": "accepted",
+    "after": "accepted",
+    "timestamp": "2026-11-14T04:15:05.389Z"
+  },
+  {
+    "id": "aud_1794629705093_tlrc1",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_accepted",
+    "target": "bug_1794629705068_aacabc",
+    "targetType": "bug_report",
+    "reason": "Great catch! Awarding 50 credits to your server.",
+    "before": "pending",
+    "after": "accepted",
+    "timestamp": "2026-11-14T04:15:05.093Z"
+  },
+  {
+    "id": "aud_1794629704778_j52fc",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_accepted",
+    "target": "bug_1794629704753_718581",
+    "targetType": "bug_report",
+    "reason": "Verified and queued for patch. Thank you!",
+    "before": "pending",
+    "after": "accepted",
+    "timestamp": "2026-11-14T04:15:04.778Z"
+  },
+  {
+    "id": "aud_1794629704148_u65oc",
+    "actor": {
+      "id": "system",
+      "username": "Cleanup"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "maintenance",
+    "after": "operational",
+    "timestamp": "2026-11-14T04:15:04.148Z"
+  },
+  {
+    "id": "aud_1794629703811_uuese",
+    "actor": {
+      "id": "system",
+      "username": "AdminTester"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Stuck Flag",
+    "before": "operational",
+    "after": "maintenance",
+    "timestamp": "2026-11-14T04:15:03.811Z"
+  },
+  {
+    "id": "aud_1794629703440_x14qm",
+    "actor": {
+      "id": "system",
+      "username": "AdminTester"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "maintenance",
+    "after": "operational",
+    "timestamp": "2026-11-14T04:15:03.440Z"
+  },
+  {
+    "id": "aud_1794629703389_x7y14",
+    "actor": {
+      "id": "system",
+      "username": "AdminTester"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Database Migration",
+    "before": "operational",
+    "after": "maintenance",
+    "timestamp": "2026-11-14T04:15:03.389Z"
+  },
+  {
+    "id": "aud_1794629702458_61a9h",
+    "actor": {
+      "id": "system",
+      "username": "TestRunner"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "operational",
+    "after": "operational",
+    "timestamp": "2026-11-14T04:15:02.458Z"
+  },
+  {
+    "id": "aud_1794629701988_6xyrx",
+    "actor": {
+      "id": "523693281541095424",
+      "username": "kims3166"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "maintenance",
+    "after": "operational",
+    "timestamp": "2026-11-14T04:15:01.988Z"
+  },
+  {
+    "id": "aud_1794629701105_wi4d1",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Scheduled Upgrade",
+    "before": "maintenance",
+    "after": "maintenance",
+    "timestamp": "2026-11-14T04:15:01.105Z"
+  },
+  {
+    "id": "aud_1794629701087_fq7as",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to ON",
+    "before": "OFF",
+    "after": "ON",
+    "timestamp": "2026-11-14T04:15:01.087Z"
+  },
+  {
+    "id": "aud_1794629701070_pg200",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to OFF",
+    "before": "OFF",
+    "after": "OFF",
+    "timestamp": "2026-11-14T04:15:01.070Z"
+  },
+  {
+    "id": "aud_1794629701057_4280k",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to OFF",
+    "before": "OFF",
+    "after": "OFF",
+    "timestamp": "2026-11-14T04:15:01.058Z"
+  },
+  {
+    "id": "aud_1794629701048_a0fj9",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to OFF",
+    "before": "OFF",
+    "after": "OFF",
+    "timestamp": "2026-11-14T04:15:01.048Z"
+  },
+  {
+    "id": "aud_1794629700392_lfrcq",
+    "actor": {
+      "id": "system",
+      "username": "SystemTest"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "operational",
+    "after": "operational",
+    "timestamp": "2026-11-14T04:15:00.392Z"
+  },
+  {
+    "id": "aud_1794629662008_e5hhw",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_rejected",
+    "target": "bug_1794629660950_458502",
+    "targetType": "bug_report",
+    "reason": "Works as designed.",
+    "before": "pending",
+    "after": "rejected",
+    "timestamp": "2026-11-14T04:14:22.008Z"
+  },
+  {
+    "id": "aud_1794629661782_jro8o",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_duplicate",
+    "target": "bug_1794629660944_c6f767",
+    "targetType": "bug_report",
+    "reason": "Duplicate of existing ticket.",
+    "before": "pending",
+    "after": "duplicate",
+    "timestamp": "2026-11-14T04:14:21.782Z"
+  },
+  {
+    "id": "aud_1794629661595_5d8yv",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_accepted",
+    "target": "bug_1794629661297_d878f7",
+    "targetType": "bug_report",
+    "reason": "Staff clicked again",
+    "before": "accepted",
+    "after": "accepted",
+    "timestamp": "2026-11-14T04:14:21.595Z"
+  },
+  {
+    "id": "aud_1794629661322_qz36w",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_accepted",
+    "target": "bug_1794629661297_d878f7",
+    "targetType": "bug_report",
+    "reason": "Great catch! Awarding 50 credits to your server.",
+    "before": "pending",
+    "after": "accepted",
+    "timestamp": "2026-11-14T04:14:21.322Z"
+  },
+  {
+    "id": "aud_1794629660974_fgm5w",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_accepted",
+    "target": "bug_1794629660939_fca8a7",
+    "targetType": "bug_report",
+    "reason": "Verified and queued for patch. Thank you!",
+    "before": "pending",
+    "after": "accepted",
+    "timestamp": "2026-11-14T04:14:20.974Z"
+  },
+  {
+    "id": "aud_1794629660313_6jg4n",
+    "actor": {
+      "id": "system",
+      "username": "Cleanup"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "maintenance",
+    "after": "operational",
+    "timestamp": "2026-11-14T04:14:20.313Z"
+  },
+  {
+    "id": "aud_1794629659926_xkl2s",
+    "actor": {
+      "id": "system",
+      "username": "AdminTester"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Stuck Flag",
+    "before": "operational",
+    "after": "maintenance",
+    "timestamp": "2026-11-14T04:14:19.926Z"
+  },
+  {
+    "id": "aud_1794629659398_ji7cq",
+    "actor": {
+      "id": "system",
+      "username": "AdminTester"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "maintenance",
+    "after": "operational",
+    "timestamp": "2026-11-14T04:14:19.398Z"
+  },
+  {
+    "id": "aud_1794629659347_x1qcq",
+    "actor": {
+      "id": "system",
+      "username": "AdminTester"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Database Migration",
+    "before": "operational",
+    "after": "maintenance",
+    "timestamp": "2026-11-14T04:14:19.347Z"
+  },
+  {
+    "id": "aud_1794629658372_x3zie",
+    "actor": {
+      "id": "system",
+      "username": "TestRunner"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "operational",
+    "after": "operational",
+    "timestamp": "2026-11-14T04:14:18.372Z"
+  },
+  {
+    "id": "aud_1794629658000_5nu0s",
+    "actor": {
+      "id": "523693281541095424",
+      "username": "kims3166"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "maintenance",
+    "after": "operational",
+    "timestamp": "2026-11-14T04:14:18.000Z"
+  },
+  {
+    "id": "aud_1794629657336_ttm8h",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Scheduled Upgrade",
+    "before": "maintenance",
+    "after": "maintenance",
+    "timestamp": "2026-11-14T04:14:17.336Z"
+  },
+  {
+    "id": "aud_1794629657323_t9erx",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to ON",
+    "before": "OFF",
+    "after": "ON",
+    "timestamp": "2026-11-14T04:14:17.323Z"
+  },
+  {
+    "id": "aud_1794629657316_ovnzq",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to OFF",
+    "before": "OFF",
+    "after": "OFF",
+    "timestamp": "2026-11-14T04:14:17.316Z"
+  },
+  {
+    "id": "aud_1794629657305_ubm4o",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to OFF",
+    "before": "OFF",
+    "after": "OFF",
+    "timestamp": "2026-11-14T04:14:17.305Z"
+  },
+  {
+    "id": "aud_1794629657298_xq42d",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to OFF",
+    "before": "OFF",
+    "after": "OFF",
+    "timestamp": "2026-11-14T04:14:17.298Z"
+  },
+  {
+    "id": "aud_1794629656641_553fk",
+    "actor": {
+      "id": "system",
+      "username": "SystemTest"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "operational",
+    "after": "operational",
+    "timestamp": "2026-11-14T04:14:16.641Z"
+  },
+  {
+    "id": "aud_1794629603551_iwrrw",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_rejected",
+    "target": "bug_1794629602523_89ede2",
+    "targetType": "bug_report",
+    "reason": "Works as designed.",
+    "before": "pending",
+    "after": "rejected",
+    "timestamp": "2026-11-14T04:13:23.551Z"
+  },
+  {
+    "id": "aud_1794629603374_dutl9",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_duplicate",
+    "target": "bug_1794629602519_8cd78b",
+    "targetType": "bug_report",
+    "reason": "Duplicate of existing ticket.",
+    "before": "pending",
+    "after": "duplicate",
+    "timestamp": "2026-11-14T04:13:23.374Z"
+  },
+  {
+    "id": "aud_1794629603168_wgif8",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_accepted",
+    "target": "bug_1794629602860_42c16c",
+    "targetType": "bug_report",
+    "reason": "Staff clicked again",
+    "before": "accepted",
+    "after": "accepted",
+    "timestamp": "2026-11-14T04:13:23.168Z"
+  },
+  {
+    "id": "aud_1794629602890_5af3n",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_accepted",
+    "target": "bug_1794629602860_42c16c",
+    "targetType": "bug_report",
+    "reason": "Great catch! Awarding 50 credits to your server.",
+    "before": "pending",
+    "after": "accepted",
+    "timestamp": "2026-11-14T04:13:22.890Z"
+  },
+  {
+    "id": "aud_1794629602535_g23hj",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_accepted",
+    "target": "bug_1794629602513_030f0e",
+    "targetType": "bug_report",
+    "reason": "Verified and queued for patch. Thank you!",
+    "before": "pending",
+    "after": "accepted",
+    "timestamp": "2026-11-14T04:13:22.535Z"
+  },
+  {
+    "id": "aud_1794629601936_ubmhw",
+    "actor": {
+      "id": "system",
+      "username": "Cleanup"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "maintenance",
+    "after": "operational",
+    "timestamp": "2026-11-14T04:13:21.936Z"
+  },
+  {
+    "id": "aud_1794629601718_qlwi6",
+    "actor": {
+      "id": "system",
+      "username": "AdminTester"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Stuck Flag",
+    "before": "operational",
+    "after": "maintenance",
+    "timestamp": "2026-11-14T04:13:21.718Z"
+  },
+  {
+    "id": "aud_1794629601512_hhhn6",
+    "actor": {
+      "id": "system",
+      "username": "AdminTester"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "maintenance",
+    "after": "operational",
+    "timestamp": "2026-11-14T04:13:21.512Z"
+  },
+  {
+    "id": "aud_1794629601466_mv0dt",
+    "actor": {
+      "id": "system",
+      "username": "AdminTester"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Database Migration",
+    "before": "operational",
+    "after": "maintenance",
+    "timestamp": "2026-11-14T04:13:21.466Z"
+  },
+  {
+    "id": "aud_1794629600683_zsdyd",
+    "actor": {
+      "id": "system",
+      "username": "TestRunner"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "operational",
+    "after": "operational",
+    "timestamp": "2026-11-14T04:13:20.683Z"
+  },
+  {
+    "id": "aud_1794629600333_zjkqs",
+    "actor": {
+      "id": "523693281541095424",
+      "username": "kims3166"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "maintenance",
+    "after": "operational",
+    "timestamp": "2026-11-14T04:13:20.333Z"
+  },
+  {
+    "id": "aud_1794629599697_k6ov6",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Scheduled Upgrade",
+    "before": "maintenance",
+    "after": "maintenance",
+    "timestamp": "2026-11-14T04:13:19.697Z"
+  },
+  {
+    "id": "aud_1794629599691_jsoaf",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to ON",
+    "before": "OFF",
+    "after": "ON",
+    "timestamp": "2026-11-14T04:13:19.691Z"
+  },
+  {
+    "id": "aud_1794629599685_smxf4",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to OFF",
+    "before": "OFF",
+    "after": "OFF",
+    "timestamp": "2026-11-14T04:13:19.685Z"
+  },
+  {
+    "id": "aud_1794629599679_82v7w",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to OFF",
+    "before": "OFF",
+    "after": "OFF",
+    "timestamp": "2026-11-14T04:13:19.679Z"
+  },
+  {
+    "id": "aud_1794629599673_y7mi0",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to OFF",
+    "before": "OFF",
+    "after": "OFF",
+    "timestamp": "2026-11-14T04:13:19.673Z"
+  },
+  {
+    "id": "aud_1794629599056_5wjvj",
+    "actor": {
+      "id": "system",
+      "username": "SystemTest"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "operational",
+    "after": "operational",
+    "timestamp": "2026-11-14T04:13:19.056Z"
+  },
+  {
+    "id": "aud_1794629573565_o9ege",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_accepted",
+    "target": "bug_1794629573554_d81da4",
+    "targetType": "bug_report",
+    "reason": "Great catch! Awarding 50 credits to your server.",
+    "before": "pending",
+    "after": "accepted",
+    "timestamp": "2026-11-14T04:12:53.565Z"
+  },
+  {
+    "id": "aud_1794629573176_7fcn2",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_accepted",
+    "target": "bug_1794629573159_c67318",
+    "targetType": "bug_report",
+    "reason": "Verified and queued for patch. Thank you!",
+    "before": "pending",
+    "after": "accepted",
+    "timestamp": "2026-11-14T04:12:53.176Z"
+  },
+  {
+    "id": "aud_1794629572523_bocwt",
+    "actor": {
+      "id": "system",
+      "username": "Cleanup"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "maintenance",
+    "after": "operational",
+    "timestamp": "2026-11-14T04:12:52.523Z"
+  },
+  {
+    "id": "aud_1794629572301_coogn",
+    "actor": {
+      "id": "system",
+      "username": "AdminTester"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Stuck Flag",
+    "before": "operational",
+    "after": "maintenance",
+    "timestamp": "2026-11-14T04:12:52.301Z"
+  },
+  {
+    "id": "aud_1794629572095_148ko",
+    "actor": {
+      "id": "system",
+      "username": "AdminTester"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "maintenance",
+    "after": "operational",
+    "timestamp": "2026-11-14T04:12:52.095Z"
+  },
+  {
+    "id": "aud_1794629572041_b46io",
+    "actor": {
+      "id": "system",
+      "username": "AdminTester"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Database Migration",
+    "before": "operational",
+    "after": "maintenance",
+    "timestamp": "2026-11-14T04:12:52.041Z"
+  },
+  {
+    "id": "aud_1794629571272_435e9",
+    "actor": {
+      "id": "system",
+      "username": "TestRunner"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "operational",
+    "after": "operational",
+    "timestamp": "2026-11-14T04:12:51.272Z"
+  },
+  {
+    "id": "aud_1794629570951_hae1n",
+    "actor": {
+      "id": "523693281541095424",
+      "username": "kims3166"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "maintenance",
+    "after": "operational",
+    "timestamp": "2026-11-14T04:12:50.951Z"
+  },
+  {
+    "id": "aud_1794629570278_qdnhk",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Scheduled Upgrade",
+    "before": "maintenance",
+    "after": "maintenance",
+    "timestamp": "2026-11-14T04:12:50.279Z"
+  },
+  {
+    "id": "aud_1794629570271_mqbdb",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to ON",
+    "before": "OFF",
+    "after": "ON",
+    "timestamp": "2026-11-14T04:12:50.271Z"
+  },
+  {
+    "id": "aud_1794629570260_8n7ga",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to OFF",
+    "before": "OFF",
+    "after": "OFF",
+    "timestamp": "2026-11-14T04:12:50.260Z"
+  },
+  {
+    "id": "aud_1794629570254_90e93",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to OFF",
+    "before": "OFF",
+    "after": "OFF",
+    "timestamp": "2026-11-14T04:12:50.254Z"
+  },
+  {
+    "id": "aud_1794629570249_h32gt",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to OFF",
+    "before": "OFF",
+    "after": "OFF",
+    "timestamp": "2026-11-14T04:12:50.249Z"
+  },
+  {
+    "id": "aud_1794629569611_5d3di",
+    "actor": {
+      "id": "system",
+      "username": "SystemTest"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "operational",
+    "after": "operational",
+    "timestamp": "2026-11-14T04:12:49.611Z"
+  },
+  {
+    "id": "aud_1794629558038_y860n",
+    "actor": {
+      "id": "system",
+      "username": "Cleanup"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "maintenance",
+    "after": "operational",
+    "timestamp": "2026-11-14T04:12:38.038Z"
+  },
+  {
+    "id": "aud_1794629557651_niajg",
+    "actor": {
+      "id": "system",
+      "username": "AdminTester"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Stuck Flag",
+    "before": "operational",
+    "after": "maintenance",
+    "timestamp": "2026-11-14T04:12:37.651Z"
+  },
+  {
+    "id": "aud_1794629557376_7fyrt",
+    "actor": {
+      "id": "system",
+      "username": "AdminTester"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "maintenance",
+    "after": "operational",
+    "timestamp": "2026-11-14T04:12:37.376Z"
+  },
+  {
+    "id": "aud_1794629557303_hvcbr",
+    "actor": {
+      "id": "system",
+      "username": "AdminTester"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Database Migration",
+    "before": "operational",
+    "after": "maintenance",
+    "timestamp": "2026-11-14T04:12:37.303Z"
+  },
+  {
+    "id": "aud_1794629556219_z4gzs",
+    "actor": {
+      "id": "system",
+      "username": "TestRunner"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "operational",
+    "after": "operational",
+    "timestamp": "2026-11-14T04:12:36.219Z"
+  },
+  {
+    "id": "aud_1794629555841_g599h",
+    "actor": {
+      "id": "523693281541095424",
+      "username": "kims3166"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "maintenance",
+    "after": "operational",
+    "timestamp": "2026-11-14T04:12:35.841Z"
+  },
+  {
+    "id": "aud_1794629555206_ddtao",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Scheduled Upgrade",
+    "before": "maintenance",
+    "after": "maintenance",
+    "timestamp": "2026-11-14T04:12:35.206Z"
+  },
+  {
+    "id": "aud_1794629555198_2nv3j",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to ON",
+    "before": "OFF",
+    "after": "ON",
+    "timestamp": "2026-11-14T04:12:35.198Z"
+  },
+  {
+    "id": "aud_1794629555192_pxxy1",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to OFF",
+    "before": "OFF",
+    "after": "OFF",
+    "timestamp": "2026-11-14T04:12:35.193Z"
+  },
+  {
+    "id": "aud_1794629555187_n6eev",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to OFF",
+    "before": "OFF",
+    "after": "OFF",
+    "timestamp": "2026-11-14T04:12:35.187Z"
+  },
+  {
+    "id": "aud_1794629555182_hjgkp",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to OFF",
+    "before": "OFF",
+    "after": "OFF",
+    "timestamp": "2026-11-14T04:12:35.182Z"
+  },
+  {
+    "id": "aud_1794629554462_zbr5t",
+    "actor": {
+      "id": "system",
+      "username": "SystemTest"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "operational",
+    "after": "operational",
+    "timestamp": "2026-11-14T04:12:34.462Z"
+  },
+  {
+    "id": "aud_1794629483276_sqrix",
+    "actor": {
+      "id": "system",
+      "username": "Cleanup"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "maintenance",
+    "after": "operational",
+    "timestamp": "2026-11-14T04:11:23.276Z"
+  },
+  {
+    "id": "aud_1794629483060_bvkkd",
+    "actor": {
+      "id": "system",
+      "username": "AdminTester"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Stuck Flag",
+    "before": "operational",
+    "after": "maintenance",
+    "timestamp": "2026-11-14T04:11:23.060Z"
+  },
+  {
+    "id": "aud_1794629482842_spo8e",
+    "actor": {
+      "id": "system",
+      "username": "AdminTester"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "maintenance",
+    "after": "operational",
+    "timestamp": "2026-11-14T04:11:22.842Z"
+  },
+  {
+    "id": "aud_1794629482793_tdshq",
+    "actor": {
+      "id": "system",
+      "username": "AdminTester"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Database Migration",
+    "before": "operational",
+    "after": "maintenance",
+    "timestamp": "2026-11-14T04:11:22.793Z"
+  },
+  {
+    "id": "aud_1794629481965_4kqp5",
+    "actor": {
+      "id": "system",
+      "username": "TestRunner"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "operational",
+    "after": "operational",
+    "timestamp": "2026-11-14T04:11:21.965Z"
+  },
+  {
+    "id": "aud_1794629481640_1fz6h",
+    "actor": {
+      "id": "523693281541095424",
+      "username": "kims3166"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "maintenance",
+    "after": "operational",
+    "timestamp": "2026-11-14T04:11:21.640Z"
+  },
+  {
+    "id": "aud_1794629480796_ghkzv",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Scheduled Upgrade",
+    "before": "maintenance",
+    "after": "maintenance",
+    "timestamp": "2026-11-14T04:11:20.796Z"
+  },
+  {
+    "id": "aud_1794629480783_wka1l",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to ON",
+    "before": "OFF",
+    "after": "ON",
+    "timestamp": "2026-11-14T04:11:20.783Z"
+  },
+  {
+    "id": "aud_1794629480772_m9zp8",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to OFF",
+    "before": "OFF",
+    "after": "OFF",
+    "timestamp": "2026-11-14T04:11:20.772Z"
+  },
+  {
+    "id": "aud_1794629480763_aszjr",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to OFF",
+    "before": "OFF",
+    "after": "OFF",
+    "timestamp": "2026-11-14T04:11:20.763Z"
+  },
+  {
+    "id": "aud_1794629480753_f3zdi",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to OFF",
+    "before": "OFF",
+    "after": "OFF",
+    "timestamp": "2026-11-14T04:11:20.753Z"
+  },
+  {
+    "id": "aud_1794629480102_k3c07",
+    "actor": {
+      "id": "system",
+      "username": "SystemTest"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "operational",
+    "after": "operational",
+    "timestamp": "2026-11-14T04:11:20.102Z"
+  },
+  {
+    "id": "aud_1794629461884_lwn13",
+    "actor": {
+      "id": "system",
+      "username": "SystemTest"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "operational",
+    "after": "operational",
+    "timestamp": "2026-11-14T04:11:01.884Z"
+  },
+  {
+    "id": "aud_1794623278853_9u84e",
+    "actor": {
+      "id": "system",
+      "username": "System"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "maintenance",
+    "after": "operational",
+    "timestamp": "2026-11-14T02:27:58.853Z"
+  },
+  {
+    "id": "aud_1794623278846_2br58",
+    "actor": {
+      "id": "system",
+      "username": "System"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "System Upgrade",
+    "before": "operational",
+    "after": "maintenance",
+    "timestamp": "2026-11-14T02:27:58.846Z"
+  },
+  {
+    "id": "aud_1794623278559_aehfo",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "announcement_delete",
+    "target": "test_ann_1",
+    "targetType": "announcement",
+    "reason": "Announcement removed from circulation",
+    "before": "active",
+    "after": null,
+    "timestamp": "2026-11-14T02:27:58.559Z"
+  },
+  {
+    "id": "aud_1794623278555_cu5ri",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "announcement_update",
+    "target": "test_ann_1",
+    "targetType": "announcement",
+    "reason": "Announcement: \"Scheduled maintenance update tonight...\"",
+    "before": null,
+    "after": "info",
+    "timestamp": "2026-11-14T02:27:58.555Z"
+  },
+  {
+    "id": "aud_1794623278550_gd6ap",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "announcement_create",
+    "target": "test_ann_1",
+    "targetType": "announcement",
+    "reason": "Announcement: \"Scheduled maintenance update tonight...\"",
+    "before": null,
+    "after": "warning",
+    "timestamp": "2026-11-14T02:27:58.550Z"
+  },
+  {
+    "id": "aud_1794623249253_q9ehp",
+    "actor": {
+      "id": "system",
+      "username": "System"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "maintenance",
+    "after": "operational",
+    "timestamp": "2026-11-14T02:27:29.253Z"
+  },
+  {
+    "id": "aud_1794623249248_4km4f",
+    "actor": {
+      "id": "system",
+      "username": "System"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "System Upgrade",
+    "before": "operational",
+    "after": "maintenance",
+    "timestamp": "2026-11-14T02:27:29.248Z"
+  },
+  {
+    "id": "aud_1794623248896_eo53i",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "announcement_delete",
+    "target": "test_ann_1",
+    "targetType": "announcement",
+    "reason": "Announcement removed from circulation",
+    "before": "active",
+    "after": null,
+    "timestamp": "2026-11-14T02:27:28.896Z"
+  },
+  {
+    "id": "aud_1794623248891_ll5e4",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "announcement_update",
+    "target": "test_ann_1",
+    "targetType": "announcement",
+    "reason": "Announcement: \"Scheduled maintenance update tonight...\"",
+    "before": null,
+    "after": "info",
+    "timestamp": "2026-11-14T02:27:28.891Z"
+  },
+  {
+    "id": "aud_1794623248886_grquh",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "announcement_create",
+    "target": "test_ann_1",
+    "targetType": "announcement",
+    "reason": "Announcement: \"Scheduled maintenance update tonight...\"",
+    "before": null,
+    "after": "warning",
+    "timestamp": "2026-11-14T02:27:28.886Z"
+  },
+  {
+    "id": "aud_1794247067636_y0xxq",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "HeadAdmin"
+    },
+    "action": "user_unban",
+    "target": "987654321098765432",
+    "targetType": "user",
+    "reason": "Pardoned by administration after appeal",
+    "before": "banned (Permanent)",
+    "after": "active",
+    "timestamp": "2026-11-09T17:57:47.636Z"
+  },
+  {
+    "id": "aud_1794247067293_yvlgn",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "HeadAdmin"
+    },
+    "action": "blacklist_add",
+    "target": "987654321098765432",
+    "targetType": "discord_id",
+    "reason": "Account suspension and blacklist",
+    "before": null,
+    "after": "Permanent",
+    "timestamp": "2026-11-09T17:57:47.293Z"
+  },
+  {
+    "id": "aud_1794247067278_1m21y",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "HeadAdmin"
+    },
+    "action": "user_ban",
+    "target": "987654321098765432",
+    "targetType": "user",
+    "reason": "Violating community guidelines and advertisement rules",
+    "before": "active",
+    "after": "banned (Permanent)",
+    "timestamp": "2026-11-09T17:57:47.278Z"
+  },
+  {
+    "id": "aud_1794247058623_araka",
+    "actor": {
+      "id": "system",
+      "username": "Admin"
+    },
+    "action": "promo_create",
+    "target": "WALLETPROMO_1794247058615",
+    "targetType": "promo_code",
+    "reason": "Created promo code WALLETPROMO_1794247058615 for 75 credits",
+    "before": null,
+    "after": "75 credits (5 uses)",
+    "timestamp": "2026-11-09T17:57:38.623Z"
+  },
+  {
+    "id": "aud_1794247058578_pbh54",
+    "actor": {
+      "id": "system",
+      "username": "Owner"
+    },
+    "action": "admin_add",
+    "target": "777666555444333222",
+    "targetType": "admin",
+    "reason": "Testing staff addition",
+    "before": null,
+    "after": "Moderator",
+    "timestamp": "2026-11-09T17:57:38.578Z"
+  },
+  {
+    "id": "aud_1794245100958_opjc4",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "HeadAdmin"
+    },
+    "action": "user_unban",
+    "target": "987654321098765432",
+    "targetType": "user",
+    "reason": "Pardoned by administration after appeal",
+    "before": "banned (Permanent)",
+    "after": "active",
+    "timestamp": "2026-11-09T17:25:00.958Z"
+  },
+  {
+    "id": "aud_1794245100400_iqfnn",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "HeadAdmin"
+    },
+    "action": "blacklist_add",
+    "target": "987654321098765432",
+    "targetType": "discord_id",
+    "reason": "Account suspension and blacklist",
+    "before": null,
+    "after": "Permanent",
+    "timestamp": "2026-11-09T17:25:00.400Z"
+  },
+  {
+    "id": "aud_1794245100393_hy8px",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "HeadAdmin"
+    },
+    "action": "user_ban",
+    "target": "987654321098765432",
+    "targetType": "user",
+    "reason": "Violating community guidelines and advertisement rules",
+    "before": "active",
+    "after": "banned (Permanent)",
+    "timestamp": "2026-11-09T17:25:00.393Z"
+  },
+  {
+    "id": "aud_1794204112638_cx3e1",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "HeadAdmin"
+    },
+    "action": "user_unban",
+    "target": "987654321098765432",
+    "targetType": "user",
+    "reason": "Pardoned by administration after appeal",
+    "before": "banned (Permanent)",
+    "after": "active",
+    "timestamp": "2026-11-09T06:01:52.638Z"
+  },
+  {
+    "id": "aud_1794204112351_sv1r6",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "HeadAdmin"
+    },
+    "action": "blacklist_add",
+    "target": "987654321098765432",
+    "targetType": "discord_id",
+    "reason": "Account suspension and blacklist",
+    "before": null,
+    "after": "Permanent",
+    "timestamp": "2026-11-09T06:01:52.351Z"
+  },
+  {
+    "id": "aud_1794204112346_kmv6p",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "HeadAdmin"
+    },
+    "action": "user_ban",
+    "target": "987654321098765432",
+    "targetType": "user",
+    "reason": "Violating community guidelines and advertisement rules",
+    "before": "active",
+    "after": "banned (Permanent)",
+    "timestamp": "2026-11-09T06:01:52.346Z"
+  },
+  {
+    "id": "aud_1794204093176_kyjl7",
+    "actor": {
+      "id": "888777666555444333",
+      "username": "SelfBanTester"
+    },
+    "action": "user_unban",
+    "target": "888777666555444333",
+    "targetType": "user",
+    "reason": "Self unban pardon",
+    "before": "banned (Permanent)",
+    "after": "active",
+    "timestamp": "2026-11-09T06:01:33.176Z"
+  },
+  {
+    "id": "aud_1794204093139_wy6kv",
+    "actor": {
+      "id": "888777666555444333",
+      "username": "SelfBanTester"
+    },
+    "action": "user_ban",
+    "target": "888777666555444333",
+    "targetType": "user",
+    "reason": "Testing self-ban through HTTP endpoint",
+    "before": "active",
+    "after": "banned (Permanent)",
+    "timestamp": "2026-11-09T06:01:33.139Z"
+  },
+  {
+    "id": "aud_1794204085096_93pst",
+    "actor": {
+      "id": "999888777666555444",
+      "username": "TestOwner"
+    },
+    "action": "user_unban",
+    "target": "999888777666555444",
+    "targetType": "user",
+    "reason": "Self-pardon test restriction lifted",
+    "before": "banned (Permanent)",
+    "after": "active",
+    "timestamp": "2026-11-09T06:01:25.096Z"
+  },
+  {
+    "id": "aud_1794204085089_nrfmj",
+    "actor": {
+      "id": "999888777666555444",
+      "username": "TestOwner"
+    },
+    "action": "user_ban",
+    "target": "999888777666555444",
+    "targetType": "user",
+    "reason": "Self-ban test restriction",
+    "before": "active",
+    "after": "banned (Permanent)",
+    "timestamp": "2026-11-09T06:01:25.089Z"
+  },
+  {
+    "id": "aud_1794203007425_bsb0q",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "HeadAdmin"
+    },
+    "action": "user_unban",
+    "target": "987654321098765432",
+    "targetType": "user",
+    "reason": "Pardoned by administration after appeal",
+    "before": "banned (Permanent)",
+    "after": "active",
+    "timestamp": "2026-11-09T05:43:27.425Z"
+  },
+  {
+    "id": "aud_1794203007135_sygg4",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "HeadAdmin"
+    },
+    "action": "blacklist_add",
+    "target": "987654321098765432",
+    "targetType": "discord_id",
+    "reason": "Account suspension and blacklist",
+    "before": null,
+    "after": "Permanent",
+    "timestamp": "2026-11-09T05:43:27.135Z"
+  },
+  {
+    "id": "aud_1794203007129_0p3hb",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "HeadAdmin"
+    },
+    "action": "user_ban",
+    "target": "987654321098765432",
+    "targetType": "user",
+    "reason": "Violating community guidelines and advertisement rules",
+    "before": "active",
+    "after": "banned (Permanent)",
+    "timestamp": "2026-11-09T05:43:27.129Z"
+  },
+  {
+    "id": "aud_1794202539762_001ur",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "HeadAdmin"
+    },
+    "action": "user_unban",
+    "target": "987654321098765432",
+    "targetType": "user",
+    "reason": "Pardoned by administration after appeal",
+    "before": "banned (Permanent)",
+    "after": "active",
+    "timestamp": "2026-11-09T05:35:39.762Z"
+  },
+  {
+    "id": "aud_1794202539455_20c3p",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "HeadAdmin"
+    },
+    "action": "blacklist_add",
+    "target": "987654321098765432",
+    "targetType": "discord_id",
+    "reason": "Account suspension and blacklist",
+    "before": null,
+    "after": "Permanent",
+    "timestamp": "2026-11-09T05:35:39.455Z"
+  },
+  {
+    "id": "aud_1794202539449_gx7yq",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "HeadAdmin"
+    },
+    "action": "user_ban",
+    "target": "987654321098765432",
+    "targetType": "user",
+    "reason": "Violating community guidelines and advertisement rules",
+    "before": "active",
+    "after": "banned (Permanent)",
+    "timestamp": "2026-11-09T05:35:39.449Z"
+  },
+  {
+    "id": "aud_1794201319670_b6hb3",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_rejected",
+    "target": "bug_1794201318661_758726",
+    "targetType": "bug_report",
+    "reason": "Works as designed.",
+    "before": "pending",
+    "after": "rejected",
+    "timestamp": "2026-11-09T05:15:19.670Z"
+  },
+  {
+    "id": "aud_1794201319497_pfry8",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_duplicate",
+    "target": "bug_1794201318657_9d550d",
+    "targetType": "bug_report",
+    "reason": "Duplicate of existing ticket.",
+    "before": "pending",
+    "after": "duplicate",
+    "timestamp": "2026-11-09T05:15:19.497Z"
+  },
+  {
+    "id": "aud_1794201319296_6lddx",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_accepted",
+    "target": "bug_1794201318994_47a444",
+    "targetType": "bug_report",
+    "reason": "Staff clicked again",
+    "before": "accepted",
+    "after": "accepted",
+    "timestamp": "2026-11-09T05:15:19.296Z"
+  },
+  {
+    "id": "aud_1794201319006_j2cog",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_accepted",
+    "target": "bug_1794201318994_47a444",
+    "targetType": "bug_report",
+    "reason": "Great catch! Awarding 50 credits to your server.",
+    "before": "pending",
+    "after": "accepted",
+    "timestamp": "2026-11-09T05:15:19.006Z"
+  },
+  {
+    "id": "aud_1794201318674_7vi7i",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_accepted",
+    "target": "bug_1794201318653_b953c8",
+    "targetType": "bug_report",
+    "reason": "Verified and queued for patch. Thank you!",
+    "before": "pending",
+    "after": "accepted",
+    "timestamp": "2026-11-09T05:15:18.674Z"
+  },
+  {
+    "id": "aud_1794201315121_lxpji",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "HeadAdmin"
+    },
+    "action": "user_unban",
+    "target": "987654321098765432",
+    "targetType": "user",
+    "reason": "Pardoned by administration after appeal",
+    "before": "banned (Permanent)",
+    "after": "active",
+    "timestamp": "2026-11-09T05:15:15.121Z"
+  },
+  {
+    "id": "aud_1794201314805_l6mls",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "HeadAdmin"
+    },
+    "action": "blacklist_add",
+    "target": "987654321098765432",
+    "targetType": "discord_id",
+    "reason": "Account suspension and blacklist",
+    "before": null,
+    "after": "Permanent",
+    "timestamp": "2026-11-09T05:15:14.805Z"
+  },
+  {
+    "id": "aud_1794201314799_uofmq",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "HeadAdmin"
+    },
+    "action": "user_ban",
+    "target": "987654321098765432",
+    "targetType": "user",
+    "reason": "Violating community guidelines and advertisement rules",
+    "before": "active",
+    "after": "banned (Permanent)",
+    "timestamp": "2026-11-09T05:15:14.799Z"
+  },
+  {
+    "id": "aud_1794201097258_lnyar",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "HeadAdmin"
+    },
+    "action": "user_unban",
+    "target": "987654321098765432",
+    "targetType": "user",
+    "reason": "Pardoned by administration after appeal",
+    "before": "banned (Permanent)",
+    "after": "active",
+    "timestamp": "2026-11-09T05:11:37.258Z"
+  },
+  {
+    "id": "aud_1794201096957_d1in2",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "HeadAdmin"
+    },
+    "action": "blacklist_add",
+    "target": "987654321098765432",
+    "targetType": "discord_id",
+    "reason": "Account suspension and blacklist",
+    "before": null,
+    "after": "Permanent",
+    "timestamp": "2026-11-09T05:11:36.957Z"
+  },
+  {
+    "id": "aud_1794201096949_mythz",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "HeadAdmin"
+    },
+    "action": "user_ban",
+    "target": "987654321098765432",
+    "targetType": "user",
+    "reason": "Violating community guidelines and advertisement rules",
+    "before": "active",
+    "after": "banned (Permanent)",
+    "timestamp": "2026-11-09T05:11:36.949Z"
+  },
+  {
+    "id": "aud_1794201092278_12i6d",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "HeadAdmin"
+    },
+    "action": "user_unban",
+    "target": "987654321098765432",
+    "targetType": "user",
+    "reason": "Pardoned by administration after appeal",
+    "before": "banned (Permanent)",
+    "after": "active",
+    "timestamp": "2026-11-09T05:11:32.278Z"
+  },
+  {
+    "id": "aud_1794201091961_p6o7z",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "HeadAdmin"
+    },
+    "action": "blacklist_add",
+    "target": "987654321098765432",
+    "targetType": "discord_id",
+    "reason": "Account suspension and blacklist",
+    "before": null,
+    "after": "Permanent",
+    "timestamp": "2026-11-09T05:11:31.961Z"
+  },
+  {
+    "id": "aud_1794201091955_uy54z",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "HeadAdmin"
+    },
+    "action": "user_ban",
+    "target": "987654321098765432",
+    "targetType": "user",
+    "reason": "Violating community guidelines and advertisement rules",
+    "before": "active",
+    "after": "banned (Permanent)",
+    "timestamp": "2026-11-09T05:11:31.955Z"
+  },
+  {
+    "id": "aud_1794201060677_ql5n6",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_rejected",
+    "target": "bug_1794201059748_090308",
+    "targetType": "bug_report",
+    "reason": "Works as designed.",
+    "before": "pending",
+    "after": "rejected",
+    "timestamp": "2026-11-09T05:11:00.677Z"
+  },
+  {
+    "id": "aud_1794201060504_wfc9o",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_duplicate",
+    "target": "bug_1794201059745_286bae",
+    "targetType": "bug_report",
+    "reason": "Duplicate of existing ticket.",
+    "before": "pending",
+    "after": "duplicate",
+    "timestamp": "2026-11-09T05:11:00.504Z"
+  },
+  {
+    "id": "aud_1794201060297_887xw",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_accepted",
+    "target": "bug_1794201060028_3ffe75",
+    "targetType": "bug_report",
+    "reason": "Staff clicked again",
+    "before": "accepted",
+    "after": "accepted",
+    "timestamp": "2026-11-09T05:11:00.297Z"
+  },
+  {
+    "id": "aud_1794201060040_gpeaq",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_accepted",
+    "target": "bug_1794201060028_3ffe75",
+    "targetType": "bug_report",
+    "reason": "Great catch! Awarding 50 credits to your server.",
+    "before": "pending",
+    "after": "accepted",
+    "timestamp": "2026-11-09T05:11:00.040Z"
+  },
+  {
+    "id": "aud_1794201059757_7t26w",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_accepted",
+    "target": "bug_1794201059741_0f8421",
+    "targetType": "bug_report",
+    "reason": "Verified and queued for patch. Thank you!",
+    "before": "pending",
+    "after": "accepted",
+    "timestamp": "2026-11-09T05:10:59.757Z"
+  },
+  {
+    "id": "aud_1794201055466_wz80h",
+    "actor": {
+      "id": "system",
+      "username": "Cleanup"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "maintenance",
+    "after": "operational",
+    "timestamp": "2026-11-09T05:10:55.466Z"
+  },
+  {
+    "id": "aud_1794201055270_vtzxp",
+    "actor": {
+      "id": "system",
+      "username": "AdminTester"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Stuck Flag",
+    "before": "operational",
+    "after": "maintenance",
+    "timestamp": "2026-11-09T05:10:55.270Z"
+  },
+  {
+    "id": "aud_1794201054990_clv4l",
+    "actor": {
+      "id": "system",
+      "username": "AdminTester"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "maintenance",
+    "after": "operational",
+    "timestamp": "2026-11-09T05:10:54.990Z"
+  },
+  {
+    "id": "aud_1794201054935_od3w7",
+    "actor": {
+      "id": "system",
+      "username": "AdminTester"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Database Migration",
+    "before": "operational",
+    "after": "maintenance",
+    "timestamp": "2026-11-09T05:10:54.935Z"
+  },
+  {
+    "id": "aud_1794201054050_2qgvs",
+    "actor": {
+      "id": "system",
+      "username": "TestRunner"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "operational",
+    "after": "operational",
+    "timestamp": "2026-11-09T05:10:54.050Z"
+  },
+  {
+    "id": "aud_1794201049784_bjhyp",
+    "actor": {
+      "id": "523693281541095424",
+      "username": "kims3166"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "maintenance",
+    "after": "operational",
+    "timestamp": "2026-11-09T05:10:49.784Z"
+  },
+  {
+    "id": "aud_1794201048450_ms7ec",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Scheduled Upgrade",
+    "before": "maintenance",
+    "after": "maintenance",
+    "timestamp": "2026-11-09T05:10:48.450Z"
+  },
+  {
+    "id": "aud_1794201048443_6rvfp",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to ON",
+    "before": "OFF",
+    "after": "ON",
+    "timestamp": "2026-11-09T05:10:48.443Z"
+  },
+  {
+    "id": "aud_1794201048434_millx",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to OFF",
+    "before": "OFF",
+    "after": "OFF",
+    "timestamp": "2026-11-09T05:10:48.434Z"
+  },
+  {
+    "id": "aud_1794201048428_qq5i2",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to OFF",
+    "before": "OFF",
+    "after": "OFF",
+    "timestamp": "2026-11-09T05:10:48.428Z"
+  },
+  {
+    "id": "aud_1794201048423_5xwma",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to OFF",
+    "before": "OFF",
+    "after": "OFF",
+    "timestamp": "2026-11-09T05:10:48.423Z"
+  },
+  {
+    "id": "aud_1794201041868_lteln",
+    "actor": {
+      "id": "system",
+      "username": "SystemTest"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "operational",
+    "after": "operational",
+    "timestamp": "2026-11-09T05:10:41.868Z"
+  },
+  {
+    "id": "aud_1794201011116_r4d4l",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "HeadAdmin"
+    },
+    "action": "user_unban",
+    "target": "987654321098765432",
+    "targetType": "user",
+    "reason": "Pardoned by administration after appeal",
+    "before": "banned (Permanent)",
+    "after": "active",
+    "timestamp": "2026-11-09T05:10:11.116Z"
+  },
+  {
+    "id": "aud_1794201010754_ymep0",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "HeadAdmin"
+    },
+    "action": "blacklist_add",
+    "target": "987654321098765432",
+    "targetType": "discord_id",
+    "reason": "Account suspension and blacklist",
+    "before": null,
+    "after": "Permanent",
+    "timestamp": "2026-11-09T05:10:10.754Z"
+  },
+  {
+    "id": "aud_1794201010747_8dcpm",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "HeadAdmin"
+    },
+    "action": "user_ban",
+    "target": "987654321098765432",
+    "targetType": "user",
+    "reason": "Violating community guidelines and advertisement rules",
+    "before": "active",
+    "after": "banned (Permanent)",
+    "timestamp": "2026-11-09T05:10:10.747Z"
+  },
+  {
+    "id": "aud_1794192863922_zogab",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_rejected",
+    "target": "bug_1794192862956_cde389",
+    "targetType": "bug_report",
+    "reason": "Works as designed.",
+    "before": "pending",
+    "after": "rejected",
+    "timestamp": "2026-11-09T02:54:23.922Z"
+  },
+  {
+    "id": "aud_1794192863727_xeszv",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_duplicate",
+    "target": "bug_1794192862953_6fb62b",
+    "targetType": "bug_report",
+    "reason": "Duplicate of existing ticket.",
+    "before": "pending",
+    "after": "duplicate",
+    "timestamp": "2026-11-09T02:54:23.727Z"
+  },
+  {
+    "id": "aud_1794192863516_4ciwu",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_accepted",
+    "target": "bug_1794192863259_256a42",
+    "targetType": "bug_report",
+    "reason": "Staff clicked again",
+    "before": "accepted",
+    "after": "accepted",
+    "timestamp": "2026-11-09T02:54:23.516Z"
+  },
+  {
+    "id": "aud_1794192863272_g4lsu",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_accepted",
+    "target": "bug_1794192863259_256a42",
+    "targetType": "bug_report",
+    "reason": "Great catch! Awarding 50 credits to your server.",
+    "before": "pending",
+    "after": "accepted",
+    "timestamp": "2026-11-09T02:54:23.272Z"
+  },
+  {
+    "id": "aud_1794192862966_p4otp",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_accepted",
+    "target": "bug_1794192862950_feca2b",
+    "targetType": "bug_report",
+    "reason": "Verified and queued for patch. Thank you!",
+    "before": "pending",
+    "after": "accepted",
+    "timestamp": "2026-11-09T02:54:22.967Z"
+  },
+  {
+    "id": "aud_1794192860321_zsnpm",
+    "actor": {
+      "id": "system",
+      "username": "Cleanup"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "maintenance",
+    "after": "operational",
+    "timestamp": "2026-11-09T02:54:20.321Z"
+  },
+  {
+    "id": "aud_1794192860148_09pi2",
+    "actor": {
+      "id": "system",
+      "username": "AdminTester"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Stuck Flag",
+    "before": "operational",
+    "after": "maintenance",
+    "timestamp": "2026-11-09T02:54:20.148Z"
+  },
+  {
+    "id": "aud_1794192859988_yjoyf",
+    "actor": {
+      "id": "system",
+      "username": "AdminTester"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "maintenance",
+    "after": "operational",
+    "timestamp": "2026-11-09T02:54:19.988Z"
+  },
+  {
+    "id": "aud_1794192859955_m9hvu",
+    "actor": {
+      "id": "system",
+      "username": "AdminTester"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Database Migration",
+    "before": "operational",
+    "after": "maintenance",
+    "timestamp": "2026-11-09T02:54:19.955Z"
+  },
+  {
+    "id": "aud_1794192859432_19b2a",
+    "actor": {
+      "id": "system",
+      "username": "TestRunner"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "operational",
+    "after": "operational",
+    "timestamp": "2026-11-09T02:54:19.432Z"
+  },
+  {
+    "id": "aud_1794192856803_k20xj",
+    "actor": {
+      "id": "523693281541095424",
+      "username": "kims3166"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "maintenance",
+    "after": "operational",
+    "timestamp": "2026-11-09T02:54:16.803Z"
+  },
+  {
+    "id": "aud_1794192856380_dpz3x",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Scheduled Upgrade",
+    "before": "maintenance",
+    "after": "maintenance",
+    "timestamp": "2026-11-09T02:54:16.380Z"
+  },
+  {
+    "id": "aud_1794192856374_a34ja",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to ON",
+    "before": "OFF",
+    "after": "ON",
+    "timestamp": "2026-11-09T02:54:16.374Z"
+  },
+  {
+    "id": "aud_1794192856369_9jq17",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to OFF",
+    "before": "OFF",
+    "after": "OFF",
+    "timestamp": "2026-11-09T02:54:16.369Z"
+  },
+  {
+    "id": "aud_1794192856365_gaxyc",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to OFF",
+    "before": "OFF",
+    "after": "OFF",
+    "timestamp": "2026-11-09T02:54:16.365Z"
+  },
+  {
+    "id": "aud_1794192856361_tieqc",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to OFF",
+    "before": "OFF",
+    "after": "OFF",
+    "timestamp": "2026-11-09T02:54:16.361Z"
+  },
+  {
+    "id": "aud_1794192853679_abs81",
+    "actor": {
+      "id": "system",
+      "username": "SystemTest"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "operational",
+    "after": "operational",
+    "timestamp": "2026-11-09T02:54:13.679Z"
+  },
+  {
+    "id": "aud_1794192791745_hbixh",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_rejected",
+    "target": "bug_1794192790766_cfcadf",
+    "targetType": "bug_report",
+    "reason": "Works as designed.",
+    "before": "pending",
+    "after": "rejected",
+    "timestamp": "2026-11-09T02:53:11.745Z"
+  },
+  {
+    "id": "aud_1794192791567_gtbfs",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_duplicate",
+    "target": "bug_1794192790762_862138",
+    "targetType": "bug_report",
+    "reason": "Duplicate of existing ticket.",
+    "before": "pending",
+    "after": "duplicate",
+    "timestamp": "2026-11-09T02:53:11.567Z"
+  },
+  {
+    "id": "aud_1794192791382_d1jxl",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_accepted",
+    "target": "bug_1794192791056_c54d72",
+    "targetType": "bug_report",
+    "reason": "Staff clicked again",
+    "before": "accepted",
+    "after": "accepted",
+    "timestamp": "2026-11-09T02:53:11.382Z"
+  },
+  {
+    "id": "aud_1794192791071_uf67c",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_accepted",
+    "target": "bug_1794192791056_c54d72",
+    "targetType": "bug_report",
+    "reason": "Great catch! Awarding 50 credits to your server.",
+    "before": "pending",
+    "after": "accepted",
+    "timestamp": "2026-11-09T02:53:11.071Z"
+  },
+  {
+    "id": "aud_1794192790778_lb8sb",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_accepted",
+    "target": "bug_1794192790758_f82bd2",
+    "targetType": "bug_report",
+    "reason": "Verified and queued for patch. Thank you!",
+    "before": "pending",
+    "after": "accepted",
+    "timestamp": "2026-11-09T02:53:10.778Z"
+  },
+  {
+    "id": "aud_1794192790384_xdguc",
+    "actor": {
+      "id": "system",
+      "username": "Cleanup"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "maintenance",
+    "after": "operational",
+    "timestamp": "2026-11-09T02:53:10.384Z"
+  },
+  {
+    "id": "aud_1794192790231_lcvok",
+    "actor": {
+      "id": "system",
+      "username": "AdminTester"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Stuck Flag",
+    "before": "operational",
+    "after": "maintenance",
+    "timestamp": "2026-11-09T02:53:10.231Z"
+  },
+  {
+    "id": "aud_1794192790055_8yxio",
+    "actor": {
+      "id": "system",
+      "username": "AdminTester"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "maintenance",
+    "after": "operational",
+    "timestamp": "2026-11-09T02:53:10.055Z"
+  },
+  {
+    "id": "aud_1794192790018_edhlw",
+    "actor": {
+      "id": "system",
+      "username": "AdminTester"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Database Migration",
+    "before": "operational",
+    "after": "maintenance",
+    "timestamp": "2026-11-09T02:53:10.018Z"
+  },
+  {
+    "id": "aud_1794192789230_gc4oj",
+    "actor": {
+      "id": "system",
+      "username": "TestRunner"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "operational",
+    "after": "operational",
+    "timestamp": "2026-11-09T02:53:09.230Z"
+  },
+  {
+    "id": "aud_1794192788852_lvk8t",
+    "actor": {
+      "id": "523693281541095424",
+      "username": "kims3166"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "maintenance",
+    "after": "operational",
+    "timestamp": "2026-11-09T02:53:08.852Z"
+  },
+  {
+    "id": "aud_1794192788364_h03rh",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Scheduled Upgrade",
+    "before": "maintenance",
+    "after": "maintenance",
+    "timestamp": "2026-11-09T02:53:08.364Z"
+  },
+  {
+    "id": "aud_1794192788359_ylm4u",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to ON",
+    "before": "OFF",
+    "after": "ON",
+    "timestamp": "2026-11-09T02:53:08.359Z"
+  },
+  {
+    "id": "aud_1794192788354_czqwz",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to OFF",
+    "before": "OFF",
+    "after": "OFF",
+    "timestamp": "2026-11-09T02:53:08.354Z"
+  },
+  {
+    "id": "aud_1794192788348_50uzn",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to OFF",
+    "before": "OFF",
+    "after": "OFF",
+    "timestamp": "2026-11-09T02:53:08.348Z"
+  },
+  {
+    "id": "aud_1794192788342_4qrfq",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to OFF",
+    "before": "OFF",
+    "after": "OFF",
+    "timestamp": "2026-11-09T02:53:08.342Z"
+  },
+  {
+    "id": "aud_1794192787789_buvca",
+    "actor": {
+      "id": "system",
+      "username": "SystemTest"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "operational",
+    "after": "operational",
+    "timestamp": "2026-11-09T02:53:07.789Z"
+  },
+  {
+    "id": "aud_1794192767635_hgbyx",
+    "actor": {
+      "id": "system",
+      "username": "SystemTest"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "operational",
+    "after": "operational",
+    "timestamp": "2026-11-09T02:52:47.635Z"
+  },
+  {
+    "id": "aud_1794192735090_w5lbr",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_rejected",
+    "target": "bug_1794192734121_64ba7e",
+    "targetType": "bug_report",
+    "reason": "Works as designed.",
+    "before": "pending",
+    "after": "rejected",
+    "timestamp": "2026-11-09T02:52:15.090Z"
+  },
+  {
+    "id": "aud_1794192734910_jshjw",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_duplicate",
+    "target": "bug_1794192734117_2da409",
+    "targetType": "bug_report",
+    "reason": "Duplicate of existing ticket.",
+    "before": "pending",
+    "after": "duplicate",
+    "timestamp": "2026-11-09T02:52:14.910Z"
+  },
+  {
+    "id": "aud_1794192734675_3l9fz",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_accepted",
+    "target": "bug_1794192734398_13f96f",
+    "targetType": "bug_report",
+    "reason": "Staff clicked again",
+    "before": "accepted",
+    "after": "accepted",
+    "timestamp": "2026-11-09T02:52:14.675Z"
+  },
+  {
+    "id": "aud_1794192734408_qoqwd",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_accepted",
+    "target": "bug_1794192734398_13f96f",
+    "targetType": "bug_report",
+    "reason": "Great catch! Awarding 50 credits to your server.",
+    "before": "pending",
+    "after": "accepted",
+    "timestamp": "2026-11-09T02:52:14.408Z"
+  },
+  {
+    "id": "aud_1794192734132_n0jd5",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_accepted",
+    "target": "bug_1794192734112_d61821",
+    "targetType": "bug_report",
+    "reason": "Verified and queued for patch. Thank you!",
+    "before": "pending",
+    "after": "accepted",
+    "timestamp": "2026-11-09T02:52:14.132Z"
+  },
+  {
+    "id": "aud_1794192692112_vu13y",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_accepted",
+    "target": "bug_1794192692098_0b84bf",
+    "targetType": "bug_report",
+    "reason": "Great catch! Awarding 50 credits to your server.",
+    "before": "pending",
+    "after": "accepted",
+    "timestamp": "2026-11-09T02:51:32.112Z"
+  },
+  {
+    "id": "aud_1794192691721_pmznx",
+    "actor": {
+      "id": "111111111111111111",
+      "username": "AdminLead"
+    },
+    "action": "bug_report_accepted",
+    "target": "bug_1794192691705_9e8f8d",
+    "targetType": "bug_report",
+    "reason": "Verified and queued for patch. Thank you!",
+    "before": "pending",
+    "after": "accepted",
+    "timestamp": "2026-11-09T02:51:31.721Z"
+  },
+  {
+    "id": "aud_1794190272128_i9g94",
+    "actor": {
+      "id": "system",
+      "username": "Cleanup"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "maintenance",
+    "after": "operational",
+    "timestamp": "2026-11-09T02:11:12.128Z"
+  },
+  {
+    "id": "aud_1794190272020_dwsa4",
+    "actor": {
+      "id": "system",
+      "username": "AdminTester"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Stuck Flag",
+    "before": "operational",
+    "after": "maintenance",
+    "timestamp": "2026-11-09T02:11:12.020Z"
+  },
+  {
+    "id": "aud_1794190271910_ghwy7",
+    "actor": {
+      "id": "system",
+      "username": "AdminTester"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "maintenance",
+    "after": "operational",
+    "timestamp": "2026-11-09T02:11:11.910Z"
+  },
+  {
+    "id": "aud_1794190271863_iuk31",
+    "actor": {
+      "id": "system",
+      "username": "AdminTester"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Database Migration",
+    "before": "operational",
+    "after": "maintenance",
+    "timestamp": "2026-11-09T02:11:11.863Z"
+  },
+  {
+    "id": "aud_1794190271231_mmbpn",
+    "actor": {
+      "id": "system",
+      "username": "TestRunner"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "operational",
+    "after": "operational",
+    "timestamp": "2026-11-09T02:11:11.231Z"
+  },
+  {
+    "id": "aud_1794190270989_isfxm",
+    "actor": {
+      "id": "523693281541095424",
+      "username": "kims3166"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "maintenance",
+    "after": "operational",
+    "timestamp": "2026-11-09T02:11:10.989Z"
+  },
+  {
+    "id": "aud_1794190270444_z6smx",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Scheduled Upgrade",
+    "before": "maintenance",
+    "after": "maintenance",
+    "timestamp": "2026-11-09T02:11:10.444Z"
+  },
+  {
+    "id": "aud_1794190270437_a1q0p",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to ON",
+    "before": "OFF",
+    "after": "ON",
+    "timestamp": "2026-11-09T02:11:10.437Z"
+  },
+  {
+    "id": "aud_1794190270428_o9wtl",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to OFF",
+    "before": "OFF",
+    "after": "OFF",
+    "timestamp": "2026-11-09T02:11:10.428Z"
+  },
+  {
+    "id": "aud_1794190270420_154st",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to OFF",
+    "before": "OFF",
+    "after": "OFF",
+    "timestamp": "2026-11-09T02:11:10.420Z"
+  },
+  {
+    "id": "aud_1794190270414_b4zqb",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to OFF",
+    "before": "OFF",
+    "after": "OFF",
+    "timestamp": "2026-11-09T02:11:10.414Z"
+  },
+  {
+    "id": "aud_1794190269641_wd9nu",
+    "actor": {
+      "id": "system",
+      "username": "SystemTest"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "operational",
+    "after": "operational",
+    "timestamp": "2026-11-09T02:11:09.641Z"
+  },
+  {
+    "id": "aud_1794189031071_eflji",
+    "actor": {
+      "id": "system",
+      "username": "Cleanup"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "maintenance",
+    "after": "operational",
+    "timestamp": "2026-11-09T01:50:31.071Z"
+  },
+  {
+    "id": "aud_1794189030949_ps19g",
+    "actor": {
+      "id": "system",
+      "username": "AdminTester"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Stuck Flag",
+    "before": "operational",
+    "after": "maintenance",
+    "timestamp": "2026-11-09T01:50:30.949Z"
+  },
+  {
+    "id": "aud_1794189030848_jmas6",
+    "actor": {
+      "id": "system",
+      "username": "AdminTester"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "maintenance",
+    "after": "operational",
+    "timestamp": "2026-11-09T01:50:30.848Z"
+  },
+  {
+    "id": "aud_1794189030801_lnc8e",
+    "actor": {
+      "id": "system",
+      "username": "AdminTester"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Database Migration",
+    "before": "operational",
+    "after": "maintenance",
+    "timestamp": "2026-11-09T01:50:30.801Z"
+  },
+  {
+    "id": "aud_1794189030107_uqvge",
+    "actor": {
+      "id": "system",
+      "username": "TestRunner"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "operational",
+    "after": "operational",
+    "timestamp": "2026-11-09T01:50:30.107Z"
+  },
+  {
+    "id": "aud_1794189029713_iso9s",
+    "actor": {
+      "id": "523693281541095424",
+      "username": "kims3166"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "maintenance",
+    "after": "operational",
+    "timestamp": "2026-11-09T01:50:29.713Z"
+  },
+  {
+    "id": "aud_1794189029198_77y06",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Scheduled Upgrade",
+    "before": "maintenance",
+    "after": "maintenance",
+    "timestamp": "2026-11-09T01:50:29.198Z"
+  },
+  {
+    "id": "aud_1794189029191_x3hyi",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to ON",
+    "before": "OFF",
+    "after": "ON",
+    "timestamp": "2026-11-09T01:50:29.191Z"
+  },
+  {
+    "id": "aud_1794189029184_rs4y1",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to OFF",
+    "before": "OFF",
+    "after": "OFF",
+    "timestamp": "2026-11-09T01:50:29.185Z"
+  },
+  {
+    "id": "aud_1794189029178_dj4r2",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to OFF",
+    "before": "OFF",
+    "after": "OFF",
+    "timestamp": "2026-11-09T01:50:29.178Z"
+  },
+  {
+    "id": "aud_1794189029171_5is2z",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to OFF",
+    "before": "OFF",
+    "after": "OFF",
+    "timestamp": "2026-11-09T01:50:29.171Z"
+  },
+  {
+    "id": "aud_1794189028504_oqlhi",
+    "actor": {
+      "id": "system",
+      "username": "SystemTest"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "operational",
+    "after": "operational",
+    "timestamp": "2026-11-09T01:50:28.504Z"
+  },
+  {
+    "id": "aud_1794188753650_4udx2",
+    "actor": {
+      "id": "system",
+      "username": "Cleanup"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "maintenance",
+    "after": "operational",
+    "timestamp": "2026-11-09T01:45:53.650Z"
+  },
+  {
+    "id": "aud_1794188753576_9e0me",
+    "actor": {
+      "id": "system",
+      "username": "AdminTester"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Stuck Flag",
+    "before": "operational",
+    "after": "maintenance",
+    "timestamp": "2026-11-09T01:45:53.576Z"
+  },
+  {
+    "id": "aud_1794188753501_i9xpt",
+    "actor": {
+      "id": "system",
+      "username": "AdminTester"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "maintenance",
+    "after": "operational",
+    "timestamp": "2026-11-09T01:45:53.501Z"
+  },
+  {
+    "id": "aud_1794188753468_9qe6p",
+    "actor": {
+      "id": "system",
+      "username": "AdminTester"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Database Migration",
+    "before": "operational",
+    "after": "maintenance",
+    "timestamp": "2026-11-09T01:45:53.468Z"
+  },
+  {
+    "id": "aud_1794188753052_pzz5g",
+    "actor": {
+      "id": "system",
+      "username": "TestRunner"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "operational",
+    "after": "operational",
+    "timestamp": "2026-11-09T01:45:53.052Z"
+  },
+  {
+    "id": "aud_1794188752887_7tx7z",
+    "actor": {
+      "id": "523693281541095424",
+      "username": "kims3166"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "maintenance",
+    "after": "operational",
+    "timestamp": "2026-11-09T01:45:52.887Z"
+  },
+  {
+    "id": "aud_1794188752528_ond2q",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Scheduled Upgrade",
+    "before": "maintenance",
+    "after": "maintenance",
+    "timestamp": "2026-11-09T01:45:52.528Z"
+  },
+  {
+    "id": "aud_1794188752523_vzz9a",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to ON",
+    "before": "OFF",
+    "after": "ON",
+    "timestamp": "2026-11-09T01:45:52.523Z"
+  },
+  {
+    "id": "aud_1794188752519_06zhp",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to OFF",
+    "before": "OFF",
+    "after": "OFF",
+    "timestamp": "2026-11-09T01:45:52.519Z"
+  },
+  {
+    "id": "aud_1794188752515_x0qek",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to OFF",
+    "before": "OFF",
+    "after": "OFF",
+    "timestamp": "2026-11-09T01:45:52.515Z"
+  },
+  {
+    "id": "aud_1794188752511_mfd2y",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to OFF",
+    "before": "OFF",
+    "after": "OFF",
+    "timestamp": "2026-11-09T01:45:52.511Z"
+  },
+  {
+    "id": "aud_1794188752035_91q3c",
+    "actor": {
+      "id": "system",
+      "username": "SystemTest"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "operational",
+    "after": "operational",
+    "timestamp": "2026-11-09T01:45:52.035Z"
+  },
+  {
+    "id": "aud_1794187951809_ay7n6",
+    "actor": {
+      "id": "system",
+      "username": "Cleanup"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "maintenance",
+    "after": "operational",
+    "timestamp": "2026-11-09T01:32:31.809Z"
+  },
+  {
+    "id": "aud_1794187951737_mh8jl",
+    "actor": {
+      "id": "system",
+      "username": "AdminTester"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Stuck Flag",
+    "before": "operational",
+    "after": "maintenance",
+    "timestamp": "2026-11-09T01:32:31.737Z"
+  },
+  {
+    "id": "aud_1794187951657_exmux",
+    "actor": {
+      "id": "system",
+      "username": "AdminTester"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "maintenance",
+    "after": "operational",
+    "timestamp": "2026-11-09T01:32:31.657Z"
+  },
+  {
+    "id": "aud_1794187951621_gkhzy",
+    "actor": {
+      "id": "system",
+      "username": "AdminTester"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Database Migration",
+    "before": "operational",
+    "after": "maintenance",
+    "timestamp": "2026-11-09T01:32:31.621Z"
+  },
+  {
+    "id": "aud_1794187951211_bk4lq",
+    "actor": {
+      "id": "system",
+      "username": "TestRunner"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "operational",
+    "after": "operational",
+    "timestamp": "2026-11-09T01:32:31.211Z"
+  },
+  {
+    "id": "aud_1794187951049_pnyfc",
+    "actor": {
+      "id": "523693281541095424",
+      "username": "kims3166"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "maintenance",
+    "after": "operational",
+    "timestamp": "2026-11-09T01:32:31.049Z"
+  },
+  {
+    "id": "aud_1794187950677_vla5k",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Scheduled Upgrade",
+    "before": "maintenance",
+    "after": "maintenance",
+    "timestamp": "2026-11-09T01:32:30.677Z"
+  },
+  {
+    "id": "aud_1794187950672_ja0iv",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to ON",
+    "before": "OFF",
+    "after": "ON",
+    "timestamp": "2026-11-09T01:32:30.672Z"
+  },
+  {
+    "id": "aud_1794187950666_i7qqx",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to OFF",
+    "before": "OFF",
+    "after": "OFF",
+    "timestamp": "2026-11-09T01:32:30.666Z"
+  },
+  {
+    "id": "aud_1794187950661_4bubi",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to OFF",
+    "before": "OFF",
+    "after": "OFF",
+    "timestamp": "2026-11-09T01:32:30.661Z"
+  },
+  {
+    "id": "aud_1794187950656_iipgf",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to OFF",
+    "before": "OFF",
+    "after": "OFF",
+    "timestamp": "2026-11-09T01:32:30.656Z"
+  },
+  {
+    "id": "aud_1794187950043_2h3mk",
+    "actor": {
+      "id": "system",
+      "username": "SystemTest"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "operational",
+    "after": "operational",
+    "timestamp": "2026-11-09T01:32:30.043Z"
+  },
+  {
+    "id": "aud_1794187917286_0lrsc",
+    "actor": {
+      "id": "system",
+      "username": "Cleanup"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "maintenance",
+    "after": "operational",
+    "timestamp": "2026-11-09T01:31:57.286Z"
+  },
+  {
+    "id": "aud_1794187917218_50v1q",
+    "actor": {
+      "id": "system",
+      "username": "AdminTester"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Stuck Flag",
+    "before": "operational",
+    "after": "maintenance",
+    "timestamp": "2026-11-09T01:31:57.218Z"
+  },
+  {
+    "id": "aud_1794187917152_qpere",
+    "actor": {
+      "id": "system",
+      "username": "AdminTester"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "maintenance",
+    "after": "operational",
+    "timestamp": "2026-11-09T01:31:57.152Z"
+  },
+  {
+    "id": "aud_1794187917122_bzes3",
+    "actor": {
+      "id": "system",
+      "username": "AdminTester"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Database Migration",
+    "before": "operational",
+    "after": "maintenance",
+    "timestamp": "2026-11-09T01:31:57.122Z"
+  },
+  {
+    "id": "aud_1794187916723_kfykw",
+    "actor": {
+      "id": "system",
+      "username": "TestRunner"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "operational",
+    "after": "operational",
+    "timestamp": "2026-11-09T01:31:56.723Z"
+  },
+  {
+    "id": "aud_1794187916558_zkt14",
+    "actor": {
+      "id": "523693281541095424",
+      "username": "kims3166"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "maintenance",
+    "after": "operational",
+    "timestamp": "2026-11-09T01:31:56.558Z"
+  },
+  {
+    "id": "aud_1794187916200_6mu1j",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Scheduled Upgrade",
+    "before": "maintenance",
+    "after": "maintenance",
+    "timestamp": "2026-11-09T01:31:56.200Z"
+  },
+  {
+    "id": "aud_1794187916195_h9una",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to ON",
+    "before": "OFF",
+    "after": "ON",
+    "timestamp": "2026-11-09T01:31:56.195Z"
+  },
+  {
+    "id": "aud_1794187916191_h73o5",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to OFF",
+    "before": "OFF",
+    "after": "OFF",
+    "timestamp": "2026-11-09T01:31:56.191Z"
+  },
+  {
+    "id": "aud_1794187916187_jxpd3",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to OFF",
+    "before": "OFF",
+    "after": "OFF",
+    "timestamp": "2026-11-09T01:31:56.187Z"
+  },
+  {
+    "id": "aud_1794187916183_zu5hq",
+    "actor": {
+      "id": "system",
+      "username": "TestAdmin"
+    },
+    "action": "site_maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance set to OFF",
+    "before": "OFF",
+    "after": "OFF",
+    "timestamp": "2026-11-09T01:31:56.183Z"
+  },
+  {
+    "id": "aud_1794187915697_msy1s",
+    "actor": {
+      "id": "system",
+      "username": "SystemTest"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "operational",
+    "after": "operational",
+    "timestamp": "2026-11-09T01:31:55.697Z"
+  },
+  {
+    "id": "aud_1794187839583_oea29",
+    "actor": {
+      "id": "system",
+      "username": "AdminTester"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Stuck Flag",
+    "before": "operational",
+    "after": "maintenance",
+    "timestamp": "2026-11-09T01:30:39.583Z"
+  },
+  {
+    "id": "aud_1794187839510_r2zyw",
+    "actor": {
+      "id": "system",
+      "username": "AdminTester"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "maintenance",
+    "after": "operational",
+    "timestamp": "2026-11-09T01:30:39.510Z"
+  },
+  {
+    "id": "aud_1794187839478_5q3gf",
+    "actor": {
+      "id": "system",
+      "username": "AdminTester"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Database Migration",
+    "before": "operational",
+    "after": "maintenance",
+    "timestamp": "2026-11-09T01:30:39.478Z"
+  },
+  {
+    "id": "aud_1794187839061_e45js",
+    "actor": {
+      "id": "system",
+      "username": "TestRunner"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "operational",
+    "after": "operational",
+    "timestamp": "2026-11-09T01:30:39.061Z"
+  },
+  {
+    "id": "aud_1794187821252_dexsj",
+    "actor": {
+      "id": "system",
+      "username": "TestRunner"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "operational",
+    "after": "operational",
+    "timestamp": "2026-11-09T01:30:21.252Z"
+  },
+  {
+    "id": "aud_1794187485175_jm0n3",
+    "actor": {
+      "id": "523693281541095424",
+      "username": "kims3166"
+    },
+    "action": "maintenance_toggle",
+    "target": "platform_system",
+    "targetType": "system",
+    "reason": "Maintenance mode set to operational",
+    "before": "maintenance",
+    "after": "operational",
+    "timestamp": "2026-11-09T01:24:45.175Z"
+  }
+]

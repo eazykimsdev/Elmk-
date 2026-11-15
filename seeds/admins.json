@@ -8,6 +8,21 @@
     "avatarUrl": "https://cdn.discordapp.com/avatars/523693281541095424/b7fc5bd1ca84c56c9144b7a02ba4e904.png",
     "addedAt": "2026-11-06T18:38:04.572Z",
     "addedBy": "System (ADMIN_DISCORD_IDS)",
-    "last_seen_at": "2026-11-08T06:27:42.482Z"
+    "last_seen_at": "2026-11-08T08:17:55.332Z"
+  },
+  {
+    "userId": "888777666555444333",
+    "username": "SelfBanTester",
+    "role": "Owner"
+  },
+  {
+    "userId": "777666555444333222",
+    "username": "testfriend_1794247058197",
+    "displayName": "testfriend_1794247058197",
+    "avatar": null,
+    "avatarUrl": null,
+    "role": "Moderator",
+    "addedAt": "2026-11-09T17:57:38.572Z",
+    "addedBy": "Owner"
   }
 ]

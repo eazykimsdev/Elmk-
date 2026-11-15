@@ -1861,11 +1861,20 @@ export function createDashboardRouter() {
       if (ownerDiscordId) {
         const known = getAllKnownUsers().find(u => u.userId === ownerDiscordId || u.id === ownerDiscordId);
         if (known) {
-          ownerDisplayName = known.username || ownerDisplayName;
+          ownerDisplayName = known.globalName || known.displayName || known.username || ownerDisplayName;
           if (known.avatarUrl) {
             ownerAvatar = known.avatarUrl;
             const match = known.avatarUrl.match(/\/avatars\/\d+\/([a-zA-Z0-9_]+)/);
             if (match) ownerAvatarHash = match[1];
+          }
+        }
+      }
+
+      if (ownerDisplayName === 'Community Owner' || !ownerDisplayName) {
+        if (ownerDiscordId) {
+          const known = getAllKnownUsers().find(u => u.userId === ownerDiscordId || u.id === ownerDiscordId);
+          if (known) {
+            ownerDisplayName = known.globalName || known.displayName || known.username;
           }
         }
       }
@@ -2012,11 +2021,20 @@ export function createDashboardRouter() {
     if (ownerDiscordId) {
       const known = getAllKnownUsers().find(u => u.userId === ownerDiscordId || u.id === ownerDiscordId);
       if (known) {
-        ownerDisplayName = known.username || ownerDisplayName;
+        ownerDisplayName = known.globalName || known.displayName || known.username || ownerDisplayName;
         if (known.avatarUrl) {
           ownerAvatar = known.avatarUrl;
           const match = known.avatarUrl.match(/\/avatars\/\d+\/([a-zA-Z0-9_]+)/);
           if (match) ownerAvatarHash = match[1];
+        }
+      }
+    }
+
+    if (ownerDisplayName === 'Community Owner' || !ownerDisplayName) {
+      if (ownerDiscordId) {
+        const known = getAllKnownUsers().find(u => u.userId === ownerDiscordId || u.id === ownerDiscordId);
+        if (known) {
+          ownerDisplayName = known.globalName || known.displayName || known.username;
         }
       }
     }
@@ -3724,14 +3742,18 @@ export function createDashboardRouter() {
     res.json(getMaintenanceStatus());
   });
 
-  // Site theme: stored admin choice wins, otherwise THEME env (default | christmas)
+  // Site theme: stored admin choice wins, otherwise THEME env (default | christmas; defaults to christmas)
   const THEME_FILE = path.join(DATA_DIR, 'theme.json');
-  const normTheme = (t) => (String(t || '').toLowerCase() === 'christmas' ? 'christmas' : 'default');
+  const SEED_THEME_FILE = path.join(process.cwd(), 'seeds', 'theme.json');
+  const normTheme = (t) => (String(t || '').toLowerCase() === 'default' ? 'default' : 'christmas');
   const readTheme = () => {
     try {
       if (fs.existsSync(THEME_FILE)) return normTheme(JSON.parse(fs.readFileSync(THEME_FILE, 'utf8')).theme);
     } catch {}
-    return normTheme(process.env.THEME);
+    try {
+      if (fs.existsSync(SEED_THEME_FILE)) return normTheme(JSON.parse(fs.readFileSync(SEED_THEME_FILE, 'utf8')).theme);
+    } catch {}
+    return normTheme(process.env.THEME || 'christmas');
   };
   router.get('/theme', (_req, res) => {
     res.set('Cache-Control', 'no-store');
@@ -3741,7 +3763,13 @@ export function createDashboardRouter() {
     const theme = normTheme(req.body?.theme);
     try {
       fs.mkdirSync(DATA_DIR, { recursive: true });
-      fs.writeFileSync(THEME_FILE, JSON.stringify({ theme, updatedAt: Date.now(), updatedBy: req.adminUser?.userId || null }), 'utf8');
+      const themePayload = JSON.stringify({ theme, updatedAt: Date.now(), updatedBy: req.adminUser?.userId || null }, null, 2);
+      fs.writeFileSync(THEME_FILE, themePayload, 'utf8');
+      try {
+        const seedDir = path.join(process.cwd(), 'seeds');
+        fs.mkdirSync(seedDir, { recursive: true });
+        fs.writeFileSync(SEED_THEME_FILE, themePayload, 'utf8');
+      } catch {}
     } catch (err) {
       return res.status(500).json({ error: 'Could not save theme' });
     }
@@ -6160,7 +6188,9 @@ export function createDashboardRouter() {
       req.path === '/status' ||
       req.path.startsWith('/status/') ||
       req.path.startsWith('/admin') ||
-      req.path === '/telemetry/error';
+      req.path === '/telemetry/error' ||
+      req.path.startsWith('/partnerships/browse') ||
+      (req.method === 'GET' && req.path.startsWith('/partnerships/'));
 
     if (!session || session.expiresAtSession < Date.now()) {
       if (sessionId && sessions.delete(sessionId)) persistSessions();

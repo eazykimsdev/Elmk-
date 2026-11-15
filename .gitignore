@@ -30,3 +30,5 @@ graphify-out/
 AGENTS.md
 .graphifyignore
 
+
+seeds/bot_instances*.json

@@ -117,6 +117,56 @@ export async function restoreDataDir() {
               console.log(`[DATA SYNC] Merged ${added} missing records from seeds into ${entry}`);
             }
           } catch {}
+        } else if (entry === 'admins.json') {
+          try {
+            const current = JSON.parse(fs.readFileSync(target, 'utf8') || '[]');
+            const seeds = JSON.parse(fs.readFileSync(seedPath, 'utf8') || '[]');
+            const existingAdminIds = new Set(current.map(a => String(a.userId || a.id)));
+            let added = 0;
+            for (const a of seeds) {
+              const aid = String(a.userId || a.id);
+              if (aid && !existingAdminIds.has(aid)) {
+                current.push(a);
+                existingAdminIds.add(aid);
+                added++;
+              }
+            }
+            if (added > 0) {
+              fs.writeFileSync(target, JSON.stringify(current, null, 2), 'utf8');
+              console.log(`[DATA SYNC] Merged ${added} missing admins into admins.json`);
+            }
+          } catch {}
+        } else if (entry === 'ledger.json') {
+          try {
+            const current = JSON.parse(fs.readFileSync(target, 'utf8') || '{"transactions":[]}');
+            const seeds = JSON.parse(fs.readFileSync(seedPath, 'utf8') || '{"transactions":[]}');
+            const curTxs = Array.isArray(current.transactions) ? current.transactions : [];
+            const seedTxs = Array.isArray(seeds.transactions) ? seeds.transactions : [];
+            const txIds = new Set(curTxs.map(t => t.id || `${t.userId}_${t.timestamp}`));
+            let added = 0;
+            for (const t of seedTxs) {
+              const tid = t.id || `${t.userId}_${t.timestamp}`;
+              if (!txIds.has(tid)) {
+                curTxs.push(t);
+                txIds.add(tid);
+                added++;
+              }
+            }
+            if (added > 0) {
+              current.transactions = curTxs;
+              fs.writeFileSync(target, JSON.stringify(current, null, 2), 'utf8');
+              console.log(`[DATA SYNC] Merged ${added} ledger transactions from seeds into ledger.json`);
+            }
+          } catch {}
+        } else if (entry === 'partnerships.json' || entry === 'bug_reports.json' || entry === 'admin_audit_log.json') {
+          try {
+            const curStat = fs.statSync(target);
+            const seedStat = fs.statSync(seedPath);
+            if (curStat.size < 50 && seedStat.size > 100) {
+              fs.copyFileSync(seedPath, target);
+              console.log(`[DATA SYNC] Restored full ${entry} from seeds (target was empty)`);
+            }
+          } catch {}
         } else if (entry === 'promoted_servers.json') {
           try {
             const current = JSON.parse(fs.readFileSync(target, 'utf8') || '{}');
