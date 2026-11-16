@@ -33,6 +33,8 @@ import {
   ChevronDown,
   Copy,
   Send,
+  Clock,
+  AlertCircle,
 } from 'lucide-react';
 import { MarkdownRenderer, stripMarkdown } from '@/components/ui/markdown-renderer';
 import { Button } from '@/components/ui/button';
@@ -217,8 +219,8 @@ function PromoteTabInner({
   const guildId = guild?.id || '';
   const serverName = guild?.name || config?.serverName || 'Server';
 
-  // Sub-tabs: Listing | Appearance | Invite and rewards | Partnerships | Premium
-  const [activeTab, setActiveTab] = useState<'listing' | 'appearance' | 'rewards' | 'partnerships' | 'premium'>('listing');
+  // Sub-tabs: Listing | Appearance | Invite and rewards | Partnerships
+  const [activeTab, setActiveTab] = useState<'listing' | 'appearance' | 'rewards' | 'partnerships'>('listing');
 
   // Initial cached listing fallback
   const cachedListing = useMemo(() => {
@@ -1450,7 +1452,6 @@ function PromoteTabInner({
             { id: 'appearance' as const, label: 'Appearance', icon: ImageIcon, status: step2Done ? 'done' : 'empty' },
             { id: 'rewards' as const, label: 'Invite and rewards', icon: LinkIcon, status: step3Done ? 'done' : 'empty' },
             { id: 'partnerships' as const, label: 'Partnerships', icon: Handshake, optional: true },
-            { id: 'premium' as const, label: 'Premium', icon: Sparkles, optional: true },
           ].map((t) => {
             const Icon = t.icon;
             const isActive = activeTab === t.id;
@@ -2939,7 +2940,7 @@ function PromoteTabInner({
                         {partnershipAdText.length} / 1500
                       </span>
                     </div>
-                    <Textarea
+                    <textarea
                       value={partnershipAdText}
                       onChange={(e) => {
                         const val = e.target.value.slice(0, 1500);
@@ -2948,7 +2949,7 @@ function PromoteTabInner({
                       }}
                       placeholder="Paste your server ad here (description, invite, perks). Partnerships only broadcast once your ad is pasted here..."
                       rows={4}
-                      className="text-[13px] bg-[#141417] border-[rgba(255,255,255,0.07)] font-sans placeholder:text-zinc-600"
+                      className="w-full text-[13px] bg-[#141417] border border-[rgba(255,255,255,0.07)] rounded-[10px] p-3 text-[#F4F4F5] font-sans placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
                     />
                     <div className="flex items-center gap-2 pt-1">
                       {partnershipBroadcastChannel && partnershipAdText.trim() ? (
@@ -3019,180 +3020,6 @@ function PromoteTabInner({
                       suffix="per day"
                     />
                   </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* ── TAB 5: PREMIUM ────────────────────────────────────────── */}
-          {activeTab === 'premium' && (
-            <div className="space-y-6">
-              {/* Premium Status & Subscription Card */}
-              <div className="rounded-[16px] border border-[rgba(255,255,255,0.07)] bg-[#0E0E11] p-6 space-y-6">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-[rgba(255,255,255,0.07)]">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <h2 className="text-[17px] font-semibold text-[#F4F4F5] font-sans">
-                        Premium Server
-                      </h2>
-                      {premiumInfo.isPremium ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-[var(--accent)]/15 text-[var(--accent)] border border-[var(--accent)]/30 font-sans">
-                          <Sparkles className="size-3" />
-                          Active ({premiumInfo.daysLeft}d left)
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-[#1C1C21] text-[#A1A1AA] border border-[rgba(255,255,255,0.08)] font-sans">
-                          Standard
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-[13px] text-[#A1A1AA] font-sans">
-                      Elevate your community listing with premium advertising and authorized advertisers.
-                    </p>
-                  </div>
-
-                  <Button
-                    type="button"
-                    onClick={() => setIsBuyModalOpen(true)}
-                    className="h-9 px-4 rounded-[8px] bg-[var(--accent)] hover:opacity-90 text-white font-medium text-[13px] font-sans cursor-pointer shrink-0"
-                  >
-                    <Sparkles className="size-4 mr-1.5" />
-                    {premiumInfo.isPremium ? 'Extend Premium' : 'Buy Premium'}
-                  </Button>
-                </div>
-
-                {/* Telemetry Stats: Price, Balance, Days Left */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div className="p-4 rounded-[12px] bg-[#141417] border border-[rgba(255,255,255,0.07)] space-y-1">
-                    <div className="text-[12px] text-[#71717A] font-sans">Price</div>
-                    <div className="text-[18px] font-semibold text-[#F4F4F5] font-sans">
-                      {premiumInfo.price} <span className="text-[13px] text-[#A1A1AA] font-normal">credits / {premiumInfo.durationDays} days</span>
-                    </div>
-                  </div>
-                  <div className="p-4 rounded-[12px] bg-[#141417] border border-[rgba(255,255,255,0.07)] space-y-1">
-                    <div className="text-[12px] text-[#71717A] font-sans">Server Balance</div>
-                    <div className="text-[18px] font-semibold text-[#F4F4F5] font-sans">
-                      {premiumInfo.balance} <span className="text-[13px] text-[#A1A1AA] font-normal">credits</span>
-                    </div>
-                  </div>
-                  <div className="p-4 rounded-[12px] bg-[#141417] border border-[rgba(255,255,255,0.07)] space-y-1">
-                    <div className="text-[12px] text-[#71717A] font-sans">Time Remaining</div>
-                    <div className="text-[18px] font-semibold text-[#F4F4F5] font-sans">
-                      {premiumInfo.isPremium ? `${premiumInfo.daysLeft} days` : '0 days'}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Premium Perks details */}
-                <div className="space-y-2 pt-2 text-[13px] text-[#A1A1AA] font-sans">
-                  <div className="text-[#F4F4F5] font-medium">Included with Premium:</div>
-                  <ul className="list-disc list-inside space-y-1 text-[#A1A1AA]">
-                    <li>Small theme-accented Premium badge in Directory and Earn Credits</li>
-                    <li>Up to {maxAdvertisers} authorized community advertisers who can post server ads</li>
-                    <li>Broadcast ads to the main Discord server Premium Advertising channel</li>
-                    <li>Automatic 3-day renewal reminder DM before expiry</li>
-                  </ul>
-                </div>
-              </div>
-
-              {/* Premium Advertising Broadcast Card */}
-              <div className="rounded-[16px] border border-[rgba(255,255,255,0.07)] bg-[#0E0E11] p-6 space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[rgba(255,255,255,0.07)]">
-                  <div className="space-y-1">
-                    <h3 className="text-[16px] font-semibold text-[#F4F4F5] font-sans">
-                      Premium Advertising Post
-                    </h3>
-                    <p className="text-[13px] text-[#A1A1AA] font-sans">
-                      Broadcast your community's official ad directly to our Discord server's Premium Advertising channel.
-                    </p>
-                  </div>
-                  <Button
-                    type="button"
-                    disabled={!premiumInfo.isPremium}
-                    onClick={() => setIsPostAdModalOpen(true)}
-                    className="h-9 px-4 rounded-[8px] bg-[#1C1C21] hover:bg-[#25252B] text-[#F4F4F5] border border-[rgba(255,255,255,0.09)] text-[13px] font-sans cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
-                  >
-                    <Send className="size-3.5 mr-1.5" />
-                    Post Ad Now
-                  </Button>
-                </div>
-                <div className="text-[12px] text-[#71717A] font-sans flex items-center justify-between">
-                  <span>Ad posting cooldown: 6 hours per server</span>
-                  <span>Components V2 panel format with real Separators</span>
-                </div>
-              </div>
-
-              {/* Authorized Advertisers Card */}
-              <div className="rounded-[16px] border border-[rgba(255,255,255,0.07)] bg-[#0E0E11] p-6 space-y-5">
-                <div className="space-y-1 pb-4 border-b border-[rgba(255,255,255,0.07)]">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-[16px] font-semibold text-[#F4F4F5] font-sans">
-                      Authorized Advertisers ({advertisersList.length} / {maxAdvertisers})
-                    </h3>
-                  </div>
-                  <p className="text-[13px] text-[#A1A1AA] font-sans">
-                    Authorize up to {maxAdvertisers} team members by Discord User ID to dispatch server ads and use <code className="text-[#F4F4F5]">/premiumad</code>.
-                  </p>
-                </div>
-
-                {/* Add Advertiser Form */}
-                <div className="flex flex-col sm:flex-row items-center gap-2.5">
-                  <Input
-                    placeholder="Enter Discord User ID (e.g. 123456789012345678)"
-                    value={newAdvertiserId}
-                    onChange={(e) => setNewAdvertiserId(e.target.value)}
-                    disabled={!premiumInfo.isPremium || advertisersList.length >= maxAdvertisers}
-                    className="h-9 text-[13px] bg-[#141417] border-[rgba(255,255,255,0.08)] font-sans"
-                  />
-                  <Button
-                    type="button"
-                    onClick={handleAddAdvertiser}
-                    disabled={!premiumInfo.isPremium || !newAdvertiserId.trim() || isAddingAdvertiser || advertisersList.length >= maxAdvertisers}
-                    className="h-9 px-4 rounded-[8px] bg-[#1C1C21] hover:bg-[#25252B] text-[#F4F4F5] border border-[rgba(255,255,255,0.09)] text-[13px] font-sans cursor-pointer whitespace-nowrap disabled:opacity-40"
-                  >
-                    <Plus className="size-3.5 mr-1.5" />
-                    {isAddingAdvertiser ? 'Verifying...' : 'Add Advertiser'}
-                  </Button>
-                </div>
-
-                {/* Advertisers List */}
-                <div className="space-y-2">
-                  {advertisersList.length === 0 ? (
-                    <div className="p-4 rounded-[10px] bg-[#141417] border border-[rgba(255,255,255,0.05)] text-center text-[13px] text-[#71717A] font-sans">
-                      No advertisers added yet. Only the server owner can post ads until you add team members.
-                    </div>
-                  ) : (
-                    advertisersList.map((adv) => (
-                      <div
-                        key={adv.userId}
-                        className="flex items-center justify-between p-3 rounded-[10px] bg-[#141417] border border-[rgba(255,255,255,0.07)]"
-                      >
-                        <div className="flex items-center gap-3">
-                          {adv.avatarUrl ? (
-                            <img src={adv.avatarUrl} alt="" className="size-8 rounded-full" />
-                          ) : (
-                            <div className="size-8 rounded-full bg-[#202026] flex items-center justify-center text-xs text-[#A1A1AA]">
-                              {(adv.username || 'U')[0].toUpperCase()}
-                            </div>
-                          )}
-                          <div>
-                            <div className="text-[13px] font-medium text-[#F4F4F5] font-sans">{adv.username}</div>
-                            <div className="text-[11px] text-[#71717A] font-sans font-mono">{adv.userId}</div>
-                          </div>
-                        </div>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleRemoveAdvertiser(adv.userId)}
-                          className="h-8 px-2.5 text-[12px] text-[#F87171] hover:bg-[#F87171]/10 font-sans cursor-pointer"
-                        >
-                          <X className="size-3.5 mr-1" />
-                          Remove
-                        </Button>
-                      </div>
-                    ))
-                  )}
                 </div>
               </div>
             </div>

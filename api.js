@@ -3576,11 +3576,14 @@ export function createDashboardRouter() {
           const pData = JSON.parse(fs.readFileSync(pPath, 'utf8'));
           for (const p of (pData.partnerships || [])) {
             if (String(p.guildIdA) === String(id) || String(p.guildIdB) === String(id)) {
+              const isA = String(p.guildIdA) === String(id);
+              const partnerName = isA ? (p.guildNameB || 'partner community') : (p.guildNameA || 'partner community');
+              const partnerTs = p.acceptedAt || p.createdAt || p.updatedAt || Date.now();
               addEvent({
                 id: `part_${p.id}`,
                 type: 'partnership',
-                text: 'Partnership connected with partner community',
-                timestamp: p.createdAt || p.updatedAt || Date.now(),
+                text: `Partnership connected with ${partnerName}`,
+                timestamp: partnerTs,
               });
             }
           }
@@ -3625,7 +3628,35 @@ export function createDashboardRouter() {
         return timeB - timeA;
       });
 
-      res.json({ ok: true, events: events.slice(0, 50) });
+      // Deduplicate consecutive/overlapping events for the same action (bumps, milestones, partnerships)
+      const dedupedEvents = [];
+      const seenGroups = new Map();
+
+      for (const evt of events) {
+        const rawText = String(evt.text || '');
+        const norm = rawText
+          .toLowerCase()
+          .replace(/\s*\(\+?\-?\d+\s*cr\)/gi, '')
+          .replace(/[^a-z0-9]/gi, '');
+        const ts = new Date(evt.timestamp).getTime() || 0;
+
+        let groupKey = norm;
+        if (norm.includes('bumpreward') || norm.includes('bumpedto1')) {
+          groupKey = 'bump_action';
+        } else if (norm.includes('milestonereward')) {
+          groupKey = `milestone_${norm.replace(/milestonereward/g, '')}`;
+        }
+
+        const prevTs = seenGroups.get(groupKey);
+        if (prevTs !== undefined && Math.abs(ts - prevTs) < 15 * 60 * 1000) {
+          continue;
+        }
+
+        seenGroups.set(groupKey, ts);
+        dedupedEvents.push(evt);
+      }
+
+      res.json({ ok: true, events: dedupedEvents.slice(0, 50) });
     } catch (err) {
       res.json({ ok: true, events: [] });
     }
@@ -5481,16 +5512,52 @@ export function createDashboardRouter() {
           });
           if (dmRes.ok) {
             const ch = await dmRes.json();
+            const userAvatarUrl = user?.avatar
+              ? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png?size=128`
+              : (user?.id ? `https://cdn.discordapp.com/embed/avatars/${(Number(BigInt(user.id) >> 22n) % 6) || 0}.png` : 'https://connectingerlc.xyz/brand/logo.png');
+            const authorLine = user ? `${user.global_name || user.username} (@${user.username})` : 'Anonymous User';
+
             const payload = {
-              flags: 32768,
+              flags: 32768, // MessageFlags.IsComponentsV2
               components: [
                 {
-                  type: 17,
-                  accent_color: 39129,
+                  type: 17, // Container (No accent_color = no color on the side)
                   components: [
                     {
-                      type: 10,
-                      content: `### New Premium Suggestion\n\n**Category:** ${cleanCat}\n**From:** ${user ? `${user.global_name || user.username} (${user.id})` : 'Anonymous'}\n\n${cleanText}`
+                      type: 9, // Section with user avatar thumbnail
+                      components: [
+                        {
+                          type: 10, // Text Display
+                          content: `### New Premium Suggestion\n**From:** ${authorLine}\n**User ID:** \`${user?.id || 'Unknown'}\`\n\n${cleanText}`
+                        }
+                      ],
+                      accessory: {
+                        type: 11, // Thumbnail
+                        media: {
+                          url: userAvatarUrl
+                        }
+                      }
+                    },
+                    {
+                      type: 14, // Real Separator
+                      divider: true
+                    },
+                    {
+                      type: 1, // Action row with Accept and Decline buttons
+                      components: [
+                        {
+                          type: 2, // Button
+                          style: 3, // Success / Green
+                          label: 'Accept',
+                          custom_id: `premium_sug_accept:${newEntry.id}`
+                        },
+                        {
+                          type: 2, // Button
+                          style: 4, // Danger / Red
+                          label: 'Decline',
+                          custom_id: `premium_sug_decline:${newEntry.id}`
+                        }
+                      ]
                     }
                   ]
                 }

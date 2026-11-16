@@ -281,6 +281,38 @@ export async function handleInteraction(interaction, token) {
   if (interaction.type === 3) {
     const customId = data?.custom_id || '';
 
+    // Premium Suggestion Accept / Decline
+    if (customId.startsWith('premium_sug_accept:') || customId.startsWith('premium_sug_decline:')) {
+      const isAccept = customId.startsWith('premium_sug_accept:');
+      const sugId = customId.split(':')[1];
+      try {
+        const sugPath = path.resolve('data/premium_suggestions.json');
+        if (fs.existsSync(sugPath)) {
+          const sugs = JSON.parse(fs.readFileSync(sugPath, 'utf8') || '[]');
+          const match = sugs.find((s) => s.id === sugId);
+          if (match) {
+            match.status = isAccept ? 'accepted' : 'declined';
+            match.reviewedAt = new Date().toISOString();
+            match.reviewedBy = callerId;
+            fs.writeFileSync(sugPath, JSON.stringify(sugs, null, 2), 'utf8');
+          }
+        }
+      } catch (err) {
+        console.warn('[PREMIUM SUGGESTION] Error saving review state:', err.message);
+      }
+
+      // Defer update callback (type 6) then delete original message
+      return fetch(`https://discord.com/api/v10/interactions/${id}/${interactionToken}/callback`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 6 })
+      }).then(() => {
+        return fetch(`https://discord.com/api/v10/webhooks/${interaction.application_id}/${interactionToken}/messages/@original`, {
+          method: 'DELETE'
+        });
+      }).catch((err) => console.error('[DISCORD BOT] Error deleting suggestion message:', err.message));
+    }
+
     // Check-in reminder toggle off
     if (customId.startsWith('checkin_remind_off:')) {
       const serverId = customId.split(':')[1];

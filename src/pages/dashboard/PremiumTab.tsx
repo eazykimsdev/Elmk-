@@ -1,7 +1,6 @@
 import { useState } from 'react';
-import { Sparkles, MessageSquare, Send, CheckCircle2, Crown, Layers, ShieldCheck } from 'lucide-react';
+import { MessageSquare, Send, CheckCircle2, Crown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card } from '@/components/ui/card';
 import { api } from '@/lib/api';
@@ -15,17 +14,7 @@ interface PremiumTabProps {
   addToast: (variant: 'success' | 'info' | 'warning' | 'error', title: string, body: string) => void;
 }
 
-const CATEGORIES = [
-  'Directory Visibility',
-  'Advertising & Broadcasts',
-  'Staff & Moderation Tools',
-  'Analytics & Growth Insights',
-  'Custom Bot Branding',
-  'Other Ideas',
-];
-
 export function PremiumTab({ guild, onNavigateTab, addToast }: PremiumTabProps) {
-  const [selectedCategory, setSelectedCategory] = useState(CATEGORIES[0]);
   const [suggestionText, setSuggestionText] = useState('');
   const [contactOk, setContactOk] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -44,7 +33,6 @@ export function PremiumTab({ guild, onNavigateTab, addToast }: PremiumTabProps) 
         method: 'POST',
         body: JSON.stringify({
           suggestion: suggestionText.trim(),
-          category: selectedCategory,
           contactOk,
           guildId: guild?.id,
           guildName: guild?.name,
@@ -61,30 +49,15 @@ export function PremiumTab({ guild, onNavigateTab, addToast }: PremiumTabProps) 
   };
 
   return (
-    <div className="space-y-8 max-w-4xl">
-      {/* ── HEADER ── */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/[0.06] pb-6">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <h1 className="text-2xl font-bold tracking-tight text-white font-sans">Premium</h1>
-            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 uppercase tracking-wider font-sans">
-              <Sparkles className="size-3" />
-              Early Access
-            </span>
-          </div>
-          <p className="text-sm text-zinc-400 mt-1 font-sans">
-            Priority directory placement, elevated advertising channels, and creator perks.
-          </p>
-        </div>
-
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => onNavigateTab('promote')}
-          className="h-8 text-xs font-sans border-white/[0.08] hover:bg-white/[0.04] text-zinc-300 self-start sm:self-auto cursor-pointer"
-        >
-          View Promote Server &rarr;
-        </Button>
+    <div className="space-y-8 max-w-4xl mx-auto">
+      {/* ── HEADER (Centered) ── */}
+      <div className="text-center space-y-2 border-b border-white/[0.06] pb-6">
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white font-sans">
+          Premium
+        </h1>
+        <p className="text-sm text-zinc-400 font-sans max-w-lg mx-auto">
+          Priority directory placement, elevated advertising channels, and creator perks.
+        </p>
       </div>
 
       {/* ── ACTIVE PREMIUM COMMUNITIES (Clean Empty State) ── */}
@@ -140,39 +113,13 @@ export function PremiumTab({ guild, onNavigateTab, addToast }: PremiumTabProps) 
               variant="outline"
               size="sm"
               onClick={() => setSubmitted(false)}
-              className="text-xs border-white/[0.08] text-zinc-300 hover:text-white"
+              className="text-xs border-white/[0.08] text-zinc-300 hover:text-white cursor-pointer"
             >
               Send another suggestion
             </Button>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Category selection */}
-            <div className="space-y-2">
-              <label className="text-xs font-medium text-zinc-300 font-sans block">
-                Suggestion Category
-              </label>
-              <div className="flex flex-wrap gap-2">
-                {CATEGORIES.map((cat) => {
-                  const isSelected = selectedCategory === cat;
-                  return (
-                    <button
-                      key={cat}
-                      type="button"
-                      onClick={() => setSelectedCategory(cat)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-sans transition-all cursor-pointer ${
-                        isSelected
-                          ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 font-medium'
-                          : 'bg-white/[0.03] text-zinc-400 border border-white/[0.06] hover:text-zinc-200 hover:border-white/[0.12]'
-                      }`}
-                    >
-                      {cat}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
             {/* Suggestion Textarea */}
             <div className="space-y-2">
               <label className="text-xs font-medium text-zinc-300 font-sans block">

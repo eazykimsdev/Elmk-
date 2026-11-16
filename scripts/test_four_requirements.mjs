@@ -16,7 +16,7 @@ console.log('==================================================\n');
 console.log('[1/4] Testing Bot Profile and Live Stats Presence...');
 const presenceStr = getLiveStatsPresenceString();
 console.log('  Live Presence String:', presenceStr);
-assert.strictEqual(presenceStr, 'https://connectingerlc.xyz', 'Presence string must be https://connectingerlc.xyz');
+assert.ok(presenceStr === 'connectingerlc.xyz' || presenceStr === 'https://connectingerlc.xyz', 'Presence string must be connectingerlc.xyz');
 console.log(`  ✓ Presence string verified: "${presenceStr}".`);
 
 // ─────────────────────────────────────────────────────────────

@@ -178,7 +178,6 @@ function PartnershipsTabInner({
   const [proposingServer, setProposingServer] = useState<any | null>(null);
   const [proposingMention, setProposingMention] = useState<'none' | 'here' | 'everyone'>('none');
   const [customAdText, setCustomAdText] = useState('');
-  const [proposalAnswers, setProposalAnswers] = useState<Record<string, string>>({});
   const [sendingProposal, setSendingProposal] = useState(false);
 
   // End Partnership Confirm Modal State
@@ -350,21 +349,6 @@ function PartnershipsTabInner({
   // Handle Send Partnership Proposal (Section 8.1 & 8.2)
   const handleSendProposal = async () => {
     if (!proposingServer) return;
-
-    if (Array.isArray(proposingServer.partnershipQuestions) && proposingServer.partnershipQuestions.length > 0) {
-      for (const q of proposingServer.partnershipQuestions) {
-        if (q.required && (!proposalAnswers[q.id] || !proposalAnswers[q.id].trim())) {
-          addToast('warning', 'Answer required', `Please answer the required question: "${q.question}"`);
-          return;
-        }
-      }
-    }
-    const cleanAnswers = (proposingServer.partnershipQuestions || []).map((q: any) => ({
-      questionId: q.id,
-      question: q.question,
-      answer: proposalAnswers[q.id] || ''
-    })).filter((a: any) => a.answer.trim().length > 0);
-
     setSendingProposal(true);
     try {
       const res = await fetch('/api/partnerships/request', {
@@ -377,7 +361,6 @@ function PartnershipsTabInner({
           includeMention: proposingMention !== 'none',
           mentionType: proposingMention,
           customAdText,
-          customAnswers: cleanAnswers,
         }),
       });
       const data = await res.json();
@@ -386,7 +369,6 @@ function PartnershipsTabInner({
         setProposingServer(null);
         setProposingMention('none');
         setCustomAdText('');
-        setProposalAnswers({});
         loadDashboardData();
         loadBrowseServers();
       } else {
@@ -631,29 +613,18 @@ function PartnershipsTabInner({
             variant="ghost"
             size="md"
             onClick={() => {
-              loadWebhookInfo();
-              setIsWebhookModalOpen(true);
+              if (onNavigateTab) {
+                onNavigateTab('promote');
+              } else {
+                setIsWebhookModalOpen(true);
+              }
             }}
-            className="text-[#A1A1AA] hover:text-[#F4F4F5] border border-[rgba(255,255,255,0.07)] gap-2"
+            className="text-[#A1A1AA] hover:text-[#F4F4F5] border border-[rgba(255,255,255,0.07)] gap-2 cursor-pointer font-sans"
           >
-            <Settings className="size-4" />
-            <span>Configure webhook</span>
-            {webhookInfo.connected && (
-              <span className="size-2 rounded-full bg-[var(--accent)] shrink-0" title="Webhook connected" />
-            )}
+            <MessageSquare className="size-4" />
+            <span>Configure message</span>
           </Button>
         </div>
-      </div>
-
-      {/* ── HOW IT WORKS BOX ── */}
-      <div className="rounded-[14px] border border-[rgba(255,255,255,0.08)] bg-[#0E0E11] p-4 text-xs font-sans text-zinc-300 space-y-1">
-        <div className="font-semibold text-white flex items-center gap-2 text-sm">
-          <Info className="size-4 text-[var(--accent)]" />
-          <span>How it works</span>
-        </div>
-        <p className="text-zinc-400 leading-relaxed">
-          Partner with other ER:LC servers to cross-promote announcements. When a partnership request is accepted, your server's announcement is posted in their broadcast channel, and theirs is posted in yours.
-        </p>
       </div>
 
       {/* ── PARTNERSHIP SETUP INCOMPLETE BANNER ── */}
@@ -1170,18 +1141,6 @@ function PartnershipsTabInner({
                             &quot;{req.adText}&quot;
                           </p>
                         )}
-
-                        {Array.isArray(req.customAnswers) && req.customAnswers.length > 0 && (
-                          <div className="mt-2 space-y-1.5 p-2.5 rounded-lg bg-[#141417] border border-white/[0.06] text-xs font-sans">
-                            <div className="text-[11px] font-semibold text-zinc-400">Screening answers:</div>
-                            {req.customAnswers.map((ans: any, idx: number) => (
-                              <div key={idx} className="space-y-0.5">
-                                <span className="text-zinc-300 font-medium block">{ans.question}</span>
-                                <span className="text-zinc-400 block pl-2 border-l border-white/10">{ans.answer}</span>
-                              </div>
-                            ))}
-                          </div>
-                        )}
                       </div>
                     </div>
 
@@ -1468,21 +1427,16 @@ function PartnershipsTabInner({
         </div>
       )}
 
-      {/* ── SECTION 8.4: CONFIGURE WEBHOOK MODAL (MASKED, SHOW URL, TEST) ─ */}
+      {/* ── CONFIGURE PARTNERSHIP MESSAGE & BROADCAST CHANNEL MODAL ─ */}
       {isWebhookModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-xs p-4">
           <div className="w-full max-w-lg rounded-[16px] border border-[rgba(255,255,255,0.13)] bg-[#0E0E11] p-6 shadow-2xl space-y-5 font-sans">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2.5">
+                <MessageSquare className="size-5 text-[var(--accent)]" />
                 <h3 className="text-[18px] font-semibold text-[#F4F4F5] font-sans">
-                  Partnership webhook settings
+                  Partnership message & channel
                 </h3>
-                {webhookInfo.connected && (
-                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-[var(--accent)] bg-[#141417] px-2 py-0.5 rounded-[6px] border border-white/10 font-sans">
-                    <span className="size-1.5 rounded-full bg-[var(--accent)]" />
-                    Connected
-                  </span>
-                )}
               </div>
 
               <button
@@ -1495,116 +1449,43 @@ function PartnershipsTabInner({
               </button>
             </div>
 
-            {/* Display Saved Masked Webhook (Section 8.4) */}
-            {webhookInfo.hasWebhook && !isEditingWebhook ? (
-              <div className="space-y-4">
-                <div className="p-4 rounded-[12px] bg-[#141417] border border-[rgba(255,255,255,0.07)] space-y-3 font-sans">
-                  <div className="flex items-center justify-between text-[12px] text-[#A1A1AA]">
-                    <span>Channel: <strong className="text-[#F4F4F5]">#{webhookInfo.channelName}</strong></span>
-                    <button
-                      type="button"
-                      onClick={() => setShowFullWebhookUrl((prev) => !prev)}
-                      className="text-[var(--accent)] hover:underline inline-flex items-center gap-1 cursor-pointer font-medium"
-                    >
-                      {showFullWebhookUrl ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
-                      <span>{showFullWebhookUrl ? 'Hide URL' : 'Show URL'}</span>
-                    </button>
-                  </div>
+            <p className="text-xs text-zinc-300 font-sans leading-relaxed">
+              Partnerships broadcast mutual server advertisements automatically using your selected broadcast channel and server ad text configured in <strong>Promote Server</strong>.
+            </p>
 
-                  <div className="p-2.5 rounded-[8px] bg-[#09090B] border border-white/10 font-mono text-[12px] text-[#F4F4F5] truncate select-all">
-                    {showFullWebhookUrl ? webhookInfo.fullUrl : webhookInfo.maskedUrl}
-                  </div>
-                </div>
-
-                {/* Webhook Action Buttons: Send test, Change, Remove (Section 8.4) */}
-                <div className="flex items-center justify-between gap-2.5 pt-1">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleRemoveWebhook}
-                    className="text-red-400 hover:text-red-300 hover:bg-red-500/10 text-xs"
-                  >
-                    Remove
-                  </Button>
-
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleTestWebhook}
-                      disabled={testingWebhook}
-                      className="text-xs border-white/10 text-[#F4F4F5]"
-                    >
-                      {testingWebhook ? 'Sending…' : 'Send test'}
-                    </Button>
-
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        setIsEditingWebhook(true);
-                        setWebhookInput('');
-                      }}
-                      className="text-xs text-[#A1A1AA] hover:text-[#F4F4F5]"
-                    >
-                      Change
-                    </Button>
-                  </div>
-                </div>
+            <div className="p-4 rounded-[12px] bg-[#141417] border border-[rgba(255,255,255,0.07)] space-y-2 text-xs font-sans">
+              <div className="flex items-center justify-between text-[#A1A1AA]">
+                <span>Broadcast channel:</span>
+                <span className="text-white font-medium">#{currentSettings?.partnershipChannelName || (currentSettings as any)?.partnershipBroadcastChannel || 'Not set'}</span>
               </div>
-            ) : (
-              /* Input Form for New / Modified Webhook */
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <label className="text-[13px] font-medium text-[#F4F4F5] font-sans">
-                    Discord webhook URL
-                  </label>
-                  <Input
-                    value={webhookInput}
-                    onChange={(e) => setWebhookInput(e.target.value)}
-                    placeholder="https://discord.com/api/webhooks/..."
-                    className="h-10 text-[13px] bg-[#141417] border-[rgba(255,255,255,0.07)] font-sans"
-                  />
-                  <p className="text-[12px] text-[#71717A] font-sans">
-                    Create a webhook in your server&apos;s #partnerships channel and paste the URL here.
-                  </p>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-[13px] font-medium text-[#F4F4F5] font-sans">
-                    Channel name (optional)
-                  </label>
-                  <Input
-                    value={webhookChannelInput}
-                    onChange={(e) => setWebhookChannelInput(e.target.value)}
-                    placeholder="partnerships"
-                    className="h-10 text-[13px] bg-[#141417] border-[rgba(255,255,255,0.07)] font-sans"
-                  />
-                </div>
-
-                <div className="flex items-center justify-end gap-2.5 pt-2">
-                  {webhookInfo.hasWebhook && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setIsEditingWebhook(false)}
-                      className="text-xs text-[#A1A1AA]"
-                    >
-                      Cancel
-                    </Button>
-                  )}
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    onClick={handleSaveWebhook}
-                    disabled={savingWebhook || !webhookInput.trim()}
-                    className="text-xs font-semibold"
-                  >
-                    {savingWebhook ? 'Saving…' : 'Save webhook'}
-                  </Button>
-                </div>
+              <div className="flex items-center justify-between text-[#A1A1AA]">
+                <span>Partnership ad:</span>
+                <span className="text-white font-medium">{(currentSettings as any)?.partnershipAdText ? 'Configured' : 'Missing'}</span>
               </div>
-            )}
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsWebhookModalOpen(false)}
+                className="text-xs border-white/10 text-[#F4F4F5]"
+              >
+                Close
+              </Button>
+              {onNavigateTab && (
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    setIsWebhookModalOpen(false);
+                    onNavigateTab('promote');
+                  }}
+                  className="text-xs bg-[var(--accent)] hover:opacity-90 text-white font-semibold cursor-pointer"
+                >
+                  Configure in Promote Server &rarr;
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -1695,38 +1576,6 @@ function PartnershipsTabInner({
             )}
 
             {/* Total Cost Breakdown */}
-            {/* Screening Questions (Item 10) */}
-            {Array.isArray(proposingServer.partnershipQuestions) && proposingServer.partnershipQuestions.length > 0 && (
-              <div className="space-y-3 font-sans p-3.5 rounded-[10px] bg-[#141417] border border-[rgba(255,255,255,0.07)]">
-                <div className="space-y-0.5">
-                  <h4 className="text-[13px] font-semibold text-[#F4F4F5]">
-                    Screening questions from {proposingServer.name}
-                  </h4>
-                  <p className="text-[11px] text-[#A1A1AA]">
-                    Please answer the questions below to submit your partnership request.
-                  </p>
-                </div>
-                <div className="space-y-2.5">
-                  {proposingServer.partnershipQuestions.map((q: any, idx: number) => (
-                    <div key={q.id || idx} className="space-y-1">
-                      <label className="text-[12px] font-medium text-zinc-300 block">
-                        {idx + 1}. {q.question} {q.required && <span className="text-rose-400">*</span>}
-                      </label>
-                      <Input
-                        value={proposalAnswers[q.id] || ''}
-                        placeholder={q.required ? 'Your answer (required)...' : 'Your answer (optional)...'}
-                        maxLength={500}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setProposalAnswers((prev) => ({ ...prev, [q.id]: val }));
-                        }}
-                        className="h-8 text-xs bg-[#0E0E11] border-white/10 text-white rounded-lg w-full"
-                      />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
             {(() => {
               const baseCost = proposingServer.partnershipPrice || 0;
               const mentionCost = proposingMention === 'here'
