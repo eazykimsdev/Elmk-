@@ -15,9 +15,16 @@ import { isMaintenanceActive } from './siteStateManager.js';
 import { startSystemMonitor } from './monitorJob.js';
 import { startScheduledInviteChecks } from './inviteValidator.js';
 import { startPremiumReminderJob } from './premiumManager.js';
-import { seedDataDir } from './dataSync.js';
+import { restoreDataDir, startDataSync, seedDataDir } from './dataSync.js';
+import { runLegacyKeysMigration } from './scripts/migrate_strip_legacy_keys.mjs';
 
-try { seedDataDir(); } catch {}
+try {
+  await restoreDataDir();
+} catch (err) {
+  console.warn('[SERVER] Data restore notice:', err.message);
+}
+try { runLegacyKeysMigration(); } catch {}
+try { startDataSync(); } catch {}
 
 dotenv.config();
 

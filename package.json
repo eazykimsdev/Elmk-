@@ -2,7 +2,7 @@
   "name": "connectingerlc",
   "version": "1.0.0",
   "description": "ConnectingERLC community management platform and web dashboard",
-  "main": "server.js",
+  "main": "bootstrap.js",
   "type": "module",
   "scripts": {
     "build": "vite build && node scripts/sync-dist.js",
@@ -21,7 +21,7 @@
     "start:bot": "node botGateway.js",
     "web:dev": "vite --config web/vite.config.ts",
     "web:build": "vite build && node scripts/sync-dist.js",
-    "web:server": "node server.js"
+    "web:server": "node bootstrap.js"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",

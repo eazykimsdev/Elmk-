@@ -21,13 +21,21 @@ const SYNC_INTERVAL_MS = 5000;
 const DATABASE_URL = process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.PG_DATABASE_URL || null;
 let pool = null;
 const known = new Map(); // relative path -> sha1 of what Postgres already has
+let restored = false;
 
-function getPool() {
+function getPool(forceSsl = null) {
   if (!DATABASE_URL) return null;
-  if (!pool) {
+  if (!pool || forceSsl !== null) {
+    if (pool && forceSsl !== null) {
+      try { pool.end().catch(() => {}); } catch {}
+      pool = null;
+    }
+    const ssl = forceSsl !== null
+      ? forceSsl
+      : (process.env.DATABASE_SSL === 'false' ? false : { rejectUnauthorized: false });
     pool = new pg.Pool({
       connectionString: DATABASE_URL,
-      ssl: process.env.DATABASE_SSL === 'false' ? false : { rejectUnauthorized: false },
+      ssl,
       max: 3,
       connectionTimeoutMillis: 8000,
     });
@@ -288,13 +296,14 @@ export function seedDataDir() {
 }
 
 export async function restoreDataDir() {
+  if (restored) return;
   try {
     seedDataDir();
   } catch (err) {
     console.warn('[DATA SYNC] Pre-restore seed warning:', err.message);
   }
 
-  const p = getPool();
+  let p = getPool();
   if (!p) {
     console.log('[DATA SYNC] No DATABASE_URL — using local files only.');
     return;
@@ -311,7 +320,30 @@ export async function restoreDataDir() {
       known.set(r.path, sha(r.content));
     }
     console.log(`[DATA SYNC] Restored ${rows.length} file(s) from PostgreSQL into ${DATA_DIR}`);
+    restored = true;
   } catch (err) {
+    // If SSL connection failed because the server does not support SSL (e.g. Railway private internal network), retry with ssl: false
+    if (err.message && (err.message.includes('does not support SSL') || err.message.includes('SSL') || err.code === 'ECONNRESET')) {
+      console.warn('[DATA SYNC] Retrying restore without SSL...');
+      try {
+        p = getPool(false);
+        await ensureTable(p);
+        const { rows } = await p.query('SELECT path, content FROM app_files');
+        fs.mkdirSync(DATA_DIR, { recursive: true });
+        for (const r of rows) {
+          const target = path.join(DATA_DIR, r.path);
+          if (!path.resolve(target).startsWith(path.resolve(DATA_DIR) + path.sep)) continue;
+          fs.mkdirSync(path.dirname(target), { recursive: true });
+          fs.writeFileSync(target, r.content);
+          known.set(r.path, sha(r.content));
+        }
+        console.log(`[DATA SYNC] Restored ${rows.length} file(s) from PostgreSQL (no SSL) into ${DATA_DIR}`);
+        restored = true;
+        return;
+      } catch (retryErr) {
+        console.error('[DATA SYNC] Retry without SSL failed:', retryErr.message);
+      }
+    }
     console.error('[DATA SYNC] Restore failed, continuing with local files:', err.message);
   } finally {
     try {
