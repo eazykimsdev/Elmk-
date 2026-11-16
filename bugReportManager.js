@@ -46,8 +46,22 @@ function ensureFile() {
 export function loadBugReports() {
   ensureFile();
   try {
-    const raw = fs.readFileSync(BUG_REPORTS_FILE, 'utf8');
-    return JSON.parse(raw) || [];
+    let list = [];
+    if (fs.existsSync(BUG_REPORTS_FILE)) {
+      const raw = fs.readFileSync(BUG_REPORTS_FILE, 'utf8');
+      list = JSON.parse(raw) || [];
+    }
+    const seedPath = path.join(process.cwd(), 'seeds', 'bug_reports.json');
+    if ((!Array.isArray(list) || list.length === 0) && fs.existsSync(seedPath)) {
+      try {
+        const seedRaw = fs.readFileSync(seedPath, 'utf8');
+        const seedBugs = JSON.parse(seedRaw) || [];
+        if (Array.isArray(seedBugs) && seedBugs.length > 0) {
+          list = seedBugs;
+        }
+      } catch {}
+    }
+    return list;
   } catch (err) {
     console.error('[BUG REPORTS] Error reading reports file:', err.message);
     return [];

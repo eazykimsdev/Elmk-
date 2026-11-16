@@ -13,6 +13,9 @@ import { validateProductionEnvironment } from './shared/productionCheck.js';
 import { query as dbQuery, isPostgresConnected } from './db.js';
 import { isMaintenanceActive } from './siteStateManager.js';
 import { startSystemMonitor } from './monitorJob.js';
+import { seedDataDir } from './dataSync.js';
+
+try { seedDataDir(); } catch {}
 
 dotenv.config();
 

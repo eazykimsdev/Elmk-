@@ -281,10 +281,23 @@ if (!fs.existsSync(DATA_DIR)) {
 
 export function loadDirectoryData() {
   try {
+    let raw = null;
     if (fs.existsSync(DIRECTORY_FILE)) {
-      const raw = fs.readFileSync(DIRECTORY_FILE, 'utf-8');
+      raw = fs.readFileSync(DIRECTORY_FILE, 'utf-8');
+    }
+    const seedFile = path.join(process.cwd(), 'seeds', 'promoted_servers.json');
+    if ((!raw || raw.trim().length <= 16) && fs.existsSync(seedFile)) {
+      raw = fs.readFileSync(seedFile, 'utf-8');
+    }
+    if (raw) {
       const parsed = JSON.parse(raw);
-      const rawServers = Array.isArray(parsed?.servers) ? parsed.servers : (Array.isArray(parsed) ? parsed : []);
+      let rawServers = Array.isArray(parsed?.servers) ? parsed.servers : (Array.isArray(parsed) ? parsed : []);
+      if (rawServers.length === 0 && fs.existsSync(seedFile)) {
+        try {
+          const seedParsed = JSON.parse(fs.readFileSync(seedFile, 'utf-8'));
+          rawServers = Array.isArray(seedParsed?.servers) ? seedParsed.servers : (Array.isArray(seedParsed) ? seedParsed : []);
+        } catch {}
+      }
       // Guarantee zero fake/demo listings: strictly 17-20 digit snowflakes and no test dummy artifacts
       const isTestContext = process.env.NODE_ENV === 'test' || process.argv.some(a => a.includes('test') || a.includes('proof'));
       const TEST_DUMMY_NAMES = new Set([

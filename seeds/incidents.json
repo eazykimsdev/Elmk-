@@ -1,0 +1,65 @@
+[
+  {
+    "id": "inc_1794689384189_nhdf",
+    "component": "Discord bot",
+    "status": "Degraded",
+    "summary": "Discord bot is degraded",
+    "started_at": "2026-11-14T20:49:44.189Z",
+    "resolved_at": "2026-11-14T20:50:41.940Z",
+    "admin_notes": null
+  },
+  {
+    "id": "inc_1794665864027_6bty",
+    "component": "Discord bot",
+    "status": "Down",
+    "summary": "The operation was aborted due to timeout",
+    "started_at": "2026-11-14T14:17:44.027Z",
+    "resolved_at": "2026-11-14T14:18:41.340Z",
+    "admin_notes": null
+  },
+  {
+    "id": "inc_1794652543056_ojkd",
+    "component": "Discord bot",
+    "status": "Degraded",
+    "summary": "Discord bot is degraded",
+    "started_at": "2026-11-14T10:35:43.056Z",
+    "resolved_at": "2026-11-14T10:36:41.580Z",
+    "admin_notes": null
+  },
+  {
+    "id": "inc_1794650983209_9wo3",
+    "component": "Discord bot",
+    "status": "Degraded",
+    "summary": "Discord bot is degraded",
+    "started_at": "2026-11-14T10:09:43.209Z",
+    "resolved_at": "2026-11-14T10:10:40.942Z",
+    "admin_notes": null
+  },
+  {
+    "id": "inc_1794649843196_p2gf",
+    "component": "Discord bot",
+    "status": "Degraded",
+    "summary": "Discord bot is degraded",
+    "started_at": "2026-11-14T09:50:43.196Z",
+    "resolved_at": "2026-11-14T09:51:40.876Z",
+    "admin_notes": null
+  },
+  {
+    "id": "inc_1794649423323_0n8k",
+    "component": "Discord bot",
+    "status": "Degraded",
+    "summary": "Discord bot is degraded",
+    "started_at": "2026-11-14T09:43:43.323Z",
+    "resolved_at": "2026-11-14T09:44:40.856Z",
+    "admin_notes": null
+  },
+  {
+    "id": "inc_1794645102479_44qu",
+    "component": "Core API",
+    "status": "Down",
+    "summary": "Health check timed out after 2000ms",
+    "started_at": "2026-11-14T08:31:42.479Z",
+    "resolved_at": "2026-11-14T08:32:40.830Z",
+    "admin_notes": null
+  }
+]

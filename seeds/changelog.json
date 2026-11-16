@@ -1,16 +1,32 @@
 [
   {
     "version": "3.3.0",
-    "date": "2026-11-06T01:08:09.969Z",
-    "title": "Nexus Admin Architecture & Audit System",
-    "description": "Complete administrative overhaul with real-time audit trails and telemetry.",
+    "date": "2026-11-14T05:44:52.212Z",
+    "title": "Christmas theme, bug reports and a faster bump engine",
+    "description": "A seasonal Christmas look, a new way to report bugs and a big round of fixes for bumps, partnerships and live stats.",
     "tags": [
-      "new"
+      "new",
+      "improved",
+      "fixed"
     ],
     "items": [
-      "Immutable administrative audit trail",
-      "Global credit ledger controls",
-      "Real-time maintenance toggle"
+      "Christmas theme with red accents and light snowfall, with a snow on and off toggle",
+      "New /bugreport command. Accepted reports earn 50 credits for your server",
+      "Top banner for announcements, controlled from the admin portal",
+      "Join links now use a redirect page, so joins are tracked and credits are earned only after the member stays",
+      "Partnership requests now post your ad and DM the server owner with a V2 panel",
+      "Partnership requirements now say representatives, and the default is 1",
+      "Bump reminders now arrive exactly when the cooldown ends and only once",
+      "Bump reminders moved into Promote server and merged into one simple section",
+      "Bump, bug report and ad commands no longer show twice in Discord",
+      "Daily check-in reminders now use your real reset time",
+      "Home page stats now come straight from live data and update as servers join and bump",
+      "System status now shows live checks for the website, database, bot and ER:LC API",
+      "Earn credits and Partnership lists now have page controls",
+      "Fixed the Partnership established error",
+      "Fixed the unban command",
+      "Reviews now show your real Discord avatar and name",
+      "Danger zone merged into one clean card at the bottom of settings"
     ],
     "href": "#3-3-0"
   },
@@ -24,7 +40,7 @@
       "improved"
     ],
     "items": [
-      "Bump counter and erlc.us directory link on every server page",
+      "Bump counter and ConnectingERLC directory link on every server page",
       "Dynamic verified member growth trajectory line chart powered by Recharts",
       "Custom banner image upload in Promote Server Studio with real-time preview",
       "Complete Anti-Raid & Churn Security suite with live defense shield rating and 72h retention enforcement",
@@ -36,7 +52,7 @@
   {
     "version": "3.0.0",
     "date": "2026-10-17T08:00:00.000Z",
-    "title": "ERLC.US Community Growth & Discord Directory",
+    "title": "ConnectingERLC Community Growth & Discord Directory",
     "description": "Major release introducing the real-time Discord directory and 72-hour credit retention guarantees.",
     "tags": [
       "new",
@@ -102,7 +118,7 @@
   {
     "version": "2.0.0",
     "date": "2026-09-28T09:00:00.000Z",
-    "title": "Initial ERLC.US Platform Launch",
+    "title": "Initial ConnectingERLC Platform Launch",
     "description": "The core platform engine connecting Discord communities with community growth tools.",
     "tags": [
       "new"

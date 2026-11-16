@@ -1,6 +1,38 @@
 {
   "applications": [
     {
+      "id": "vapp_1794788366099_tv2m3",
+      "serverId": "155999999999999903",
+      "serverName": "Verified Candidate Server",
+      "userId": "cand_owner_1",
+      "username": "cand_owner",
+      "why": "We run a verified 400-member community with structured sessions.",
+      "offerings": "Custom vehicle packs, CAD/MDT, and regular daily patrols.",
+      "links": "https://connectingerlc.xyz/candidate",
+      "status": "revoked",
+      "submittedAt": 1794788366099,
+      "processedAt": 1794788366170,
+      "processedBy": "cand_owner",
+      "processedByRole": "Reviewer",
+      "reason": "Owner requested badge removal"
+    },
+    {
+      "id": "vapp_1794787658237_syey4",
+      "serverId": "155999999999999903",
+      "serverName": "Verified Candidate Server",
+      "userId": "cand_owner_1",
+      "username": "cand_owner",
+      "why": "We run a verified 400-member community with structured sessions.",
+      "offerings": "Custom vehicle packs, CAD/MDT, and regular daily patrols.",
+      "links": "https://connectingerlc.xyz/candidate",
+      "status": "revoked",
+      "submittedAt": 1794787658237,
+      "processedAt": 1794787658298,
+      "processedBy": "cand_owner",
+      "processedByRole": "Reviewer",
+      "reason": "Owner requested badge removal"
+    },
+    {
       "id": "vapp_1794775081007_s7v4s",
       "serverId": "155999999999999903",
       "serverName": "Verified Candidate Server",

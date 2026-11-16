@@ -29,8 +29,24 @@ function ensureLedgerFile() {
 export function loadLedgerData() {
   ensureLedgerFile();
   try {
-    const raw = fs.readFileSync(LEDGER_FILE, 'utf8');
-    const parsed = JSON.parse(raw);
+    let raw = null;
+    if (fs.existsSync(LEDGER_FILE)) {
+      raw = fs.readFileSync(LEDGER_FILE, 'utf8');
+    }
+    const seedPath = path.join(process.cwd(), 'seeds', 'ledger.json');
+    let parsed = null;
+    if (raw) {
+      try { parsed = JSON.parse(raw); } catch {}
+    }
+    if ((!parsed || !Array.isArray(parsed.transactions) || parsed.transactions.length === 0) && fs.existsSync(seedPath)) {
+      try {
+        const seedRaw = fs.readFileSync(seedPath, 'utf8');
+        const seedParsed = JSON.parse(seedRaw);
+        if (seedParsed && Array.isArray(seedParsed.transactions) && seedParsed.transactions.length > 0) {
+          parsed = seedParsed;
+        }
+      } catch {}
+    }
     const transactions = Array.isArray(parsed?.transactions)
       ? parsed.transactions.filter(
           (t) =>

@@ -64,7 +64,232 @@ function walk(dir, base = '') {
 
 const sha = (buf) => crypto.createHash('sha1').update(buf).digest('hex');
 
+export function seedDataDir() {
+  const seedDir = path.join(process.cwd(), 'seeds');
+  if (!fs.existsSync(seedDir)) return;
+  fs.mkdirSync(DATA_DIR, { recursive: true });
+
+  for (const entry of fs.readdirSync(seedDir)) {
+    if (!entry.endsWith('.json')) continue;
+    const target = path.join(DATA_DIR, entry);
+    const seedPath = path.join(seedDir, entry);
+
+    if (!fs.existsSync(target) || fs.statSync(target).size <= 4) {
+      try {
+        fs.copyFileSync(seedPath, target);
+        console.log(`[DATA SYNC] Seeded default ${entry} from seeds/`);
+      } catch {}
+      continue;
+    }
+
+    if (entry === 'known_users.json' || entry === 'known_accounts.json') {
+      try {
+        const current = JSON.parse(fs.readFileSync(target, 'utf8') || '[]');
+        const seeds = JSON.parse(fs.readFileSync(seedPath, 'utf8') || '[]');
+        const idKey = entry === 'known_users.json' ? 'userId' : 'id';
+        const existingIds = new Set(current.map(x => String(x[idKey] || x.id || x.userId)));
+        let added = 0;
+        for (const s of seeds) {
+          const sid = String(s[idKey] || s.id || s.userId);
+          if (sid && !existingIds.has(sid)) {
+            current.push(s);
+            existingIds.add(sid);
+            added++;
+          }
+        }
+        if (added > 0) {
+          fs.writeFileSync(target, JSON.stringify(current, null, 2), 'utf8');
+          console.log(`[DATA SYNC] Merged ${added} missing records from seeds into ${entry}`);
+        }
+      } catch {}
+    } else if (entry === 'admins.json') {
+      try {
+        const current = JSON.parse(fs.readFileSync(target, 'utf8') || '[]');
+        const seeds = JSON.parse(fs.readFileSync(seedPath, 'utf8') || '[]');
+        const existingAdminIds = new Set(current.map(a => String(a.userId || a.id)));
+        let added = 0;
+        for (const a of seeds) {
+          const aid = String(a.userId || a.id);
+          if (aid && !existingAdminIds.has(aid)) {
+            current.push(a);
+            existingAdminIds.add(aid);
+            added++;
+          }
+        }
+        if (added > 0) {
+          fs.writeFileSync(target, JSON.stringify(current, null, 2), 'utf8');
+          console.log(`[DATA SYNC] Merged ${added} missing admins into admins.json`);
+        }
+      } catch {}
+    } else if (entry === 'ledger.json') {
+      try {
+        const current = JSON.parse(fs.readFileSync(target, 'utf8') || '{"transactions":[]}');
+        const seeds = JSON.parse(fs.readFileSync(seedPath, 'utf8') || '{"transactions":[]}');
+        const curTxs = Array.isArray(current.transactions) ? current.transactions : [];
+        const seedTxs = Array.isArray(seeds.transactions) ? seeds.transactions : [];
+        const txIds = new Set(curTxs.map(t => t.id || `${t.userId}_${t.timestamp}`));
+        let added = 0;
+        for (const t of seedTxs) {
+          const tid = t.id || `${t.userId}_${t.timestamp}`;
+          if (!txIds.has(tid)) {
+            curTxs.push(t);
+            txIds.add(tid);
+            added++;
+          }
+        }
+        if (added > 0) {
+          current.transactions = curTxs;
+          fs.writeFileSync(target, JSON.stringify(current, null, 2), 'utf8');
+          console.log(`[DATA SYNC] Merged ${added} ledger transactions from seeds into ledger.json`);
+        }
+      } catch {}
+    } else if (entry === 'admin_audit_log.json') {
+      try {
+        const current = JSON.parse(fs.readFileSync(target, 'utf8') || '[]');
+        const seeds = JSON.parse(fs.readFileSync(seedPath, 'utf8') || '[]');
+        const curLogs = Array.isArray(current) ? current : [];
+        const seedLogs = Array.isArray(seeds) ? seeds : [];
+        const logKeys = new Set(curLogs.map(l => l.id || `${l.timestamp}_${l.action}_${l.target}`));
+        let added = 0;
+        for (const l of seedLogs) {
+          const k = l.id || `${l.timestamp}_${l.action}_${l.target}`;
+          if (!logKeys.has(k)) {
+            curLogs.push(l);
+            logKeys.add(k);
+            added++;
+          }
+        }
+        if (added > 0) {
+          fs.writeFileSync(target, JSON.stringify(curLogs, null, 2), 'utf8');
+          console.log(`[DATA SYNC] Merged ${added} audit logs from seeds into admin_audit_log.json`);
+        }
+      } catch {}
+    } else if (entry === 'bug_reports.json') {
+      try {
+        const current = JSON.parse(fs.readFileSync(target, 'utf8') || '[]');
+        const seeds = JSON.parse(fs.readFileSync(seedPath, 'utf8') || '[]');
+        const curBugs = Array.isArray(current) ? current : [];
+        const seedBugs = Array.isArray(seeds) ? seeds : [];
+        const bugIds = new Set(curBugs.map(b => String(b.id)));
+        let added = 0;
+        for (const b of seedBugs) {
+          const bid = String(b.id);
+          if (bid && !bugIds.has(bid)) {
+            curBugs.push(b);
+            bugIds.add(bid);
+            added++;
+          }
+        }
+        if (added > 0) {
+          fs.writeFileSync(target, JSON.stringify(curBugs, null, 2), 'utf8');
+          console.log(`[DATA SYNC] Merged ${added} bug reports from seeds into bug_reports.json`);
+        }
+      } catch {}
+    } else if (entry === 'blacklist.json') {
+      try {
+        const current = JSON.parse(fs.readFileSync(target, 'utf8') || '[]');
+        const seeds = JSON.parse(fs.readFileSync(seedPath, 'utf8') || '[]');
+        const curList = Array.isArray(current) ? current : [];
+        const seedList = Array.isArray(seeds) ? seeds : [];
+        const keys = new Set(curList.map(b => String(b.value || b.id)));
+        let added = 0;
+        for (const s of seedList) {
+          const k = String(s.value || s.id);
+          if (k && !keys.has(k)) {
+            curList.push(s);
+            keys.add(k);
+            added++;
+          }
+        }
+        if (added > 0) {
+          fs.writeFileSync(target, JSON.stringify(curList, null, 2), 'utf8');
+          console.log(`[DATA SYNC] Merged ${added} blacklist entries from seeds into blacklist.json`);
+        }
+      } catch {}
+    } else if (entry === 'promo_codes.json') {
+      try {
+        const current = JSON.parse(fs.readFileSync(target, 'utf8') || '[]');
+        const seeds = JSON.parse(fs.readFileSync(seedPath, 'utf8') || '[]');
+        const curList = Array.isArray(current) ? current : [];
+        const seedList = Array.isArray(seeds) ? seeds : [];
+        const codes = new Set(curList.map(p => String(p.code || p.id).toUpperCase()));
+        let added = 0;
+        for (const s of seedList) {
+          const c = String(s.code || s.id).toUpperCase();
+          if (c && !codes.has(c)) {
+            curList.push(s);
+            codes.add(c);
+            added++;
+          }
+        }
+        if (added > 0) {
+          fs.writeFileSync(target, JSON.stringify(curList, null, 2), 'utf8');
+          console.log(`[DATA SYNC] Merged ${added} promo codes from seeds into promo_codes.json`);
+        }
+      } catch {}
+    } else if (entry === 'reports.json') {
+      try {
+        const current = JSON.parse(fs.readFileSync(target, 'utf8') || '[]');
+        const seeds = JSON.parse(fs.readFileSync(seedPath, 'utf8') || '[]');
+        const curList = Array.isArray(current) ? current : [];
+        const seedList = Array.isArray(seeds) ? seeds : [];
+        const ids = new Set(curList.map(r => String(r.id)));
+        let added = 0;
+        for (const s of seedList) {
+          const rid = String(s.id);
+          if (rid && !ids.has(rid)) {
+            curList.push(s);
+            ids.add(rid);
+            added++;
+          }
+        }
+        if (added > 0) {
+          fs.writeFileSync(target, JSON.stringify(curList, null, 2), 'utf8');
+          console.log(`[DATA SYNC] Merged ${added} reports from seeds into reports.json`);
+        }
+      } catch {}
+    } else if (entry === 'partnerships.json') {
+      try {
+        const curStat = fs.statSync(target);
+        const seedStat = fs.statSync(seedPath);
+        if (curStat.size < 50 && seedStat.size > 100) {
+          fs.copyFileSync(seedPath, target);
+          console.log(`[DATA SYNC] Restored full ${entry} from seeds (target was empty)`);
+        }
+      } catch {}
+    } else if (entry === 'promoted_servers.json') {
+      try {
+        const current = JSON.parse(fs.readFileSync(target, 'utf8') || '{}');
+        const seeds = JSON.parse(fs.readFileSync(seedPath, 'utf8') || '{}');
+        let currentServers = Array.isArray(current.servers) ? current.servers : Object.values(current.servers || {});
+        const seedServers = Array.isArray(seeds.servers) ? seeds.servers : Object.values(seeds.servers || {});
+        const existingServerIds = new Set(currentServers.map(s => String(s.id || s.guildId)));
+        let addedServers = 0;
+        for (const ss of seedServers) {
+          const sid = String(ss.id || ss.guildId);
+          if (sid && !existingServerIds.has(sid)) {
+            currentServers.push(ss);
+            existingServerIds.add(sid);
+            addedServers++;
+          }
+        }
+        if (addedServers > 0 || !Array.isArray(current.servers)) {
+          current.servers = currentServers;
+          fs.writeFileSync(target, JSON.stringify(current, null, 2), 'utf8');
+          console.log(`[DATA SYNC] Merged ${addedServers} missing servers from seeds into promoted_servers.json`);
+        }
+      } catch {}
+    }
+  }
+}
+
 export async function restoreDataDir() {
+  try {
+    seedDataDir();
+  } catch (err) {
+    console.warn('[DATA SYNC] Pre-restore seed warning:', err.message);
+  }
+
   const p = getPool();
   if (!p) {
     console.log('[DATA SYNC] No DATABASE_URL — using local files only.');
@@ -85,154 +310,10 @@ export async function restoreDataDir() {
   } catch (err) {
     console.error('[DATA SYNC] Restore failed, continuing with local files:', err.message);
   } finally {
-    // Seed fallback & merge: ensure all real users and servers from seeds are merged
-    const seedDir = path.join(process.cwd(), 'seeds');
-    if (fs.existsSync(seedDir)) {
-      for (const entry of fs.readdirSync(seedDir)) {
-        if (!entry.endsWith('.json')) continue;
-        const target = path.join(DATA_DIR, entry);
-        const seedPath = path.join(seedDir, entry);
-        if (!fs.existsSync(target) || fs.statSync(target).size === 0) {
-          try {
-            fs.copyFileSync(seedPath, target);
-            console.log(`[DATA SYNC] Seeded default ${entry} from seeds/`);
-          } catch {}
-        } else if (entry === 'known_users.json' || entry === 'known_accounts.json') {
-          try {
-            const current = JSON.parse(fs.readFileSync(target, 'utf8') || '[]');
-            const seeds = JSON.parse(fs.readFileSync(seedPath, 'utf8') || '[]');
-            const idKey = entry === 'known_users.json' ? 'userId' : 'id';
-            const existingIds = new Set(current.map(x => String(x[idKey] || x.id || x.userId)));
-            let added = 0;
-            for (const s of seeds) {
-              const sid = String(s[idKey] || s.id || s.userId);
-              if (sid && !existingIds.has(sid)) {
-                current.push(s);
-                existingIds.add(sid);
-                added++;
-              }
-            }
-            if (added > 0) {
-              fs.writeFileSync(target, JSON.stringify(current, null, 2), 'utf8');
-              console.log(`[DATA SYNC] Merged ${added} missing records from seeds into ${entry}`);
-            }
-          } catch {}
-        } else if (entry === 'admins.json') {
-          try {
-            const current = JSON.parse(fs.readFileSync(target, 'utf8') || '[]');
-            const seeds = JSON.parse(fs.readFileSync(seedPath, 'utf8') || '[]');
-            const existingAdminIds = new Set(current.map(a => String(a.userId || a.id)));
-            let added = 0;
-            for (const a of seeds) {
-              const aid = String(a.userId || a.id);
-              if (aid && !existingAdminIds.has(aid)) {
-                current.push(a);
-                existingAdminIds.add(aid);
-                added++;
-              }
-            }
-            if (added > 0) {
-              fs.writeFileSync(target, JSON.stringify(current, null, 2), 'utf8');
-              console.log(`[DATA SYNC] Merged ${added} missing admins into admins.json`);
-            }
-          } catch {}
-        } else if (entry === 'ledger.json') {
-          try {
-            const current = JSON.parse(fs.readFileSync(target, 'utf8') || '{"transactions":[]}');
-            const seeds = JSON.parse(fs.readFileSync(seedPath, 'utf8') || '{"transactions":[]}');
-            const curTxs = Array.isArray(current.transactions) ? current.transactions : [];
-            const seedTxs = Array.isArray(seeds.transactions) ? seeds.transactions : [];
-            const txIds = new Set(curTxs.map(t => t.id || `${t.userId}_${t.timestamp}`));
-            let added = 0;
-            for (const t of seedTxs) {
-              const tid = t.id || `${t.userId}_${t.timestamp}`;
-              if (!txIds.has(tid)) {
-                curTxs.push(t);
-                txIds.add(tid);
-                added++;
-              }
-            }
-            if (added > 0) {
-              current.transactions = curTxs;
-              fs.writeFileSync(target, JSON.stringify(current, null, 2), 'utf8');
-              console.log(`[DATA SYNC] Merged ${added} ledger transactions from seeds into ledger.json`);
-            }
-          } catch {}
-        } else if (entry === 'admin_audit_log.json') {
-          try {
-            const current = JSON.parse(fs.readFileSync(target, 'utf8') || '[]');
-            const seeds = JSON.parse(fs.readFileSync(seedPath, 'utf8') || '[]');
-            const curLogs = Array.isArray(current) ? current : [];
-            const seedLogs = Array.isArray(seeds) ? seeds : [];
-            const logKeys = new Set(curLogs.map(l => l.id || `${l.timestamp}_${l.action}_${l.target}`));
-            let added = 0;
-            for (const l of seedLogs) {
-              const k = l.id || `${l.timestamp}_${l.action}_${l.target}`;
-              if (!logKeys.has(k)) {
-                curLogs.push(l);
-                logKeys.add(k);
-                added++;
-              }
-            }
-            if (added > 0) {
-              fs.writeFileSync(target, JSON.stringify(curLogs, null, 2), 'utf8');
-              console.log(`[DATA SYNC] Merged ${added} audit logs from seeds into admin_audit_log.json`);
-            }
-          } catch {}
-        } else if (entry === 'bug_reports.json') {
-          try {
-            const current = JSON.parse(fs.readFileSync(target, 'utf8') || '[]');
-            const seeds = JSON.parse(fs.readFileSync(seedPath, 'utf8') || '[]');
-            const curBugs = Array.isArray(current) ? current : [];
-            const seedBugs = Array.isArray(seeds) ? seeds : [];
-            const bugIds = new Set(curBugs.map(b => String(b.id)));
-            let added = 0;
-            for (const b of seedBugs) {
-              const bid = String(b.id);
-              if (bid && !bugIds.has(bid)) {
-                curBugs.push(b);
-                bugIds.add(bid);
-                added++;
-              }
-            }
-            if (added > 0) {
-              fs.writeFileSync(target, JSON.stringify(curBugs, null, 2), 'utf8');
-              console.log(`[DATA SYNC] Merged ${added} bug reports from seeds into bug_reports.json`);
-            }
-          } catch {}
-        } else if (entry === 'partnerships.json') {
-          try {
-            const curStat = fs.statSync(target);
-            const seedStat = fs.statSync(seedPath);
-            if (curStat.size < 50 && seedStat.size > 100) {
-              fs.copyFileSync(seedPath, target);
-              console.log(`[DATA SYNC] Restored full ${entry} from seeds (target was empty)`);
-            }
-          } catch {}
-        } else if (entry === 'promoted_servers.json') {
-          try {
-            const current = JSON.parse(fs.readFileSync(target, 'utf8') || '{}');
-            const seeds = JSON.parse(fs.readFileSync(seedPath, 'utf8') || '{}');
-            let currentServers = Array.isArray(current.servers) ? current.servers : Object.values(current.servers || {});
-            const seedServers = Array.isArray(seeds.servers) ? seeds.servers : Object.values(seeds.servers || {});
-            const existingServerIds = new Set(currentServers.map(s => String(s.id || s.guildId)));
-            let addedServers = 0;
-            for (const ss of seedServers) {
-              const sid = String(ss.id || ss.guildId);
-              if (sid && !existingServerIds.has(sid)) {
-                currentServers.push(ss);
-                existingServerIds.add(sid);
-                addedServers++;
-              }
-            }
-            if (addedServers > 0) {
-              current.servers = currentServers;
-              fs.writeFileSync(target, JSON.stringify(current, null, 2), 'utf8');
-              console.log(`[DATA SYNC] Merged ${addedServers} missing servers from seeds into promoted_servers.json`);
-            }
-          } catch {}
-        }
-      }
+    try {
+      seedDataDir();
+    } catch (err) {
+      console.warn('[DATA SYNC] Post-restore seed warning:', err.message);
     }
   }
 }

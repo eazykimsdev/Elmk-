@@ -1,5 +1,44 @@
 [
   {
+    "id": "rep_1794449422287",
+    "review_id": "rev_1794162690807_qrsma",
+    "server_id": "1347902300324368414",
+    "author_id": "523693281541095424",
+    "review_text": "Goated server!",
+    "reporter_user_id": "1400351264415682621",
+    "reason": "Reported by user for review.",
+    "created_at": "2026-11-12T02:10:22.287Z",
+    "status": "resolved",
+    "adminNotes": "Report resolved",
+    "updatedAt": "2026-11-12T02:10:58.794Z",
+    "updatedBy": "James"
+  },
+  {
+    "id": "rep_1794183039290_zgdks",
+    "reporterId": "523693281541095424",
+    "reporterTag": "Eazykims",
+    "targetType": "server",
+    "targetId": "1347902300324368414",
+    "serverId": "1347902300324368414",
+    "reason": "Inappropriate content",
+    "details": "TEST!!!!",
+    "snapshot": {
+      "id": "1347902300324368414",
+      "name": "@ConnectingERLC",
+      "description": "The home of ER:LC advertising. Bump your server across the network, rank up, find partners and grow your community.",
+      "category": "Misc",
+      "memberCount": 537,
+      "ownerId": "1400351264415682621"
+    },
+    "status": "dismissed",
+    "internalNotes": "",
+    "assignee": null,
+    "createdAt": "2026-11-09T00:10:39.290Z",
+    "updatedAt": "2026-11-09T00:11:00.321Z",
+    "adminNotes": "Report resolved",
+    "updatedBy": "admin"
+  },
+  {
     "id": "rep_1794121587223",
     "review_id": "rev_1794121587127_tyw82",
     "server_id": "1347902300324368414",
@@ -8,7 +47,10 @@
     "reporter_user_id": "999999999999999999",
     "reason": "Spam review",
     "created_at": "2026-11-08T07:06:27.223Z",
-    "status": "pending"
+    "status": "dismissed",
+    "adminNotes": "Report resolved",
+    "updatedAt": "2026-11-08T07:54:53.542Z",
+    "updatedBy": "admin"
   },
   {
     "id": "rep_1794121430843",
@@ -19,7 +61,10 @@
     "reporter_user_id": "999999999999999999",
     "reason": "Spam review",
     "created_at": "2026-11-08T07:03:50.843Z",
-    "status": "pending"
+    "status": "dismissed",
+    "adminNotes": "Report resolved",
+    "updatedAt": "2026-11-08T07:54:55.841Z",
+    "updatedBy": "admin"
   },
   {
     "id": "rep_1794098707909_0ju2m",

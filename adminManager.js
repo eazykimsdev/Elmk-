@@ -30,9 +30,35 @@ function ensureDir() {
 
 function safeRead(filePath, fallback) {
   try {
-    if (!fs.existsSync(filePath)) return fallback;
-    const content = fs.readFileSync(filePath, 'utf8');
-    return JSON.parse(content || 'null') ?? fallback;
+    let content = null;
+    if (fs.existsSync(filePath)) {
+      content = fs.readFileSync(filePath, 'utf8');
+    }
+    const fileName = path.basename(filePath);
+    const seedPath = path.join(process.cwd(), 'seeds', fileName);
+
+    let parsed = null;
+    if (content) {
+      try { parsed = JSON.parse(content); } catch {}
+    }
+
+    const isEmpty = parsed === null || parsed === undefined ||
+      (Array.isArray(parsed) && parsed.length === 0) ||
+      (typeof parsed === 'object' && !Array.isArray(parsed) && Object.keys(parsed).length === 0);
+
+    if (isEmpty && fs.existsSync(seedPath)) {
+      try {
+        const seedContent = fs.readFileSync(seedPath, 'utf8');
+        const seedParsed = JSON.parse(seedContent);
+        if (seedParsed !== null && seedParsed !== undefined) {
+          if (Array.isArray(seedParsed) && seedParsed.length > 0) return seedParsed;
+          if (typeof seedParsed === 'object' && !Array.isArray(seedParsed) && Object.keys(seedParsed).length > 0) return seedParsed;
+          if (parsed === null || parsed === undefined) return seedParsed;
+        }
+      } catch {}
+    }
+
+    return parsed ?? fallback;
   } catch {
     return fallback;
   }

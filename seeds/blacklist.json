@@ -1,1 +1,32 @@
-[]
+[
+  {
+    "id": "blk_1794622741183_e66e49",
+    "type": "discord_id",
+    "value": "1472285854004154630",
+    "masked_value": "1472285854004154630",
+    "reason": "Corruption, Botted Server, and a lot more.",
+    "expires_at": "2026-12-14T02:19:01.183Z",
+    "created_at": "2026-11-14T02:19:01.183Z",
+    "added_by": "Admin"
+  },
+  {
+    "id": "blk_1794622721426_300ded",
+    "type": "discord_id",
+    "value": "817140070960070706",
+    "masked_value": "817140070960070706",
+    "reason": "Corruption, Botted Server, and a lot more.",
+    "expires_at": "2026-12-14T02:18:41.426Z",
+    "created_at": "2026-11-14T02:18:41.426Z",
+    "added_by": "Admin"
+  },
+  {
+    "id": "blk_1794536540434_aae508",
+    "type": "discord_id",
+    "value": "929987043432484884",
+    "masked_value": "929987043432484884",
+    "reason": "Hard R Useage, Power Hungry, courrupt, begging for free stuff In ConnectingERLC and Major Disrespect.",
+    "expires_at": "2026-12-13T02:22:20.434Z",
+    "created_at": "2026-11-13T02:22:20.434Z",
+    "added_by": "Admin"
+  }
+]

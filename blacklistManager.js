@@ -17,9 +17,20 @@ const HMAC_KEY = crypto.createHash('sha256').update(SECRET + '_hmac').digest();
 
 function loadBlacklist() {
   try {
+    let list = [];
     if (fs.existsSync(BLACKLIST_FILE)) {
-      return JSON.parse(fs.readFileSync(BLACKLIST_FILE, 'utf8') || '[]');
+      list = JSON.parse(fs.readFileSync(BLACKLIST_FILE, 'utf8') || '[]');
     }
+    const seedPath = path.join(process.cwd(), 'seeds', 'blacklist.json');
+    if ((!Array.isArray(list) || list.length === 0) && fs.existsSync(seedPath)) {
+      try {
+        const seedList = JSON.parse(fs.readFileSync(seedPath, 'utf8') || '[]');
+        if (Array.isArray(seedList) && seedList.length > 0) {
+          list = seedList;
+        }
+      } catch {}
+    }
+    return Array.isArray(list) ? list : [];
   } catch {}
   return [];
 }
