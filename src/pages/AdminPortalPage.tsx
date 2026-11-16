@@ -50,7 +50,9 @@ import {
   Ticket,
   Bug,
   Handshake,
-  Gift
+  Gift,
+  Sparkles,
+  Copy
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -252,6 +254,8 @@ const SIDEBAR_GROUPS = [
     items: [
       { id: 'users', label: 'Users', icon: Users },
       { id: 'servers', label: 'Servers', icon: Globe },
+      { id: 'hidden_servers', label: 'Hidden servers', icon: EyeOff },
+      { id: 'premium_servers', label: 'Premium servers', icon: Sparkles },
       { id: 'reports', label: 'Reports', icon: ShieldAlert },
       { id: 'bugs', label: 'Bug reports', icon: Bug },
       { id: 'flags', label: 'Flags', icon: AlertTriangle },
@@ -467,6 +471,26 @@ export function AdminPortalPage() {
     patch?: any;
   }>({ open: false, server: null, action: 'hide', reason: '' });
 
+  // Hidden Servers Tab
+  const [hiddenServers, setHiddenServers] = useState<any[]>([]);
+  const [hiddenServersLoading, setHiddenServersLoading] = useState(false);
+  const [hiddenServersSearch, setHiddenServersSearch] = useState('');
+  const [hiddenReasonFilter, setHiddenReasonFilter] = useState('all');
+
+  // Premium Servers Tab
+  const [premiumServers, setPremiumServers] = useState<any[]>([]);
+  const [premiumServersLoading, setPremiumServersLoading] = useState(false);
+  const [premiumSearch, setPremiumSearch] = useState('');
+  const [grantModalOpen, setGrantModalOpen] = useState(false);
+  const [grantTargetServer, setGrantTargetServer] = useState<any>(null);
+  const [grantDays, setGrantDays] = useState(30);
+  const [grantReason, setGrantReason] = useState('');
+  const [isSubmittingGrant, setIsSubmittingGrant] = useState(false);
+  const [revokeModalOpen, setRevokeModalOpen] = useState(false);
+  const [revokeTargetServer, setRevokeTargetServer] = useState<any>(null);
+  const [revokeReason, setRevokeReason] = useState('');
+  const [isSubmittingRevoke, setIsSubmittingRevoke] = useState(false);
+
   // Credits Tab
   const [ledgerTxs, setLedgerTxs] = useState<any[]>([]);
   const [ledgerLoading, setLedgerLoading] = useState(false);
@@ -489,6 +513,7 @@ export function AdminPortalPage() {
   const [bugs, setBugs] = useState<any[]>([]);
   const [bugsLoading, setBugsLoading] = useState(false);
   const [bugFilter, setBugFilter] = useState<'all' | 'pending' | 'accepted' | 'rejected' | 'duplicate'>('all');
+  const [bugSearch, setBugSearch] = useState('');
   const [selectedBug, setSelectedBug] = useState<any | null>(null);
   const [bugStaffNote, setBugStaffNote] = useState('');
   const [bugSubmitting, setBugSubmitting] = useState(false);
@@ -632,6 +657,8 @@ export function AdminPortalPage() {
     else if (activeTab === 'users') fetchUsers();
     else if (activeTab === 'blacklist') fetchBlacklist();
     else if (activeTab === 'servers') fetchServers();
+    else if (activeTab === 'hidden_servers') fetchHiddenServers();
+    else if (activeTab === 'premium_servers') fetchPremiumServers();
     else if (activeTab === 'credits') fetchLedger();
     else if (activeTab === 'reports') fetchReports();
     else if (activeTab === 'bugs') fetchBugs();
@@ -723,6 +750,74 @@ export function AdminPortalPage() {
     }
   };
 
+  const fetchHiddenServers = async () => {
+    setHiddenServersLoading(true);
+    try {
+      const q = new URLSearchParams({
+        reason: hiddenReasonFilter,
+        search: hiddenServersSearch
+      });
+      const res = await adminFetch(`/api/admin/servers/hidden?${q.toString()}`);
+      if (res.ok) {
+        const data = await res.json();
+        setHiddenServers(data.servers || []);
+      }
+    } catch {} finally {
+      setHiddenServersLoading(false);
+    }
+  };
+
+  const fetchPremiumServers = async () => {
+    setPremiumServersLoading(true);
+    try {
+      const res = await adminFetch('/api/admin/premium-servers');
+      if (res.ok) {
+        const data = await res.json();
+        setPremiumServers(data.servers || []);
+      }
+    } catch {} finally {
+      setPremiumServersLoading(false);
+    }
+  };
+
+  const handleGrantPremium = async () => {
+    if (!grantTargetServer) return;
+    setIsSubmittingGrant(true);
+    try {
+      const res = await adminFetch(`/api/admin/servers/${grantTargetServer.id}/grant-premium`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ days: grantDays, reason: grantReason.trim() || 'Admin manual grant' })
+      });
+      if (res.ok) {
+        setGrantModalOpen(false);
+        setGrantReason('');
+        fetchPremiumServers();
+      }
+    } catch {} finally {
+      setIsSubmittingGrant(false);
+    }
+  };
+
+  const handleRevokePremium = async () => {
+    if (!revokeTargetServer) return;
+    setIsSubmittingRevoke(true);
+    try {
+      const res = await adminFetch(`/api/admin/servers/${revokeTargetServer.id}/remove-premium`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason: revokeReason.trim() || 'Admin manual revocation' })
+      });
+      if (res.ok) {
+        setRevokeModalOpen(false);
+        setRevokeReason('');
+        fetchPremiumServers();
+      }
+    } catch {} finally {
+      setIsSubmittingRevoke(false);
+    }
+  };
+
   const fetchBlacklist = async () => {
     setBlacklistLoading(true);
     try {
@@ -785,6 +880,31 @@ export function AdminPortalPage() {
       setBugsLoading(false);
     }
   };
+
+  const bugCounts = useMemo(() => {
+    const counts = { all: bugs.length, pending: 0, accepted: 0, rejected: 0, duplicate: 0 };
+    for (const b of bugs) {
+      const s = (b.status || 'pending').toLowerCase();
+      if (s in counts) (counts as any)[s]++;
+    }
+    return counts;
+  }, [bugs]);
+
+  const filteredBugs = useMemo(() => {
+    return bugs.filter((b) => {
+      if (!bugSearch.trim()) return true;
+      const q = bugSearch.toLowerCase();
+      return (
+        (b.title || '').toLowerCase().includes(q) ||
+        (b.description || '').toLowerCase().includes(q) ||
+        (b.stepsToReproduce || '').toLowerCase().includes(q) ||
+        (b.username || '').toLowerCase().includes(q) ||
+        (b.displayName || '').toLowerCase().includes(q) ||
+        (b.userId || '').includes(q) ||
+        (b.id || '').includes(q)
+      );
+    });
+  }, [bugs, bugSearch]);
 
   const handleBugAction = async (bugId: string, status: 'accepted' | 'rejected' | 'duplicate') => {
     setBugSubmitting(true);
@@ -2657,6 +2777,304 @@ export function AdminPortalPage() {
           )}
 
           {/* ═══════════════════════════════════════════════════════════
+              HIDDEN SERVERS TAB (Unfinished, missing invite, bot missing)
+             ═══════════════════════════════════════════════════════════ */}
+          {activeTab === 'hidden_servers' && (
+            <div className="space-y-4 animate-in fade-in-50 duration-200">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white">Hidden Servers</h1>
+                  <p className="text-xs sm:text-sm text-zinc-400 mt-0.5">Servers where setup was never completed, bot left, or invite link is missing.</p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <div className="relative w-48 sm:w-64">
+                    <Search className="size-3.5 text-zinc-500 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                    <Input
+                      placeholder="Search hidden servers..."
+                      value={hiddenServersSearch}
+                      onChange={(e) => setHiddenServersSearch(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && fetchHiddenServers()}
+                      className="pl-8 h-8 text-xs bg-[#121215] border-white/[0.08]"
+                    />
+                  </div>
+
+                  <Select value={hiddenReasonFilter} onValueChange={(val: any) => setHiddenReasonFilter(val)}>
+                    <SelectTrigger className="w-36 h-8 text-xs bg-[#121215] border-white/[0.08]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-[#121215] border-white/[0.08] text-xs">
+                      <SelectItem value="all">All reasons</SelectItem>
+                      <SelectItem value="not set up">Not set up</SelectItem>
+                      <SelectItem value="no invite">No invite</SelectItem>
+                      <SelectItem value="bot missing">Bot missing</SelectItem>
+                      <SelectItem value="blacklisted">Blacklisted</SelectItem>
+                      <SelectItem value="delisted">Delisted</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-white/[0.08] bg-[#121215] overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-[#0E0E11] text-[11px] font-semibold text-zinc-400 uppercase tracking-wider border-b border-white/[0.08]">
+                      <tr>
+                        <th className="py-3 px-4">Community</th>
+                        <th className="py-3 px-4">Owner</th>
+                        <th className="py-3 px-4">Hidden Reason</th>
+                        <th className="py-3 px-4">Missing Item</th>
+                        <th className="py-3 px-4">Members</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-white/[0.04]">
+                      {hiddenServersLoading ? (
+                        [1, 2, 3, 4].map(i => (
+                          <tr key={i} className="animate-pulse">
+                            <td className="py-4 px-4"><div className="h-4 bg-white/10 rounded w-32" /></td>
+                            <td className="py-4 px-4"><div className="h-4 bg-white/10 rounded w-20" /></td>
+                            <td className="py-4 px-4"><div className="h-4 bg-white/10 rounded w-24" /></td>
+                            <td className="py-4 px-4"><div className="h-4 bg-white/10 rounded w-28" /></td>
+                            <td className="py-4 px-4"><div className="h-4 bg-white/10 rounded w-12" /></td>
+                          </tr>
+                        ))
+                      ) : hiddenServers.length === 0 ? (
+                        <tr>
+                          <td colSpan={5} className="py-12 text-center text-zinc-500">
+                            No hidden servers found.
+                          </td>
+                        </tr>
+                      ) : (
+                        hiddenServers.map((s) => {
+                          const reason = s.hiddenReason || 'not set up';
+                          const missingInvite = !s.inviteUrl && !s.discordInvite;
+                          const missingDesc = !s.description || s.description === 'ConnectingERLC Verified Community Server';
+                          const missingCat = !s.category;
+                          const botMissing = s.bot_in_guild === false;
+
+                          return (
+                            <tr key={s.id} className="hover:bg-white/[0.02] transition-colors">
+                              <td className="py-3 px-4">
+                                <div className="flex items-center gap-2.5">
+                                  <div className="size-7 rounded-lg bg-[#19191D] border border-white/10 flex items-center justify-center overflow-hidden shrink-0">
+                                    {s.icon || s.iconUrl ? (
+                                      <img src={s.icon || s.iconUrl} alt="" className="size-full object-cover" />
+                                    ) : (
+                                      <Globe className="size-3.5 text-zinc-500" />
+                                    )}
+                                  </div>
+                                  <div className="min-w-0">
+                                    <div className="font-semibold text-white truncate max-w-[180px]">{s.name}</div>
+                                    <div className="text-[10px] text-zinc-500 font-mono">{s.id}</div>
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="py-3 px-4 text-zinc-400">
+                                {s.ownerUsername || s.owner_display_name || s.ownerId || '—'}
+                              </td>
+                              <td className="py-3 px-4">
+                                <span className={cn(
+                                  'inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border',
+                                  reason === 'bot missing' ? 'bg-red-500/10 text-red-400 border-red-500/20' :
+                                  reason === 'no invite' ? 'bg-amber-500/10 text-amber-300 border-amber-500/20' :
+                                  reason === 'blacklisted' ? 'bg-rose-500/10 text-rose-300 border-rose-500/20' :
+                                  reason === 'delisted' ? 'bg-zinc-500/10 text-zinc-300 border-zinc-500/20' :
+                                  'bg-yellow-500/10 text-yellow-300 border-yellow-500/20'
+                                )}>
+                                  {reason}
+                                </span>
+                              </td>
+                              <td className="py-3 px-4 text-zinc-400 text-[11px]">
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  {botMissing && <span className="text-red-400">• Bot left</span>}
+                                  {missingInvite && <span className="text-amber-400">• No invite link</span>}
+                                  {missingDesc && <span className="text-zinc-400">• Description not saved</span>}
+                                  {missingCat && <span className="text-zinc-400">• Category not set</span>}
+                                </div>
+                              </td>
+                              <td className="py-3 px-4 text-zinc-300 font-medium">
+                                {s.memberCount && s.memberCount > 1 ? s.memberCount : '—'}
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ═══════════════════════════════════════════════════════════
+              PREMIUM SERVERS TAB (Subscribed, Days remaining, Admin grants)
+             ═══════════════════════════════════════════════════════════ */}
+          {activeTab === 'premium_servers' && (
+            <div className="space-y-4 animate-in fade-in-50 duration-200">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white flex items-center gap-2">
+                    <Sparkles className="size-5 text-[var(--accent)]" />
+                    Premium Servers
+                  </h1>
+                  <p className="text-xs sm:text-sm text-zinc-400 mt-0.5">
+                    Manage active premium subscriptions, grant or revoke premium status with full audit logging.
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <div className="relative w-64">
+                    <Search className="size-3.5 text-zinc-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                    <Input
+                      placeholder="Search servers..."
+                      value={premiumSearch}
+                      onChange={(e) => setPremiumSearch(e.target.value)}
+                      className="pl-8 h-8 text-xs bg-[#121215] border-white/[0.08]"
+                    />
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={fetchPremiumServers}
+                    className="h-8 text-xs border-white/[0.08] hover:bg-white/5"
+                  >
+                    <RefreshCw className={cn("size-3.5 mr-1.5", premiumServersLoading && "animate-spin")} />
+                    Refresh
+                  </Button>
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-white/[0.08] bg-[#0E0E11] overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs text-zinc-300">
+                    <thead className="bg-[#121215] border-b border-white/[0.08] text-[11px] uppercase tracking-wider text-zinc-400 font-semibold">
+                      <tr>
+                        <th className="py-3 px-4">Server</th>
+                        <th className="py-3 px-4">Status</th>
+                        <th className="py-3 px-4">Days Left</th>
+                        <th className="py-3 px-4">Expiry</th>
+                        <th className="py-3 px-4">Balance</th>
+                        <th className="py-3 px-4">Granted By</th>
+                        <th className="py-3 px-4 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-white/[0.04]">
+                      {premiumServersLoading ? (
+                        [1, 2, 3, 4].map(i => (
+                          <tr key={i} className="animate-pulse">
+                            <td className="py-4 px-4"><div className="h-4 bg-white/10 rounded w-32" /></td>
+                            <td className="py-4 px-4"><div className="h-4 bg-white/10 rounded w-20" /></td>
+                            <td className="py-4 px-4"><div className="h-4 bg-white/10 rounded w-16" /></td>
+                            <td className="py-4 px-4"><div className="h-4 bg-white/10 rounded w-24" /></td>
+                            <td className="py-4 px-4"><div className="h-4 bg-white/10 rounded w-16" /></td>
+                            <td className="py-4 px-4"><div className="h-4 bg-white/10 rounded w-20" /></td>
+                            <td className="py-4 px-4"><div className="h-4 bg-white/10 rounded w-12 ml-auto" /></td>
+                          </tr>
+                        ))
+                      ) : (() => {
+                        const filtered = premiumServers.filter(s => {
+                          if (!premiumSearch.trim()) return true;
+                          const q = premiumSearch.toLowerCase();
+                          return (s.name || '').toLowerCase().includes(q) || (s.id || '').includes(q);
+                        });
+                        if (filtered.length === 0) {
+                          return (
+                            <tr>
+                              <td colSpan={7} className="py-12 text-center text-zinc-500">
+                                No servers found.
+                              </td>
+                            </tr>
+                          );
+                        }
+                        return filtered.map((s) => (
+                          <tr key={s.id} className="hover:bg-white/[0.02] transition-colors">
+                            <td className="py-3 px-4">
+                              <div className="flex items-center gap-2.5">
+                                <div className="size-7 rounded-lg bg-[#19191D] border border-white/10 flex items-center justify-center overflow-hidden shrink-0">
+                                  {s.icon ? (
+                                    <img src={s.icon.startsWith('http') ? s.icon : `https://cdn.discordapp.com/icons/${s.id}/${s.icon}.png`} alt="" className="size-full object-cover" />
+                                  ) : (
+                                    <Globe className="size-3.5 text-zinc-500" />
+                                  )}
+                                </div>
+                                <div className="min-w-0">
+                                  <div className="font-semibold text-white truncate max-w-[180px]">{s.name}</div>
+                                  <div className="text-[10px] text-zinc-500 font-mono">{s.id}</div>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="py-3 px-4">
+                              {s.is_premium ? (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-[var(--accent)]/15 text-[var(--accent)] border border-[var(--accent)]/30">
+                                  <Sparkles className="size-2.5" />
+                                  Premium
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-zinc-800 text-zinc-400 border border-white/5">
+                                  Standard
+                                </span>
+                              )}
+                            </td>
+                            <td className="py-3 px-4 font-medium">
+                              {s.is_premium ? `${s.daysLeft}d` : '—'}
+                            </td>
+                            <td className="py-3 px-4 text-zinc-400 text-[11px]">
+                              {s.premiumUntil ? new Date(s.premiumUntil).toLocaleDateString() : '—'}
+                            </td>
+                            <td className="py-3 px-4 text-zinc-300 font-medium">
+                              {s.balance || 0} cr
+                            </td>
+                            <td className="py-3 px-4 text-zinc-400 text-[11px]">
+                              {s.premium_granted_by ? (
+                                <span title={s.premium_grant_reason || ''}>{s.premium_granted_by}</span>
+                              ) : s.is_premium ? (
+                                'Purchased'
+                              ) : (
+                                '—'
+                              )}
+                            </td>
+                            <td className="py-3 px-4 text-right">
+                              <div className="flex items-center justify-end gap-1.5">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    setGrantTargetServer(s);
+                                    setGrantDays(30);
+                                    setGrantReason('');
+                                    setGrantModalOpen(true);
+                                  }}
+                                  className="h-7 px-2 text-[11px] text-zinc-300 hover:text-white hover:bg-white/5"
+                                >
+                                  {s.is_premium ? 'Extend' : 'Grant'}
+                                </Button>
+                                {s.is_premium && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                      setRevokeTargetServer(s);
+                                      setRevokeReason('');
+                                      setRevokeModalOpen(true);
+                                    }}
+                                    className="h-7 px-2 text-[11px] text-rose-400 hover:text-rose-300 hover:bg-rose-500/10"
+                                  >
+                                    Revoke
+                                  </Button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        ));
+                      })()}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ═══════════════════════════════════════════════════════════
               4. REPORTS TAB (Open, Reviewing, Resolved, Dismissed)
              ═══════════════════════════════════════════════════════════ */}
           {activeTab === 'reports' && (
@@ -2879,83 +3297,278 @@ export function AdminPortalPage() {
              ═══════════════════════════════════════════════════════════ */}
           {activeTab === 'bugs' && (
             <AdminTabErrorBoundary tabName="Bug reports">
-              <div className="space-y-4 animate-in fade-in-50 duration-200">
+              <div className="space-y-5 animate-in fade-in-50 duration-200">
+                {/* Header */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div>
-                    <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white">Bug Reports</h1>
-                    <p className="text-xs sm:text-sm text-zinc-400 mt-0.5">Review in-game and dashboard bug reports submitted via /bugreport.</p>
+                    <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white flex items-center gap-2.5 font-sans">
+                      <Bug className="size-6 text-[var(--accent)]" />
+                      Bug Reports
+                      <span className="text-xs font-normal px-2.5 py-0.5 rounded-full bg-white/5 border border-white/10 text-zinc-400">
+                        {bugs.length} total
+                      </span>
+                    </h1>
+                    <p className="text-xs sm:text-sm text-zinc-400 mt-1 font-sans">
+                      Review in-game and dashboard bug reports submitted via /bugreport.
+                    </p>
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <Select value={bugFilter} onValueChange={(val: any) => { setBugFilter(val); fetchBugs(val); }}>
-                      <SelectTrigger className="w-36 h-8 text-xs bg-[#121215] border-white/[0.08]">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="bg-[#121215] border-white/[0.08] text-xs">
-                        <SelectItem value="all">All statuses</SelectItem>
-                        <SelectItem value="pending">Pending</SelectItem>
-                        <SelectItem value="accepted">Accepted</SelectItem>
-                        <SelectItem value="rejected">Rejected</SelectItem>
-                        <SelectItem value="duplicate">Duplicate</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => fetchBugs()}
+                      className="h-8 text-xs border-white/[0.08] hover:bg-white/5 font-sans cursor-pointer"
+                    >
+                      <RefreshCw className={cn("size-3.5 mr-1.5", bugsLoading && "animate-spin")} />
+                      Refresh
+                    </Button>
                   </div>
                 </div>
 
+                {/* Filter Tabs & Search Bar */}
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pt-1">
+                  {/* Status Pills */}
+                  <div className="inline-flex items-center rounded-lg border border-white/[0.08] bg-[#121215] p-1 flex-wrap gap-1">
+                    {[
+                      { id: 'all' as const, label: 'All', count: bugCounts.all },
+                      { id: 'pending' as const, label: 'Pending', count: bugCounts.pending, badgeColor: 'bg-blue-500/20 text-blue-300' },
+                      { id: 'accepted' as const, label: 'Accepted', count: bugCounts.accepted, badgeColor: 'bg-emerald-500/20 text-emerald-300' },
+                      { id: 'rejected' as const, label: 'Rejected', count: bugCounts.rejected, badgeColor: 'bg-rose-500/20 text-rose-300' },
+                      { id: 'duplicate' as const, label: 'Duplicate', count: bugCounts.duplicate, badgeColor: 'bg-zinc-700 text-zinc-300' },
+                    ].map((tab) => {
+                      const isActive = bugFilter === tab.id;
+                      return (
+                        <button
+                          key={tab.id}
+                          type="button"
+                          onClick={() => {
+                            setBugFilter(tab.id);
+                            fetchBugs(tab.id);
+                          }}
+                          className={cn(
+                            'flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer font-sans',
+                            isActive
+                              ? 'bg-[#1C1C21] text-white shadow-xs'
+                              : 'text-zinc-400 hover:text-zinc-200'
+                          )}
+                        >
+                          <span>{tab.label}</span>
+                          <span
+                            className={cn(
+                              'text-[10px] px-1.5 py-0.2 rounded-full font-semibold',
+                              isActive ? (tab.badgeColor || 'bg-white/10 text-zinc-200') : 'bg-white/5 text-zinc-400'
+                            )}
+                          >
+                            {tab.count}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Search Input */}
+                  <div className="relative w-full md:w-72">
+                    <Search className="size-3.5 text-zinc-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                    <Input
+                      placeholder="Search title, details, reporter..."
+                      value={bugSearch}
+                      onChange={(e) => setBugSearch(e.target.value)}
+                      className="pl-8 h-8 text-xs bg-[#121215] border-white/[0.08] font-sans"
+                    />
+                  </div>
+                </div>
+
+                {/* Bug Reports Cards List */}
                 {bugsLoading ? (
                   <div className="space-y-3">
                     {[1, 2, 3].map(i => (
-                      <Skeleton key={i} className="h-28 rounded-2xl bg-white/[0.03]" />
+                      <div key={i} className="h-44 rounded-xl border border-white/[0.06] bg-[#0E0E11] p-5 space-y-3 animate-pulse">
+                        <div className="flex items-center gap-3">
+                          <div className="size-10 rounded-full bg-white/10 shrink-0" />
+                          <div className="space-y-1.5 flex-1">
+                            <div className="h-3.5 bg-white/10 rounded w-36" />
+                            <div className="h-2.5 bg-white/5 rounded w-24" />
+                          </div>
+                        </div>
+                        <div className="h-4 bg-white/10 rounded w-2/3" />
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="h-16 bg-white/5 rounded" />
+                          <div className="h-16 bg-white/5 rounded" />
+                        </div>
+                      </div>
                     ))}
                   </div>
-                ) : bugs.length === 0 ? (
-                  <div className="p-12 rounded-2xl border border-white/[0.08] bg-[#121215] text-center text-xs text-zinc-500">
-                    No bug reports found matching filter.
+                ) : filteredBugs.length === 0 ? (
+                  <div className="p-12 rounded-xl border border-white/[0.08] bg-[#0E0E11] text-center space-y-2">
+                    <Bug className="size-8 text-zinc-600 mx-auto" />
+                    <div className="text-sm font-medium text-white font-sans">No bug reports found</div>
+                    <p className="text-xs text-zinc-500 font-sans">
+                      {bugSearch ? 'Try a different search term or clear the filter.' : 'No bug reports submitted for this filter.'}
+                    </p>
                   </div>
                 ) : (
-                  <div className="space-y-3">
-                    {bugs.map((b) => (
+                  <div className="space-y-4">
+                    {filteredBugs.map((b) => (
                       <div
                         key={b.id}
-                        onClick={() => { setSelectedBug(b); setBugStaffNote(b.staffNotes || ''); }}
-                        className="p-5 rounded-2xl border border-white/[0.08] bg-[#121215] hover:border-white/20 transition-all cursor-pointer space-y-3"
+                        className="rounded-xl border border-white/[0.08] bg-[#0E0E11] hover:border-white/[0.18] transition-all p-5 space-y-4 shadow-sm"
                       >
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/[0.06] pb-3">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <Badge variant="outline" className={`text-[10px] font-semibold uppercase px-2 py-0.5 ${
-                              b.status === 'accepted'
-                                ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
-                                : b.status === 'rejected'
-                                ? 'bg-rose-500/10 text-rose-400 border-rose-500/20'
-                                : b.status === 'duplicate'
-                                ? 'bg-zinc-800 text-zinc-400 border-white/[0.08]'
-                                : 'bg-blue-500/10 text-blue-400 border-blue-500/20'
-                            }`}>
-                              {b.status}
-                            </Badge>
-                            <span className="text-sm font-semibold text-white">
-                              {b.title}
-                            </span>
-                            <span className="text-[10px] font-mono text-zinc-500">ID: {b.id}</span>
+                        {/* Reporter & Header Row */}
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-white/[0.06]">
+                          <div className="flex items-center gap-3">
+                            <UserAvatar
+                              userId={b.userId}
+                              avatarUrl={b.avatarUrl}
+                              name={b.displayName || b.username}
+                              size={40}
+                              className="rounded-full ring-1 ring-white/10 shrink-0"
+                            />
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className="text-[13px] font-semibold text-white truncate font-sans">
+                                  {b.displayName || b.username}
+                                </span>
+                                <span className="text-[11px] text-zinc-400 font-sans">
+                                  @{b.username}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2 text-[11px] text-zinc-500 font-sans mt-0.5">
+                                <span className="font-mono text-[10px]">ID: {b.userId}</span>
+                                <span className="text-zinc-600">•</span>
+                                <span className="font-mono text-[10px] text-zinc-600">Ticket #{b.id.slice(-6)}</span>
+                                <span className="text-zinc-600">•</span>
+                                <span className="flex items-center gap-1">
+                                  <Clock className="size-3 text-zinc-500" />
+                                  {new Date(b.createdAt).toLocaleString(undefined, {
+                                    month: 'short',
+                                    day: 'numeric',
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                  })}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Status Badge & Reward Indicator */}
+                          <div className="flex items-center gap-2 shrink-0">
                             {b.rewardGiven && (
-                              <Badge variant="outline" className="text-[10px] bg-amber-500/10 text-amber-400 border-amber-500/20">
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-amber-500/10 text-amber-300 border border-amber-500/25 font-sans">
+                                <Sparkles className="size-3 text-amber-400" />
                                 +50 Credits Awarded
-                              </Badge>
+                              </span>
+                            )}
+                            {b.pendingReward && !b.rewardGiven && (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-amber-500/10 text-amber-300 border border-amber-500/25 font-sans">
+                                <Sparkles className="size-3 text-amber-400" />
+                                +50 Credits Pending
+                              </span>
+                            )}
+                            <Badge
+                              variant="outline"
+                              className={cn(
+                                'text-[11px] font-medium px-2.5 py-1 rounded-full flex items-center gap-1.5 font-sans',
+                                b.status === 'accepted'
+                                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                                  : b.status === 'rejected'
+                                  ? 'bg-rose-500/10 text-rose-400 border-rose-500/30'
+                                  : b.status === 'duplicate'
+                                  ? 'bg-zinc-800 text-zinc-400 border-white/[0.08]'
+                                  : 'bg-blue-500/10 text-blue-400 border-blue-500/30'
+                              )}
+                            >
+                              {b.status === 'accepted' && <CheckCircle className="size-3" />}
+                              {b.status === 'rejected' && <XCircle className="size-3" />}
+                              {b.status === 'duplicate' && <Copy className="size-3" />}
+                              {b.status === 'pending' && <Clock className="size-3" />}
+                              <span className="capitalize">{b.status}</span>
+                            </Badge>
+                          </div>
+                        </div>
+
+                        {/* Title */}
+                        <div>
+                          <h3 className="text-[15px] font-semibold text-white font-sans leading-snug">
+                            {b.title}
+                          </h3>
+                        </div>
+
+                        {/* What Happened & Steps Content */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs font-sans">
+                          <div className="p-3.5 rounded-xl bg-[#141417] border border-white/[0.05] space-y-1.5">
+                            <div className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
+                              <AlertCircle className="size-3 text-zinc-400" />
+                              What Happened
+                            </div>
+                            <p className="text-zinc-200 whitespace-pre-wrap leading-relaxed line-clamp-4">
+                              {b.description}
+                            </p>
+                          </div>
+
+                          <div className="p-3.5 rounded-xl bg-[#141417] border border-white/[0.05] space-y-1.5">
+                            <div className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
+                              <Layers className="size-3 text-zinc-400" />
+                              Steps to Reproduce
+                            </div>
+                            <p className="text-zinc-200 whitespace-pre-wrap leading-relaxed line-clamp-4">
+                              {b.stepsToReproduce}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Reviewer Notice (if reviewed) */}
+                        {b.reviewedBy && (
+                          <div className="p-3 rounded-lg bg-[#141417]/60 border border-white/[0.04] text-[11px] text-zinc-400 flex flex-col sm:flex-row sm:items-center justify-between gap-2 font-sans">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="text-zinc-500">Reviewed by</span>
+                              <span className="text-white font-medium">{b.reviewedBy}</span>
+                              {b.reviewedAt && (
+                                <span className="text-zinc-500">on {new Date(b.reviewedAt).toLocaleDateString()}</span>
+                              )}
+                              {b.staffNotes && (
+                                <>
+                                  <span className="text-zinc-600">—</span>
+                                  <span className="text-zinc-300 italic">"{b.staffNotes}"</span>
+                                </>
+                              )}
+                            </div>
+                            {b.dmDelivered === false && (
+                              <span className="text-amber-400 text-[10px]">{b.dmNote || 'DMs closed'}</span>
                             )}
                           </div>
-                          <span className="text-[11px] text-zinc-400 font-sans">
-                            {new Date(b.createdAt).toLocaleString()}
-                          </span>
-                        </div>
+                        )}
 
-                        <div className="text-xs text-zinc-300 line-clamp-2 font-sans">
-                          {b.description}
-                        </div>
-
-                        <div className="flex items-center justify-between text-[11px] text-zinc-500 font-sans pt-1">
-                          <span>Reported by: <strong className="text-zinc-300">@{b.username}</strong> ({b.userId})</span>
-                          {b.reviewedBy && (
-                            <span>Reviewed by: <strong className="text-zinc-300">{b.reviewedBy}</strong></span>
+                        {/* Card Footer: Actions */}
+                        <div className="flex items-center justify-end gap-2 pt-2 border-t border-white/[0.04]">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => { setSelectedBug(b); setBugStaffNote(b.staffNotes || ''); }}
+                            className="h-8 text-xs border-white/[0.08] hover:bg-white/5 text-zinc-300 hover:text-white cursor-pointer font-sans"
+                          >
+                            Review & Details
+                          </Button>
+                          {b.status === 'pending' && (
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleBugAction(b.id, 'rejected')}
+                                disabled={bugSubmitting}
+                                className="h-8 px-2.5 text-xs text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 cursor-pointer font-sans"
+                              >
+                                Reject
+                              </Button>
+                              <Button
+                                size="sm"
+                                onClick={() => handleBugAction(b.id, 'accepted')}
+                                disabled={bugSubmitting}
+                                className="h-8 px-3 text-xs bg-[var(--accent)] hover:opacity-90 text-[var(--accent-foreground)] font-semibold cursor-pointer font-sans"
+                              >
+                                Accept (+50 Cr)
+                              </Button>
+                            </>
                           )}
                         </div>
                       </div>
@@ -2966,43 +3579,80 @@ export function AdminPortalPage() {
                 {/* Bug Details & Action Modal */}
                 {selectedBug && (
                   <Dialog open={true} onOpenChange={() => setSelectedBug(null)}>
-                    <DialogContent className="max-w-xl bg-[#0E0E11] border-white/10 text-white font-sans p-6 rounded-2xl space-y-4">
-                      <DialogHeader>
+                    <DialogContent className="max-w-xl bg-[#0E0E11] border border-white/[0.1] text-white font-sans p-6 rounded-2xl space-y-5 shadow-2xl">
+                      <DialogHeader className="space-y-3 pb-3 border-b border-white/[0.07]">
                         <div className="flex items-center justify-between">
-                          <Badge variant="outline" className={`text-[10px] font-semibold uppercase px-2 py-0.5 ${
-                            selectedBug.status === 'accepted'
-                              ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
-                              : selectedBug.status === 'rejected'
-                              ? 'bg-rose-500/10 text-rose-400 border-rose-500/20'
-                              : selectedBug.status === 'duplicate'
-                              ? 'bg-zinc-800 text-zinc-400 border-white/[0.08]'
-                              : 'bg-blue-500/10 text-blue-400 border-blue-500/20'
-                          }`}>
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              'text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full font-sans',
+                              selectedBug.status === 'accepted'
+                                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                                : selectedBug.status === 'rejected'
+                                ? 'bg-rose-500/10 text-rose-400 border-rose-500/20'
+                                : selectedBug.status === 'duplicate'
+                                ? 'bg-zinc-800 text-zinc-400 border-white/[0.08]'
+                                : 'bg-blue-500/10 text-blue-400 border-blue-500/20'
+                            )}
+                          >
                             {selectedBug.status}
                           </Badge>
                           <span className="text-[10px] font-mono text-zinc-500">ID: {selectedBug.id}</span>
                         </div>
-                        <DialogTitle className="text-lg font-bold text-white pt-2">
+
+                        {/* Reporter Banner */}
+                        <div className="flex items-center gap-3 p-3 rounded-xl bg-[#141417] border border-white/[0.05]">
+                          <UserAvatar
+                            userId={selectedBug.userId}
+                            avatarUrl={selectedBug.avatarUrl}
+                            name={selectedBug.displayName || selectedBug.username}
+                            size={44}
+                            className="rounded-full ring-1 ring-white/10 shrink-0"
+                          />
+                          <div className="min-w-0 flex-1">
+                            <div className="text-[14px] font-semibold text-white font-sans">
+                              {selectedBug.displayName || selectedBug.username}
+                            </div>
+                            <div className="text-[11px] text-zinc-400 font-sans flex items-center gap-2">
+                              <span>@{selectedBug.username}</span>
+                              <span className="text-zinc-600">•</span>
+                              <span className="font-mono text-zinc-500">{selectedBug.userId}</span>
+                            </div>
+                          </div>
+                          <div className="text-[11px] text-zinc-500 font-sans text-right">
+                            <div>Submitted</div>
+                            <div>{new Date(selectedBug.createdAt).toLocaleDateString()}</div>
+                          </div>
+                        </div>
+
+                        <DialogTitle className="text-base font-bold text-white pt-1">
                           {selectedBug.title}
                         </DialogTitle>
-                        <DialogDescription className="text-xs text-zinc-400">
-                          Reported by @{selectedBug.username} ({selectedBug.userId}) on {new Date(selectedBug.createdAt).toLocaleString()}
-                        </DialogDescription>
                       </DialogHeader>
 
-                      <div className="space-y-3 text-xs">
-                        <div className="p-3.5 rounded-xl bg-white/[0.02] border border-white/[0.06] space-y-1">
-                          <div className="font-semibold text-zinc-300 uppercase tracking-wider text-[10px]">What happened</div>
+                      <div className="space-y-3.5 text-xs">
+                        <div className="p-3.5 rounded-xl bg-[#141417] border border-white/[0.06] space-y-1.5">
+                          <div className="font-semibold text-zinc-400 uppercase tracking-wider text-[10px] flex items-center gap-1.5">
+                            <AlertCircle className="size-3 text-zinc-400" />
+                            What Happened
+                          </div>
                           <p className="text-zinc-200 whitespace-pre-wrap leading-relaxed">{selectedBug.description}</p>
                         </div>
 
-                        <div className="p-3.5 rounded-xl bg-white/[0.02] border border-white/[0.06] space-y-1">
-                          <div className="font-semibold text-zinc-300 uppercase tracking-wider text-[10px]">Steps to reproduce</div>
+                        <div className="p-3.5 rounded-xl bg-[#141417] border border-white/[0.06] space-y-1.5">
+                          <div className="font-semibold text-zinc-400 uppercase tracking-wider text-[10px] flex items-center gap-1.5">
+                            <Layers className="size-3 text-zinc-400" />
+                            Steps to Reproduce
+                          </div>
                           <p className="text-zinc-200 whitespace-pre-wrap leading-relaxed">{selectedBug.stepsToReproduce}</p>
                         </div>
 
-                        <div className="p-3 rounded-xl bg-amber-500/[0.04] border border-amber-500/20 space-y-1">
-                          <div className="font-semibold text-amber-400 text-[11px]">Bounty Reward Eligibility</div>
+                        {/* Bounty Reward Eligibility */}
+                        <div className="p-3.5 rounded-xl bg-amber-500/[0.04] border border-amber-500/20 space-y-1.5 font-sans">
+                          <div className="font-semibold text-amber-400 text-[11px] flex items-center gap-1.5">
+                            <Sparkles className="size-3.5 text-amber-400" />
+                            Bounty Reward Eligibility
+                          </div>
                           <p className="text-zinc-300 text-[11px] leading-relaxed">
                             {selectedBug.rewardGiven
                               ? (selectedBug.rewardGuildId === 'pending'
@@ -3013,13 +3663,28 @@ export function AdminPortalPage() {
                         </div>
 
                         {selectedBug.dmDelivered === false && (
-                          <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-300">
+                          <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-300 font-sans">
                             Notice: {selectedBug.dmNote || 'Recipient Discord DMs are closed or private.'}
                           </div>
                         )}
 
-                        <div className="space-y-1.5 pt-1">
-                          <label className="text-[11px] font-medium text-zinc-400">Staff internal note / reason (sent to reporter in DM):</label>
+                        {/* Staff Notes */}
+                        <div className="space-y-1.5 pt-1 font-sans">
+                          <div className="flex items-center justify-between">
+                            <label className="text-[11px] font-medium text-zinc-400">Staff internal note / reason (sent to reporter in DM):</label>
+                            <div className="flex items-center gap-1">
+                              {['Fixed in next update', 'Duplicate ticket', 'Works as intended'].map((preset) => (
+                                <button
+                                  key={preset}
+                                  type="button"
+                                  onClick={() => setBugStaffNote(preset)}
+                                  className="text-[10px] px-1.5 py-0.5 rounded bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white transition-colors cursor-pointer"
+                                >
+                                  {preset}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
                           <textarea
                             value={bugStaffNote}
                             onChange={(e) => setBugStaffNote(e.target.value)}
@@ -3035,7 +3700,7 @@ export function AdminPortalPage() {
                           size="sm"
                           onClick={() => setSelectedBug(null)}
                           disabled={bugSubmitting}
-                          className="h-8 text-xs text-zinc-400 cursor-pointer"
+                          className="h-8 text-xs text-zinc-400 cursor-pointer font-sans"
                         >
                           Cancel
                         </Button>
@@ -3044,7 +3709,7 @@ export function AdminPortalPage() {
                           size="sm"
                           onClick={() => handleSendTestDM(selectedBug.id)}
                           disabled={bugSubmitting}
-                          className="h-8 text-xs bg-zinc-800 hover:bg-zinc-700 text-zinc-200 cursor-pointer"
+                          className="h-8 text-xs bg-zinc-800 hover:bg-zinc-700 text-zinc-200 cursor-pointer font-sans"
                         >
                           Send Test DM
                         </Button>
@@ -3053,7 +3718,7 @@ export function AdminPortalPage() {
                           size="sm"
                           onClick={() => handleBugAction(selectedBug.id, 'duplicate')}
                           disabled={bugSubmitting}
-                          className="h-8 text-xs bg-zinc-800 hover:bg-zinc-700 text-zinc-200 cursor-pointer"
+                          className="h-8 text-xs bg-zinc-800 hover:bg-zinc-700 text-zinc-200 cursor-pointer font-sans"
                         >
                           Duplicate
                         </Button>
@@ -3062,7 +3727,7 @@ export function AdminPortalPage() {
                           size="sm"
                           onClick={() => handleBugAction(selectedBug.id, 'rejected')}
                           disabled={bugSubmitting}
-                          className="h-8 text-xs bg-zinc-800 hover:bg-zinc-700 text-zinc-200 cursor-pointer"
+                          className="h-8 text-xs bg-zinc-800 hover:bg-zinc-700 text-zinc-200 cursor-pointer font-sans"
                         >
                           Reject
                         </Button>
@@ -3071,7 +3736,7 @@ export function AdminPortalPage() {
                           size="sm"
                           onClick={() => handleBugAction(selectedBug.id, 'accepted')}
                           disabled={bugSubmitting}
-                          className="h-8 text-xs bg-[var(--accent)] hover:opacity-90 text-[var(--accent-foreground)] font-semibold cursor-pointer"
+                          className="h-8 text-xs bg-[var(--accent)] hover:opacity-90 text-[var(--accent-foreground)] font-semibold cursor-pointer font-sans"
                         >
                           {bugSubmitting ? 'Saving...' : 'Accept (+50 Credits)'}
                         </Button>
@@ -6187,6 +6852,99 @@ export function AdminPortalPage() {
               className="text-xs bg-rose-600 hover:bg-rose-500 text-white font-semibold"
             >
               Revoke Staff Role
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Grant / Extend Premium Modal */}
+      <Dialog open={grantModalOpen} onOpenChange={setGrantModalOpen}>
+        <DialogContent className="max-w-[440px] bg-[#0E0E11] border border-white/[0.1] rounded-2xl p-6 space-y-4">
+          <DialogHeader>
+            <DialogTitle className="text-base text-white flex items-center gap-2">
+              <Sparkles className="size-4 text-[var(--accent)]" />
+              {grantTargetServer?.is_premium ? 'Extend Premium Status' : 'Grant Premium Status'}
+            </DialogTitle>
+            <DialogDescription className="text-xs text-zinc-400">
+              Grant or extend premium subscription for <span className="text-white font-medium">{grantTargetServer?.name}</span>. This will be recorded in the administrative audit log.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-zinc-300">Days to add</label>
+              <Input
+                type="number"
+                min={1}
+                max={365}
+                value={grantDays}
+                onChange={(e) => setGrantDays(Math.max(1, parseInt(e.target.value) || 30))}
+                className="text-xs bg-[#141417] border-white/[0.08]"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-zinc-300">Administrative Reason</label>
+              <Input
+                placeholder="e.g. Community partnership award, staff grant"
+                value={grantReason}
+                onChange={(e) => setGrantReason(e.target.value)}
+                className="text-xs bg-[#141417] border-white/[0.08]"
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0 pt-2">
+            <Button variant="outline" size="sm" onClick={() => setGrantModalOpen(false)} className="text-xs border-white/[0.08]">
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              disabled={isSubmittingGrant}
+              onClick={handleGrantPremium}
+              className="text-xs bg-[var(--accent)] hover:opacity-90 text-white font-semibold"
+            >
+              {isSubmittingGrant ? 'Processing...' : 'Confirm Grant'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Revoke Premium Modal */}
+      <Dialog open={revokeModalOpen} onOpenChange={setRevokeModalOpen}>
+        <DialogContent className="max-w-[440px] bg-[#0E0E11] border border-white/[0.1] rounded-2xl p-6 space-y-4">
+          <DialogHeader>
+            <DialogTitle className="text-base text-white flex items-center gap-2">
+              <Sparkles className="size-4 text-rose-400" />
+              Revoke Premium Status
+            </DialogTitle>
+            <DialogDescription className="text-xs text-zinc-400">
+              Revoke premium subscription from <span className="text-white font-medium">{revokeTargetServer?.name}</span> immediately.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-zinc-300">Revocation Reason</label>
+              <Input
+                placeholder="e.g. Terms violation, requested cancellation"
+                value={revokeReason}
+                onChange={(e) => setRevokeReason(e.target.value)}
+                className="text-xs bg-[#141417] border-white/[0.08]"
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0 pt-2">
+            <Button variant="outline" size="sm" onClick={() => setRevokeModalOpen(false)} className="text-xs border-white/[0.08]">
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              disabled={isSubmittingRevoke}
+              onClick={handleRevokePremium}
+              className="text-xs bg-rose-600 hover:bg-rose-500 text-white font-semibold"
+            >
+              {isSubmittingRevoke ? 'Revoking...' : 'Revoke Premium'}
             </Button>
           </DialogFooter>
         </DialogContent>

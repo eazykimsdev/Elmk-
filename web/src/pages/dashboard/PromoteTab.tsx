@@ -162,7 +162,6 @@ export function normalizePromoteValues(data: any) {
     partnershipBroadcastChannel: normStr(data?.partnershipBroadcastChannel || ''),
     partnershipAcceptedCategories: normCategories(data?.partnershipAcceptedCategories),
     partnershipDailyLimit: Math.min(10, Math.max(1, normNum(data?.partnershipDailyLimit, 1))),
-    partnershipQuestions: Array.isArray(data?.partnershipQuestions) ? data.partnershipQuestions.slice(0, 5) : [],
   };
 }
 
@@ -422,11 +421,6 @@ function PromoteTabInner({
   const [partnershipDailyLimit, setPartnershipDailyLimit] = useState<number>(() => {
     return cachedListing?.partnershipDailyLimit ?? (config as any)?.partnershipDailyLimit ?? 1;
   });
-  const [partnershipQuestions, setPartnershipQuestions] = useState<Array<{ id: string; question: string; required: boolean }>>(() => {
-    if (Array.isArray(cachedListing?.partnershipQuestions)) return cachedListing.partnershipQuestions;
-    if (Array.isArray((config as any)?.partnershipQuestions)) return (config as any).partnershipQuestions;
-    return [];
-  });
 
   // Dialog & Discord Channels state
   const [gateDialogOpen, setGateDialogOpen] = useState(false);
@@ -645,7 +639,6 @@ function PromoteTabInner({
     setPartnershipBroadcastChannel(initialNorm.partnershipBroadcastChannel);
     setPartnershipAcceptedCategories(initialNorm.partnershipAcceptedCategories);
     setPartnershipDailyLimit(initialNorm.partnershipDailyLimit);
-    setPartnershipQuestions(initialNorm.partnershipQuestions);
     baseline.current = initialNorm;
   }, [config]);
 
@@ -699,7 +692,6 @@ function PromoteTabInner({
         setPartnershipBroadcastChannel(initialNorm.partnershipBroadcastChannel);
         setPartnershipAcceptedCategories(initialNorm.partnershipAcceptedCategories);
         setPartnershipDailyLimit(initialNorm.partnershipDailyLimit);
-        setPartnershipQuestions(initialNorm.partnershipQuestions);
         baseline.current = initialNorm;
 
         // Fetch active reps count for turn-off confirmation
@@ -749,7 +741,7 @@ function PromoteTabInner({
     bumpRoleId: { label: 'Bump mention role', section: 'Bump reminders' },
     bumpReadyNoticeEnabled: { label: 'Bump reminders switch', section: 'Bump reminders' },
     openForPartnerships: { label: 'Partnership status', section: 'Partnerships' },
-    partnershipMinMembers: { label: 'Minimum members', section: 'Partnerships' },
+    partnershipMinMembers: { label: 'Minimum representatives', section: 'Partnerships' },
     partnershipPrice: { label: 'Partnership price', section: 'Partnerships' },
     partnershipAllowedMentions: { label: 'Allowed mentions', section: 'Partnerships' },
     partnershipHerePrice: { label: '@here fee', section: 'Partnerships' },
@@ -1077,7 +1069,6 @@ function PromoteTabInner({
         partnershipBroadcastChannel: safeStr(partnershipBroadcastChannel) || null,
         partnershipAcceptedCategories,
         partnershipDailyLimit,
-        partnershipQuestions: partnershipQuestions.slice(0, 5),
       };
 
       const resData = await api<any>(`/servers/${guildId}/listing`, {
@@ -1274,17 +1265,6 @@ function PromoteTabInner({
         </div>
       </div>
 
-      {/* ── HOW IT WORKS BOX ── */}
-      <div className="rounded-[14px] border border-[rgba(255,255,255,0.08)] bg-[#0E0E11] p-4 text-xs font-sans text-zinc-300 space-y-1">
-        <div className="font-semibold text-white flex items-center gap-2 text-sm">
-          <Info className="size-4 text-[var(--accent)]" />
-          <span>How it works</span>
-        </div>
-        <p className="text-zinc-400 leading-relaxed">
-          List your server in the public directory to attract active players. Set an optional credit reward for visitors who join and stay, customize your server card, and connect with other ER:LC communities for cross-promotion.
-        </p>
-      </div>
-
       {/* ── SEGMENTED TABS: Listing | Appearance | Invite and rewards | Partnerships ── */}
       <div className="space-y-3">
         <div className="inline-flex items-center rounded-[10px] border border-[rgba(255,255,255,0.07)] bg-[#141417] p-1 flex-wrap gap-1">
@@ -1293,6 +1273,7 @@ function PromoteTabInner({
             { id: 'appearance' as const, label: 'Appearance', icon: ImageIcon, status: step2Done ? 'done' : 'empty' },
             { id: 'rewards' as const, label: 'Invite and rewards', icon: LinkIcon, status: step3Done ? 'done' : 'empty' },
             { id: 'partnerships' as const, label: 'Partnerships', icon: Handshake, optional: true },
+            { id: 'premium' as const, label: 'Premium', icon: Sparkles, optional: true },
           ].map((t) => {
             const Icon = t.icon;
             const isActive = activeTab === t.id;
@@ -2451,21 +2432,9 @@ function PromoteTabInner({
                               ))}
                             </SelectContent>
                           </Select>
-                          <p className="text-[11px] text-[#A1A1AA] font-sans">
-                            Representative role is given in this server to active representatives. A representative is a member of a partner server who represents it in my server.
+                          <p className="text-[11px] text-[#71717A] font-sans">
+                            Given to approved representatives.
                           </p>
-                          {(() => {
-                            const selected = discordRoles.find((r) => r.id === repRoleId);
-                            if (selected && (selected.canAssign === false || selected.belowBot === false)) {
-                              return (
-                                <p className="text-[11px] text-amber-400 font-sans flex items-center gap-1.5 pt-0.5">
-                                  <AlertTriangle className="size-3 shrink-0" />
-                                  <span>{selected.assignWarning || 'Bot cannot assign this role (check bot role position and Manage Roles permission in Discord).'}</span>
-                                </p>
-                              );
-                            }
-                            return null;
-                          })()}
                         </div>
 
                         {/* Recruit Role */}
@@ -2494,21 +2463,9 @@ function PromoteTabInner({
                               ))}
                             </SelectContent>
                           </Select>
-                          <p className="text-[11px] text-[#A1A1AA] font-sans">
-                            Recruit role is given in this server to new members who join through a representative's tracked invite link.
+                          <p className="text-[11px] text-[#71717A] font-sans">
+                            Role given after staying minimum time.
                           </p>
-                          {(() => {
-                            const selected = discordRoles.find((r) => r.id === recruitRoleId);
-                            if (selected && (selected.canAssign === false || selected.belowBot === false)) {
-                              return (
-                                <p className="text-[11px] text-amber-400 font-sans flex items-center gap-1.5 pt-0.5">
-                                  <AlertTriangle className="size-3 shrink-0" />
-                                  <span>{selected.assignWarning || 'Bot cannot assign this role (check bot role position and Manage Roles permission in Discord).'}</span>
-                                </p>
-                              );
-                            }
-                            return null;
-                          })()}
                         </div>
                       </div>
                     </div>
@@ -2596,10 +2553,10 @@ function PromoteTabInner({
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div className="space-y-0.5">
                       <div className="text-[14px] font-medium text-[#F4F4F5] font-sans">
-                        Minimum members to request
+                        Minimum representatives to request
                       </div>
                       <div className="text-[12px] text-[#A1A1AA] font-sans">
-                        Default is None (no minimum). Type any number to require a minimum member count.
+                        Default is 1 representative. Type any number to require a minimum representative count.
                       </div>
                     </div>
                     <div className="w-full sm:w-[160px] shrink-0">
@@ -2849,89 +2806,180 @@ function PromoteTabInner({
                       suffix="per day"
                     />
                   </div>
+                </div>
+              </div>
+            </div>
+          )}
 
-                  {/* Screening Questions (up to 5 questions) */}
-                  <div className="p-4 rounded-[12px] bg-[#141417] border border-[rgba(255,255,255,0.07)] space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-0.5">
-                        <div className="text-[14px] font-semibold text-[#F4F4F5] font-sans">
-                          Custom partnership screening questions
-                        </div>
-                        <div className="text-[12px] text-[#A1A1AA] font-sans">
-                          Add up to 5 questions partner servers must answer when proposing a partnership.
-                        </div>
-                      </div>
-                      {partnershipQuestions.length < 5 && (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            const updated = [
-                              ...partnershipQuestions,
-                              { id: `q_${Date.now()}`, question: '', required: true }
-                            ];
-                            setPartnershipQuestions(updated);
-                            syncUpdates({ partnershipQuestions: updated });
-                          }}
-                          className="h-8 px-3 text-xs bg-[#19191D] border-white/10 text-white rounded-lg hover:bg-white/10"
-                        >
-                          + Add question
-                        </Button>
+          {/* ── TAB 5: PREMIUM ────────────────────────────────────────── */}
+          {activeTab === 'premium' && (
+            <div className="space-y-6">
+              {/* Premium Status & Subscription Card */}
+              <div className="rounded-[16px] border border-[rgba(255,255,255,0.07)] bg-[#0E0E11] p-6 space-y-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-[rgba(255,255,255,0.07)]">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <h2 className="text-[17px] font-semibold text-[#F4F4F5] font-sans">
+                        Premium Server
+                      </h2>
+                      {premiumInfo.isPremium ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-[var(--accent)]/15 text-[var(--accent)] border border-[var(--accent)]/30 font-sans">
+                          <Sparkles className="size-3" />
+                          Active ({premiumInfo.daysLeft}d left)
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-[#1C1C21] text-[#A1A1AA] border border-[rgba(255,255,255,0.08)] font-sans">
+                          Standard
+                        </span>
                       )}
                     </div>
-
-                    {partnershipQuestions.length === 0 ? (
-                      <p className="text-[12px] text-zinc-500 italic font-sans py-2">
-                        No screening questions added. Anyone meeting your minimum member requirement can propose a partnership.
-                      </p>
-                    ) : (
-                      <div className="space-y-2.5 pt-1">
-                        {partnershipQuestions.map((q, idx) => (
-                          <div key={q.id || idx} className="flex items-center gap-3 p-2.5 rounded-lg bg-[#0E0E11] border border-white/[0.06]">
-                            <span className="text-xs font-mono text-zinc-500 w-4 shrink-0">{idx + 1}.</span>
-                            <Input
-                              value={q.question}
-                              placeholder="e.g. How active is your server daily?"
-                              maxLength={120}
-                              onChange={(e) => {
-                                const val = e.target.value;
-                                const updated = partnershipQuestions.map((item, i) => i === idx ? { ...item, question: val } : item);
-                                setPartnershipQuestions(updated);
-                                syncUpdates({ partnershipQuestions: updated });
-                              }}
-                              className="h-8 text-xs bg-[#141417] border-white/10 text-white rounded-lg flex-1"
-                            />
-                            <label className="flex items-center gap-1.5 text-xs text-zinc-300 cursor-pointer shrink-0">
-                              <input
-                                type="checkbox"
-                                checked={q.required}
-                                onChange={(e) => {
-                                  const req = e.target.checked;
-                                  const updated = partnershipQuestions.map((item, i) => i === idx ? { ...item, required: req } : item);
-                                  setPartnershipQuestions(updated);
-                                  syncUpdates({ partnershipQuestions: updated });
-                                }}
-                                className="rounded border-zinc-700 bg-zinc-800 text-[var(--accent)]"
-                              />
-                              <span>Required</span>
-                            </label>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const updated = partnershipQuestions.filter((_, i) => i !== idx);
-                                setPartnershipQuestions(updated);
-                                syncUpdates({ partnershipQuestions: updated });
-                              }}
-                              className="text-zinc-500 hover:text-rose-400 p-1 shrink-0"
-                            >
-                              <Trash2 className="size-3.5" />
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                    <p className="text-[13px] text-[#A1A1AA] font-sans">
+                      Elevate your community listing with premium advertising and authorized advertisers.
+                    </p>
                   </div>
+
+                  <Button
+                    type="button"
+                    onClick={() => setIsBuyModalOpen(true)}
+                    className="h-9 px-4 rounded-[8px] bg-[var(--accent)] hover:opacity-90 text-white font-medium text-[13px] font-sans cursor-pointer shrink-0"
+                  >
+                    <Sparkles className="size-4 mr-1.5" />
+                    {premiumInfo.isPremium ? 'Extend Premium' : 'Buy Premium'}
+                  </Button>
+                </div>
+
+                {/* Telemetry Stats: Price, Balance, Days Left */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="p-4 rounded-[12px] bg-[#141417] border border-[rgba(255,255,255,0.07)] space-y-1">
+                    <div className="text-[12px] text-[#71717A] font-sans">Price</div>
+                    <div className="text-[18px] font-semibold text-[#F4F4F5] font-sans">
+                      {premiumInfo.price} <span className="text-[13px] text-[#A1A1AA] font-normal">credits / {premiumInfo.durationDays} days</span>
+                    </div>
+                  </div>
+                  <div className="p-4 rounded-[12px] bg-[#141417] border border-[rgba(255,255,255,0.07)] space-y-1">
+                    <div className="text-[12px] text-[#71717A] font-sans">Server Balance</div>
+                    <div className="text-[18px] font-semibold text-[#F4F4F5] font-sans">
+                      {premiumInfo.balance} <span className="text-[13px] text-[#A1A1AA] font-normal">credits</span>
+                    </div>
+                  </div>
+                  <div className="p-4 rounded-[12px] bg-[#141417] border border-[rgba(255,255,255,0.07)] space-y-1">
+                    <div className="text-[12px] text-[#71717A] font-sans">Time Remaining</div>
+                    <div className="text-[18px] font-semibold text-[#F4F4F5] font-sans">
+                      {premiumInfo.isPremium ? `${premiumInfo.daysLeft} days` : '0 days'}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Premium Perks details */}
+                <div className="space-y-2 pt-2 text-[13px] text-[#A1A1AA] font-sans">
+                  <div className="text-[#F4F4F5] font-medium">Included with Premium:</div>
+                  <ul className="list-disc list-inside space-y-1 text-[#A1A1AA]">
+                    <li>Small theme-accented Premium badge in Directory and Earn Credits</li>
+                    <li>Up to {maxAdvertisers} authorized community advertisers who can post server ads</li>
+                    <li>Broadcast ads to the main Discord server Premium Advertising channel</li>
+                    <li>Automatic 3-day renewal reminder DM before expiry</li>
+                  </ul>
+                </div>
+              </div>
+
+              {/* Premium Advertising Broadcast Card */}
+              <div className="rounded-[16px] border border-[rgba(255,255,255,0.07)] bg-[#0E0E11] p-6 space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[rgba(255,255,255,0.07)]">
+                  <div className="space-y-1">
+                    <h3 className="text-[16px] font-semibold text-[#F4F4F5] font-sans">
+                      Premium Advertising Post
+                    </h3>
+                    <p className="text-[13px] text-[#A1A1AA] font-sans">
+                      Broadcast your community's official ad directly to our Discord server's Premium Advertising channel.
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    disabled={!premiumInfo.isPremium}
+                    onClick={() => setIsPostAdModalOpen(true)}
+                    className="h-9 px-4 rounded-[8px] bg-[#1C1C21] hover:bg-[#25252B] text-[#F4F4F5] border border-[rgba(255,255,255,0.09)] text-[13px] font-sans cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+                  >
+                    <Send className="size-3.5 mr-1.5" />
+                    Post Ad Now
+                  </Button>
+                </div>
+                <div className="text-[12px] text-[#71717A] font-sans flex items-center justify-between">
+                  <span>Ad posting cooldown: 6 hours per server</span>
+                  <span>Components V2 panel format with real Separators</span>
+                </div>
+              </div>
+
+              {/* Authorized Advertisers Card */}
+              <div className="rounded-[16px] border border-[rgba(255,255,255,0.07)] bg-[#0E0E11] p-6 space-y-5">
+                <div className="space-y-1 pb-4 border-b border-[rgba(255,255,255,0.07)]">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-[16px] font-semibold text-[#F4F4F5] font-sans">
+                      Authorized Advertisers ({advertisersList.length} / {maxAdvertisers})
+                    </h3>
+                  </div>
+                  <p className="text-[13px] text-[#A1A1AA] font-sans">
+                    Authorize up to {maxAdvertisers} team members by Discord User ID to dispatch server ads and use <code className="text-[#F4F4F5]">/premiumad</code>.
+                  </p>
+                </div>
+
+                {/* Add Advertiser Form */}
+                <div className="flex flex-col sm:flex-row items-center gap-2.5">
+                  <Input
+                    placeholder="Enter Discord User ID (e.g. 123456789012345678)"
+                    value={newAdvertiserId}
+                    onChange={(e) => setNewAdvertiserId(e.target.value)}
+                    disabled={!premiumInfo.isPremium || advertisersList.length >= maxAdvertisers}
+                    className="h-9 text-[13px] bg-[#141417] border-[rgba(255,255,255,0.08)] font-sans"
+                  />
+                  <Button
+                    type="button"
+                    onClick={handleAddAdvertiser}
+                    disabled={!premiumInfo.isPremium || !newAdvertiserId.trim() || isAddingAdvertiser || advertisersList.length >= maxAdvertisers}
+                    className="h-9 px-4 rounded-[8px] bg-[#1C1C21] hover:bg-[#25252B] text-[#F4F4F5] border border-[rgba(255,255,255,0.09)] text-[13px] font-sans cursor-pointer whitespace-nowrap disabled:opacity-40"
+                  >
+                    <Plus className="size-3.5 mr-1.5" />
+                    {isAddingAdvertiser ? 'Verifying...' : 'Add Advertiser'}
+                  </Button>
+                </div>
+
+                {/* Advertisers List */}
+                <div className="space-y-2">
+                  {advertisersList.length === 0 ? (
+                    <div className="p-4 rounded-[10px] bg-[#141417] border border-[rgba(255,255,255,0.05)] text-center text-[13px] text-[#71717A] font-sans">
+                      No advertisers added yet. Only the server owner can post ads until you add team members.
+                    </div>
+                  ) : (
+                    advertisersList.map((adv) => (
+                      <div
+                        key={adv.userId}
+                        className="flex items-center justify-between p-3 rounded-[10px] bg-[#141417] border border-[rgba(255,255,255,0.07)]"
+                      >
+                        <div className="flex items-center gap-3">
+                          {adv.avatarUrl ? (
+                            <img src={adv.avatarUrl} alt="" className="size-8 rounded-full" />
+                          ) : (
+                            <div className="size-8 rounded-full bg-[#202026] flex items-center justify-center text-xs text-[#A1A1AA]">
+                              {(adv.username || 'U')[0].toUpperCase()}
+                            </div>
+                          )}
+                          <div>
+                            <div className="text-[13px] font-medium text-[#F4F4F5] font-sans">{adv.username}</div>
+                            <div className="text-[11px] text-[#71717A] font-sans font-mono">{adv.userId}</div>
+                          </div>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleRemoveAdvertiser(adv.userId)}
+                          className="h-8 px-2.5 text-[12px] text-[#F87171] hover:bg-[#F87171]/10 font-sans cursor-pointer"
+                        >
+                          <X className="size-3.5 mr-1" />
+                          Remove
+                        </Button>
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
             </div>
@@ -3320,6 +3368,120 @@ function PromoteTabInner({
               className="h-9 px-4 text-[13px] bg-[#F87171] hover:bg-[#ef4444] text-[#09090B] font-medium"
             >
               Disconnect
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Buy Premium Confirmation Dialog */}
+      <Dialog open={isBuyModalOpen} onOpenChange={setIsBuyModalOpen}>
+        <DialogContent className="max-w-[440px] bg-[#0E0E11] border border-[rgba(255,255,255,0.13)] rounded-[16px] p-6 space-y-5 shadow-2xl">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <Sparkles className="size-5 text-[var(--accent)]" />
+              <h3 className="text-[17px] font-semibold text-[#F4F4F5] font-sans">
+                {premiumInfo.isPremium ? 'Extend Premium Subscription' : 'Purchase Premium Subscription'}
+              </h3>
+            </div>
+            <p className="text-[13px] text-[#A1A1AA] font-sans leading-relaxed">
+              {premiumInfo.isPremium
+                ? `Add ${premiumInfo.durationDays} more days to your active Premium subscription. New expiry will be extended automatically.`
+                : `Activate ${premiumInfo.durationDays} days of Premium status for this community.`}
+            </p>
+          </div>
+
+          <div className="p-4 rounded-[12px] bg-[#141417] border border-[rgba(255,255,255,0.07)] space-y-2 text-[13px] font-sans">
+            <div className="flex items-center justify-between">
+              <span className="text-[#71717A]">Duration</span>
+              <span className="text-[#F4F4F5] font-medium">{premiumInfo.durationDays} days</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-[#71717A]">Cost</span>
+              <span className="text-[#F4F4F5] font-medium">{premiumInfo.price} credits</span>
+            </div>
+            <div className="flex items-center justify-between pt-2 border-t border-[rgba(255,255,255,0.06)]">
+              <span className="text-[#71717A]">Current Server Balance</span>
+              <span className={cn('font-medium', premiumInfo.balance < premiumInfo.price ? 'text-[#F87171]' : 'text-[#F4F4F5]')}>
+                {premiumInfo.balance} credits
+              </span>
+            </div>
+          </div>
+
+          {premiumInfo.balance < premiumInfo.price && (
+            <div className="p-3 rounded-[10px] bg-[#F87171]/10 border border-[#F87171]/20 text-[12px] text-[#F87171] font-sans">
+              Insufficient credits. Your community needs {premiumInfo.price - premiumInfo.balance} more credits to complete this purchase.
+            </div>
+          )}
+
+          <div className="flex items-center justify-end gap-2.5 pt-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsBuyModalOpen(false)}
+              className="h-9 px-4 text-[13px]"
+            >
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              disabled={isBuyingPremium || premiumInfo.balance < premiumInfo.price}
+              onClick={handleConfirmBuyPremium}
+              className="h-9 px-4 text-[13px] bg-[var(--accent)] hover:opacity-90 text-white font-medium disabled:opacity-40"
+            >
+              {isBuyingPremium ? 'Processing...' : 'Confirm Purchase'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Post Premium Ad Modal */}
+      <Dialog open={isPostAdModalOpen} onOpenChange={setIsPostAdModalOpen}>
+        <DialogContent className="max-w-[500px] bg-[#0E0E11] border border-[rgba(255,255,255,0.13)] rounded-[16px] p-6 space-y-4 shadow-2xl">
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2">
+              <Send className="size-4 text-[var(--accent)]" />
+              <h3 className="text-[17px] font-semibold text-[#F4F4F5] font-sans">
+                Post Premium Advertisement
+              </h3>
+            </div>
+            <p className="text-[13px] text-[#A1A1AA] font-sans leading-relaxed">
+              This will send a Components V2 panel with your ad and a Join Server button to our official Discord server.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <textarea
+              rows={5}
+              maxLength={1000}
+              placeholder="Write your server ad here... (max 1000 characters)"
+              value={adContent}
+              onChange={(e) => setAdContent(e.target.value)}
+              className="w-full p-3 rounded-[10px] bg-[#141417] border border-[rgba(255,255,255,0.08)] text-[13px] text-[#F4F4F5] placeholder-[#71717A] focus:outline-none focus:border-[rgba(255,255,255,0.2)] font-sans resize-none"
+            />
+            <div className="flex items-center justify-between text-[11px] text-[#71717A] font-sans">
+              <span>No @everyone or @here. Only your server invite or connectingerlc.xyz allowed.</span>
+              <span className={cn(adContent.length > 950 ? 'text-[#FBBF24]' : '')}>
+                {adContent.length}/1000
+              </span>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-end gap-2.5 pt-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsPostAdModalOpen(false)}
+              className="h-9 px-4 text-[13px]"
+            >
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              disabled={isPostingAd || !adContent.trim()}
+              onClick={handlePostAd}
+              className="h-9 px-4 text-[13px] bg-[var(--accent)] hover:opacity-90 text-white font-medium disabled:opacity-40"
+            >
+              {isPostingAd ? 'Posting...' : 'Post Ad'}
             </Button>
           </div>
         </DialogContent>

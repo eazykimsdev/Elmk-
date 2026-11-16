@@ -1,13 +1,13 @@
 import React from 'react';
-import { Users, Check, Coins } from 'lucide-react';
+import { Users, Coins, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { ServerIcon } from '@/components/ui/ServerIcon';
-import { stripMarkdown } from '@/components/ui/markdown-renderer';
 import { cn } from '@/lib/utils';
+import { stripMarkdown } from '@/lib/markdownSanitizer';
 
 export interface DirectoryServerData {
-  id: string;
-  name: string;
+  id?: string;
+  guildId?: string;
+  name?: string;
   icon?: string | null;
   iconUrl?: string | null;
   icon_hash?: string | null;
@@ -19,8 +19,14 @@ export interface DirectoryServerData {
   bannerUrl?: string | null;
   memberCount?: number;
   verified?: boolean;
+  is_premium?: boolean;
+  premiumUntil?: number | string | null;
   bot_in_guild?: boolean;
   inviteUrl?: string;
+  invite_status?: 'valid' | 'expired' | 'unknown';
+  last_checked?: string | null;
+  last_checked_error?: string | null;
+  expired_click_count?: number;
   rewardCoins?: number;
   owner_discord_id?: string | null;
   owner_display_name?: string | null;
@@ -81,8 +87,7 @@ export function DirectoryCard({
   lineClamp,
 }: DirectoryCardProps) {
   const safeServer = server || ({} as DirectoryServerData);
-  const isSetUp = partnershipSetUp !== undefined ? Boolean(partnershipSetUp) : (safeServer.partnershipSetUp !== false && Boolean(safeServer.partnershipSetUp));
-  const isPartnershipClosed = safeServer.partnershipSetUp === false || safeServer.acceptPartnerships === false || safeServer.openForPartnerships === false || !isSetUp;
+  const isSetUp = partnershipSetUp !== undefined ? Boolean(partnershipSetUp) : Boolean(safeServer.partnershipSetUp);
   const rawName = safeServer.name?.trim();
   const serverName = rawName || '';
   const rawSummary = stripMarkdown(safeServer.summary?.trim() || safeServer.description?.trim());
@@ -90,6 +95,7 @@ export function DirectoryCard({
   const memberCount = safeServer.memberCount || 0;
   const reward = propReward !== undefined ? propReward : (safeServer.rewardCoins || 2);
   const bannerUrl = safeServer.bannerUrl?.trim() || null;
+  const isExpired = safeServer.invite_status === 'expired';
 
   return (
     <div
@@ -105,9 +111,9 @@ export function DirectoryCard({
       className={cn(
         '@container relative rounded-[16px] border border-[#19191D] bg-[#0E0E11] p-3.5 sm:p-4 overflow-hidden transition-all duration-150 text-left w-full outline-hidden',
         'ring-1 ring-white/[0.06] shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_0_0_3px_rgba(255,255,255,0.02)]',
-        isPartnershipClosed && 'bg-[#0B090A] border-[#2A1518]/80 ring-[#3A181C]/30 shadow-[0_0_0_1px_rgba(239,68,68,0.12)]',
         'hover:border-white/20 hover:ring-white/10',
         !previewOnly && 'cursor-pointer focus-visible:ring-2 focus-visible:ring-[var(--accent)]',
+        isExpired && 'opacity-60 grayscale-[0.25]',
         className
       )}
     >
@@ -121,133 +127,136 @@ export function DirectoryCard({
           style={{
             filter: 'blur(14px) saturate(1.1)',
             transform: 'scale(1.15)',
-            opacity: 0.35,
+            opacity: 0.22,
           }}
         />
       )}
       <div
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          background: 'linear-gradient(90deg, rgba(9,9,11,0.88) 0%, rgba(9,9,11,0.62) 100%)',
-        }}
+        aria-hidden="true"
+        className="absolute inset-0 bg-gradient-to-t from-[#0E0E11] via-[#0E0E11]/85 to-[#0E0E11]/60 pointer-events-none select-none"
       />
 
-      {/* ── Grid Layout: [icon: 48px/56px] [content: 1fr] [actions: auto] with container wrap ── */}
-      <div className={cn(
-        "relative z-10 grid items-center gap-3.5 w-full",
-        iconSize === 48
-          ? "grid-cols-[48px_minmax(0,1fr)] @[460px]:grid-cols-[48px_minmax(0,1fr)_auto]"
-          : "grid-cols-[56px_minmax(0,1fr)] @[460px]:grid-cols-[56px_minmax(0,1fr)_auto]"
-      )}>
-        {/* Column 1: ServerIcon 48px or 56px */}
-        <div className="shrink-0 self-start @[460px]:self-center">
-          <ServerIcon
-            guildId={safeServer.id}
-            iconHash={safeServer.icon_hash || safeServer.iconHash || safeServer.icon}
-            iconUrl={safeServer.iconUrl || safeServer.icon}
-            name={serverName || 'Server'}
-            size={iconSize}
-            className={cn(
-              "rounded-[14px] shrink-0 object-cover shadow-md border border-white/10",
-              iconSize === 48 ? "size-12" : "size-[56px]"
-            )}
-          />
+      <div className="relative z-10 grid grid-cols-[auto_1fr] @[460px]:grid-cols-[auto_1fr_auto] items-start @[460px]:items-center gap-3 sm:gap-3.5">
+        {/* Column 1: Server Icon */}
+        <div
+          className="rounded-full bg-[#18181B] ring-1 ring-white/10 overflow-hidden shrink-0 flex items-center justify-center select-none"
+          style={{ width: iconSize, height: iconSize }}
+        >
+          {safeServer.iconUrl ? (
+            <img
+              src={safeServer.iconUrl}
+              alt=""
+              className="w-full h-full object-cover"
+              loading="lazy"
+            />
+          ) : (
+            <span className="text-zinc-400 font-semibold text-base sm:text-lg uppercase">
+              {serverName ? serverName.charAt(0) : '?'}
+            </span>
+          )}
         </div>
 
-        {/* Column 2: Name, Category + Members, 1-line Summary */}
-        <div className="flex flex-col justify-center gap-1 min-w-0 overflow-hidden">
-          {/* Row 1: Server name (16px/600, ellipsis) or skeleton line */}
+        {/* Column 2: Server Info */}
+        <div className="min-w-0 flex-1 space-y-1">
+          {/* Row 1: Title + Verified Badge */}
           <div className="flex items-center gap-1.5 min-w-0">
-            {serverName ? (
-              <h4 className="text-[16px] font-semibold text-white truncate tracking-tight font-sans min-w-0">
-                {serverName}
-              </h4>
-            ) : (
-              <div className="h-4 bg-white/10 rounded-[4px] w-28 animate-pulse" />
-            )}
+            <h3
+              className={cn(
+                'text-sm font-semibold text-white truncate leading-tight',
+                isOwnServer && 'text-[var(--accent)]'
+              )}
+            >
+              {serverName}
+            </h3>
             {safeServer.verified && (
-              <Check className="size-3.5 text-[#38BDF8] stroke-[2.5] shrink-0" title="Verified community" />
-            )}
-            {safeServer.bot_in_guild === false && (
-              <span className="px-1.5 py-0.5 rounded-[4px] bg-[#141417] border border-white/10 text-zinc-400 text-[10px] font-medium shrink-0">
-                Joins can't be verified
+              <span
+                title="Verified Community"
+                className="inline-flex items-center justify-center size-4 rounded-full bg-[var(--accent)] text-[var(--accent-foreground)] shrink-0"
+              >
+                <Check className="size-2.5 stroke-[3]" />
               </span>
             )}
-            {isPartnershipClosed && (
-              <span className="px-1.5 py-0.5 rounded-[4px] bg-[#1C0F12] border border-red-500/25 text-red-300 text-[10px] font-medium shrink-0">
-                Partnerships closed
+            {safeServer.is_premium && (
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-[var(--accent)]/15 text-[var(--accent)] border border-[var(--accent)]/30 tracking-wider shrink-0 select-none">
+                PREMIUM
               </span>
             )}
           </div>
 
-          {/* Row 2: Category badge and member count */}
-          <div className="flex items-center gap-2 text-xs text-zinc-400 min-w-0 flex-wrap">
-            <span className="px-2 py-0.5 rounded-[6px] bg-[#141417]/90 border border-white/[0.08] text-zinc-300 font-medium text-[11px] leading-none shrink-0">
-              {safeServer.category || 'Roleplay Server'}
-            </span>
-            <span className="flex items-center gap-1 tabular-nums text-zinc-400 text-xs shrink-0">
-              <Users className="size-3.5 text-zinc-500 shrink-0" />
-              <span>{Number(memberCount).toLocaleString()} members</span>
-            </span>
-          </div>
+          {/* Row 2: Description */}
+          {displaySummary ? (
+            <p
+              className={cn(
+                'text-xs text-zinc-400 leading-snug',
+                lineClamp === 1 ? 'truncate' : 'line-clamp-2'
+              )}
+            >
+              {displaySummary}
+            </p>
+          ) : null}
 
-          {/* Row 3: Summary or skeleton line */}
-          <div className={cn(
-            'text-[13px] text-zinc-400 font-sans min-w-0 leading-normal',
-            (lineClamp === 2 || variant === 'partnership') ? 'line-clamp-2 leading-snug' : 'truncate'
-          )}>
-            {displaySummary ? (
-              <span className={(lineClamp === 2 || variant === 'partnership') ? undefined : 'truncate block'}>{displaySummary}</span>
-            ) : (
-              <div className="h-3 bg-white/10 rounded-[4px] w-44 animate-pulse mt-1" />
-            )}
-          </div>
-
-          {/* Row 4: Terms row of small badges (for partnership variant) */}
-          {variant === 'partnership' && (() => {
-            if (!isSetUp) {
-              return (
-                <div className="flex items-center gap-1.5 flex-wrap pt-0.5 text-[11px] text-zinc-400">
-                  <span className="px-2 py-0.5 rounded-[6px] bg-[#141417]/90 border border-white/[0.08] text-zinc-500 font-medium shrink-0">
-                    Not set up
-                  </span>
-                </div>
-              );
-            }
-
-            const min = minMembers !== undefined ? minMembers : (safeServer.partnershipMinMembers ?? null);
-            const price = partnershipPrice !== undefined ? partnershipPrice : (safeServer.partnershipPrice ?? null);
-            const rawMentions = allowedMentions !== undefined
-              ? allowedMentions
-              : (safeServer.partnershipAllowedMentions || (safeServer.partnershipAllowHere ? 'here' : null));
-            const isEveryone = rawMentions === 'everyone' || rawMentions === '@everyone allowed';
-            const isHere = rawMentions === 'here' || rawMentions === '@here allowed';
-
+          {/* Row 3: Metadata Badges */}
+          {(() => {
+            const rawCat = safeServer.category?.trim();
+            const categoryLabel = rawCat && rawCat.toLowerCase() !== 'other' ? rawCat : '';
             return (
-              <div className="flex items-center gap-1.5 flex-wrap pt-0.5 text-[11px] text-zinc-400">
-                {min !== null && min > 0 && (
-                  <span className="px-2 py-0.5 rounded-[6px] bg-[#141417]/90 border border-white/[0.08] text-zinc-300 font-medium shrink-0">
-                    Min {min} members
+              <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                {categoryLabel ? (
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-white/[0.04] border border-white/[0.06] text-[11px] font-medium text-zinc-300">
+                    {categoryLabel}
+                  </span>
+                ) : null}
+
+                {/* Member Count */}
+                {memberCount > 1 ? (
+                  <span className="inline-flex items-center gap-1 text-[11px] text-zinc-400 font-sans">
+                    <Users className="size-3 text-zinc-400 shrink-0" />
+                    <span>{memberCount.toLocaleString()}</span>
+                  </span>
+                ) : null}
+
+                {/* ER:LC In-Game Indicator */}
+                {safeServer.erlc?.connected && typeof safeServer.erlc.currentPlayers === 'number' && (
+                  <span className="inline-flex items-center gap-1 text-[11px] text-emerald-400 font-medium">
+                    <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    <span>{safeServer.erlc.currentPlayers} in-game</span>
                   </span>
                 )}
-                {price !== null && price > 0 && (
-                  <span className="px-2 py-0.5 rounded-[6px] bg-[#141417]/90 border border-white/[0.08] text-zinc-300 font-medium shrink-0">
-                    Price {price} credits
+
+                {/* Reward pill for directory variant */}
+                {variant !== 'partnership' && reward > 0 ? (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[var(--accent-soft)] border border-[var(--accent-border)] text-[11px] font-medium text-[var(--accent)] font-sans">
+                    <Coins className="size-3 shrink-0" />
+                    <span>+{reward}</span>
                   </span>
-                )}
-                {rawMentions ? (
-                  isEveryone ? (
-                    <span className="px-2 py-0.5 rounded-[6px] bg-[var(--accent-soft)] border border-[var(--accent-border)] text-[var(--accent)] font-medium shrink-0">
-                      @everyone allowed
-                    </span>
-                  ) : isHere ? (
-                    <span className="px-2 py-0.5 rounded-[6px] bg-[#141417]/90 border border-white/[0.08] text-zinc-300 font-medium shrink-0">
-                      @here allowed
-                    </span>
-                  ) : (
-                    <span className="px-2 py-0.5 rounded-[6px] bg-[#141417]/90 border border-white/[0.08] text-zinc-500 font-medium shrink-0">
-                      No mentions
-                    </span>
+                ) : null}
+
+                {/* Partnership Requirements Badges */}
+                {variant === 'partnership' ? (
+                  !isSetUp ? null : (
+                    <>
+                      {minMembers !== undefined && minMembers !== null && minMembers > 0 ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/[0.04] border border-white/[0.06] text-[11px] font-medium text-zinc-300 font-sans">
+                          <Users className="size-3 text-zinc-400 shrink-0" />
+                          <span>{minMembers.toLocaleString()}+</span>
+                        </span>
+                      ) : null}
+                      {partnershipPrice !== undefined && partnershipPrice !== null && partnershipPrice > 0 ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[var(--accent-soft)] border border-[var(--accent-border)] text-[11px] font-medium text-[var(--accent)] font-sans">
+                          <Coins className="size-3 shrink-0" />
+                          <span>{partnershipPrice} cr</span>
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[11px] font-medium text-emerald-400 font-sans">
+                          Free
+                        </span>
+                      )}
+                      {allowedMentions ? (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-white/[0.04] border border-white/[0.06] text-[11px] font-medium text-zinc-400 font-sans">
+                          @{allowedMentions}
+                        </span>
+                      ) : null}
+                    </>
                   )
                 ) : null}
               </div>
@@ -290,14 +299,14 @@ export function DirectoryCard({
               <span className="inline-flex items-center gap-1 h-8 px-3 rounded-lg bg-[#18181B] border border-white/10 text-xs font-medium text-zinc-300 shrink-0 select-none">
                 <span>Requested</span>
               </span>
-            ) : isPartnershipClosed ? (
+            ) : !isSetUp ? (
               <Button
                 type="button"
                 size="sm"
                 disabled
-                className="h-8 px-3 rounded-lg bg-[#18181B] border border-white/5 text-zinc-400 font-semibold text-xs flex items-center gap-1 cursor-not-allowed opacity-60 shrink-0 select-none"
+                className="h-8 px-3 rounded-lg bg-[#18181B] border border-white/5 text-zinc-500 font-semibold text-xs flex items-center gap-1 cursor-not-allowed opacity-60 shrink-0 select-none"
               >
-                <span>Partnerships closed</span>
+                <span>Not set up</span>
               </Button>
             ) : (
               <Button
@@ -327,6 +336,32 @@ export function DirectoryCard({
               <span className="inline-flex items-center gap-1 h-8 px-3 rounded-lg bg-[#18181B] border border-white/10 text-xs font-medium text-zinc-300 shrink-0 select-none">
                 <span>Verifying</span>
               </span>
+            ) : isExpired ? (
+              <Button
+                type="button"
+                size="sm"
+                onClick={async (e) => {
+                  e.stopPropagation();
+                  try {
+                    const res = await fetch(`/api/servers/${safeServer.id || safeServer.guildId}/report-expired-invite`, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      credentials: 'include'
+                    });
+                    if (res.ok) {
+                      const data = await res.json();
+                      alert(data.rateLimited ? 'You already reported this invite recently.' : 'Thank you. The community owner has been notified that the invite is expired.');
+                    } else {
+                      alert('Please sign in to report an expired invite.');
+                    }
+                  } catch {
+                    alert('Unable to report at this moment.');
+                  }
+                }}
+                className="h-8 px-3 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 font-medium text-xs flex items-center gap-1 cursor-pointer transition-colors shrink-0"
+              >
+                <span>Invite expired</span>
+              </Button>
             ) : (
               <Button
                 type="button"

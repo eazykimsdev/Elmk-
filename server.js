@@ -13,6 +13,8 @@ import { validateProductionEnvironment } from './shared/productionCheck.js';
 import { query as dbQuery, isPostgresConnected } from './db.js';
 import { isMaintenanceActive } from './siteStateManager.js';
 import { startSystemMonitor } from './monitorJob.js';
+import { startScheduledInviteChecks } from './inviteValidator.js';
+import { startPremiumReminderJob } from './premiumManager.js';
 import { seedDataDir } from './dataSync.js';
 
 try { seedDataDir(); } catch {}
@@ -256,6 +258,20 @@ const server = app.listen(PORT, '0.0.0.0', () => {
     startSystemMonitor();
   } catch (mErr) {
     console.warn('[MONITOR] Could not start system monitor:', mErr.message);
+  }
+
+  // Start scheduled batch invite status checks
+  try {
+    startScheduledInviteChecks();
+  } catch (iErr) {
+    console.warn('[INVITES] Could not start scheduled invite checks:', iErr.message);
+  }
+
+  // Start scheduled premium reminder checks (3 days before expiry)
+  try {
+    startPremiumReminderJob();
+  } catch (pErr) {
+    console.warn('[PREMIUM] Could not start premium reminder job:', pErr.message);
   }
 
   // Continuously process mature pending joins (minimum stay verified)

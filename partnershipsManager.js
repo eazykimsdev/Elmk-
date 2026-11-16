@@ -226,7 +226,18 @@ export function getPartnerEligibleServers(currentGuildId) {
   const data = loadPartnershipsData();
 
   return allServers
-    .filter(s => String(s.id) !== String(currentGuildId))
+    .filter(server => {
+      if (String(server.id) === String(currentGuildId)) return false;
+      const cfg = data.serverConfigs[server.id] || {};
+      const isSetUp = Boolean(cfg.partnershipSetUp || server.partnershipSetUp);
+      const savedMin = resolveNullableRequirementNumber(cfg.partnershipMinMembers, server.partnershipMinMembers);
+      const savedPrice = resolveNullableRequirementNumber(cfg.partnershipPrice, server.partnershipPrice);
+      const savedMentions = cfg.partnershipAllowedMentions || server.partnershipAllowedMentions || null;
+      // Owner must have partnership settings saved (Min representatives/members, cost, mentions)
+      if (!isSetUp) return false;
+      if (savedMin === null && savedPrice === null && !savedMentions) return false;
+      return true;
+    })
     .map(server => {
       const cfg = data.serverConfigs[server.id] || {};
       const isSetUp = Boolean(cfg.partnershipSetUp || server.partnershipSetUp);
@@ -256,8 +267,8 @@ export function getPartnerEligibleServers(currentGuildId) {
         name: server.name,
         icon: server.icon || server.iconUrl,
         iconUrl: server.iconUrl || server.icon,
-        category: server.category || 'Roleplay Server',
-        memberCount: Number(server.memberCount) > 0 ? Number(server.memberCount) : 0,
+        category: server.category || '',
+        memberCount: server.memberCount ? Number(server.memberCount) : null,
         ownerId: server.ownerId || null,
         ownerUsername: server.ownerUsername || null,
         ownerAvatar: server.ownerAvatar || null,

@@ -39,12 +39,12 @@ export function DirectoryRow({
   className,
 }: DirectoryRowProps) {
   const [imgError, setImgError] = useState(false);
-  const serverName = server?.name || 'Community Server';
-  const category = server?.category || 'Roleplay server';
+  const serverName = server?.name || '';
+  const category = server?.category || '';
   const memberCount = Number(server?.memberCount || 0);
 
   // Description truncated to 1 line
-  const oneLineDesc = stripMarkdown(server?.summary || server?.description || '') || 'Join this roleplay community on ConnectingERLC.';
+  const oneLineDesc = stripMarkdown(server?.summary || server?.description || '');
 
   // ER:LC telemetry if connected
   const isErlcConnected = Boolean(
@@ -53,6 +53,7 @@ export function DirectoryRow({
   );
   const currentPlayers = server?.erlc?.currentPlayers ?? 0;
   const maxPlayers = server?.erlc?.maxPlayers ?? 32;
+  const isExpired = server?.invite_status === 'expired';
 
   return (
     <div
@@ -67,6 +68,7 @@ export function DirectoryRow({
       }}
       className={cn(
         'group flex flex-col sm:flex-row items-start sm:items-center justify-between p-3.5 sm:px-4 min-h-[80px] sm:h-[72px] rounded-xl border border-white/[0.06] bg-[#0E0E11] hover:bg-[#141417] hover:border-white/15 transition-all text-left w-full outline-hidden cursor-pointer gap-3 sm:gap-4 select-none',
+        isExpired && 'opacity-60 grayscale-[0.25]',
         className
       )}
     >
@@ -102,13 +104,22 @@ export function DirectoryRow({
               </span>
             )}
 
+            {/* Premium badge */}
+            {server.is_premium && (
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-[var(--accent)]/15 text-[var(--accent)] border border-[var(--accent)]/30 tracking-wider shrink-0 select-none">
+                PREMIUM
+              </span>
+            )}
+
             {/* Category Pill */}
-            <Badge
-              variant="outline"
-              className="text-[10px] px-2 py-0.5 bg-[#141417] text-zinc-300 border-white/10 font-medium shrink-0"
-            >
-              {category}
-            </Badge>
+            {category ? (
+              <Badge
+                variant="outline"
+                className="text-[10px] px-2 py-0.5 bg-[#141417] text-zinc-300 border-white/10 font-medium shrink-0"
+              >
+                {category}
+              </Badge>
+            ) : null}
 
             {/* ER:LC Status Pill (ONLY if connected) */}
             {isErlcConnected && (
@@ -130,11 +141,13 @@ export function DirectoryRow({
       <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4 shrink-0 w-full sm:w-auto pt-2 sm:pt-0 border-t border-white/[0.04] sm:border-0">
         <div className="flex items-center gap-3 text-xs text-zinc-400 shrink-0">
           {/* Member count */}
-          <span className="flex items-center gap-1.5">
-            <Users className="size-3.5 text-zinc-500" />
-            <span className="tabular-nums font-medium text-zinc-300">{memberCount.toLocaleString()}</span>
-            <span className="text-zinc-500 hidden sm:inline">members</span>
-          </span>
+          {memberCount > 1 ? (
+            <span className="flex items-center gap-1.5">
+              <Users className="size-3.5 text-zinc-500" />
+              <span className="tabular-nums font-medium text-zinc-300">{memberCount.toLocaleString()}</span>
+              <span className="text-zinc-500 hidden sm:inline">members</span>
+            </span>
+          ) : null}
 
           {/* Bump time */}
           <span className="flex items-center gap-1 text-zinc-500 text-[11px] hidden md:flex">
@@ -156,6 +169,31 @@ export function DirectoryRow({
           >
             Your server
           </Badge>
+        ) : isExpired ? (
+          <Button
+            size="sm"
+            onClick={async (e) => {
+              e.stopPropagation();
+              try {
+                const res = await fetch(`/api/servers/${server.id || (server as any).guildId}/report-expired-invite`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  credentials: 'include'
+                });
+                if (res.ok) {
+                  const data = await res.json();
+                  alert(data.rateLimited ? 'You already reported this invite recently.' : 'Thank you. The community owner has been notified that the invite is expired.');
+                } else {
+                  alert('Please sign in to report an expired invite.');
+                }
+              } catch {
+                alert('Unable to report at this moment.');
+              }
+            }}
+            className="bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 font-semibold text-xs h-8.5 px-3 rounded-xl shrink-0 cursor-pointer transition-all"
+          >
+            Invite expired
+          </Button>
         ) : (
           <Button
             size="sm"
@@ -172,4 +210,3 @@ export function DirectoryRow({
     </div>
   );
 }
-

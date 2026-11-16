@@ -19,8 +19,14 @@ export interface DirectoryServerData {
   bannerUrl?: string | null;
   memberCount?: number;
   verified?: boolean;
+  is_premium?: boolean;
+  premiumUntil?: number | string | null;
   bot_in_guild?: boolean;
   inviteUrl?: string;
+  invite_status?: 'valid' | 'expired' | 'unknown';
+  last_checked?: string | null;
+  last_checked_error?: string | null;
+  expired_click_count?: number;
   rewardCoins?: number;
   owner_discord_id?: string | null;
   owner_display_name?: string | null;
@@ -89,6 +95,7 @@ export function DirectoryCard({
   const memberCount = safeServer.memberCount || 0;
   const reward = propReward !== undefined ? propReward : (safeServer.rewardCoins || 2);
   const bannerUrl = safeServer.bannerUrl?.trim() || null;
+  const isExpired = safeServer.invite_status === 'expired';
 
   return (
     <div
@@ -106,6 +113,7 @@ export function DirectoryCard({
         'ring-1 ring-white/[0.06] shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_0_0_3px_rgba(255,255,255,0.02)]',
         'hover:border-white/20 hover:ring-white/10',
         !previewOnly && 'cursor-pointer focus-visible:ring-2 focus-visible:ring-[var(--accent)]',
+        isExpired && 'opacity-60 grayscale-[0.25]',
         className
       )}
     >
@@ -166,6 +174,11 @@ export function DirectoryCard({
             {safeServer.verified && (
               <Check className="size-3.5 text-[var(--accent)] stroke-[2.5] shrink-0" />
             )}
+            {safeServer.is_premium && (
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-[var(--accent)]/15 text-[var(--accent)] border border-[var(--accent)]/30 tracking-wider shrink-0 select-none">
+                PREMIUM
+              </span>
+            )}
             {safeServer.bot_in_guild === false && (
               <span className="px-1.5 py-0.5 rounded-[4px] bg-[#141417] border border-white/10 text-zinc-400 text-[10px] font-medium shrink-0">
                 Joins can't be verified
@@ -174,15 +187,21 @@ export function DirectoryCard({
           </div>
 
           {/* Row 2: Category badge and member count */}
-          <div className="flex items-center gap-2 text-xs text-zinc-400 min-w-0 flex-wrap">
-            <span className="px-2 py-0.5 rounded-[6px] bg-[#141417]/90 border border-white/[0.08] text-zinc-300 font-medium text-[11px] leading-none shrink-0">
-              {safeServer.category || 'Roleplay Server'}
-            </span>
-            <span className="flex items-center gap-1 tabular-nums text-zinc-400 text-xs shrink-0">
-              <Users className="size-3.5 text-zinc-500 shrink-0" />
-              <span>{Number(memberCount).toLocaleString()} members</span>
-            </span>
-          </div>
+          {(safeServer.category || (memberCount && memberCount > 1)) && (
+            <div className="flex items-center gap-2 text-xs text-zinc-400 min-w-0 flex-wrap">
+              {safeServer.category && (
+                <span className="px-2 py-0.5 rounded-[6px] bg-[#141417]/90 border border-white/[0.08] text-zinc-300 font-medium text-[11px] leading-none shrink-0">
+                  {safeServer.category}
+                </span>
+              )}
+              {memberCount && memberCount > 1 ? (
+                <span className="flex items-center gap-1 tabular-nums text-zinc-400 text-xs shrink-0">
+                  <Users className="size-3.5 text-zinc-500 shrink-0" />
+                  <span>{Number(memberCount).toLocaleString()} members</span>
+                </span>
+              ) : null}
+            </div>
+          )}
 
           {/* Row 3: Summary or skeleton line */}
           <div className={cn(
@@ -320,6 +339,32 @@ export function DirectoryCard({
               <span className="inline-flex items-center gap-1 h-8 px-3 rounded-lg bg-[#18181B] border border-white/10 text-xs font-medium text-zinc-300 shrink-0 select-none">
                 <span>Verifying</span>
               </span>
+            ) : isExpired ? (
+              <Button
+                type="button"
+                size="sm"
+                onClick={async (e) => {
+                  e.stopPropagation();
+                  try {
+                    const res = await fetch(`/api/servers/${safeServer.id || safeServer.guildId}/report-expired-invite`, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      credentials: 'include'
+                    });
+                    if (res.ok) {
+                      const data = await res.json();
+                      alert(data.rateLimited ? 'You already reported this invite recently.' : 'Thank you. The community owner has been notified that the invite is expired.');
+                    } else {
+                      alert('Please sign in to report an expired invite.');
+                    }
+                  } catch {
+                    alert('Unable to report at this moment.');
+                  }
+                }}
+                className="h-8 px-3 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 font-medium text-xs flex items-center gap-1 cursor-pointer transition-colors shrink-0"
+              >
+                <span>Invite expired</span>
+              </Button>
             ) : (
               <Button
                 type="button"

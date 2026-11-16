@@ -370,17 +370,76 @@ function getBannedUserIds() {
   return new Set();
 }
 
-/** Get all promoted servers sorted with latest bumps first */
+// ── Server Listability & Hidden Checks ──
+export const PLACEHOLDER_DESCS = new Set([
+  'connectingerlc verified community server',
+  'connectingerlc community',
+  'welcome to connectingerlc',
+  'community server'
+]);
+
+export function getServerHiddenReason(server, bannedIds = null) {
+  if (!server) return 'not set up';
+  if (server.delist_reason) return server.delist_reason;
+  if (server.hidden || server.delisted) return 'delisted';
+
+  const banned = bannedIds || getBannedUserIds();
+  if (server.ownerId && banned.has(String(server.ownerId))) {
+    return 'blacklisted';
+  }
+  if (server.blacklisted) return 'blacklisted';
+
+  if (server.bot_in_guild === false) {
+    return 'bot missing';
+  }
+
+  const rawInvite = (server.inviteUrl || server.discordInvite || server.invite || '').trim();
+  if (!rawInvite) {
+    return 'no invite';
+  }
+
+  const rawCategory = (server.category || '').trim();
+  if (!rawCategory) {
+    return 'not set up';
+  }
+
+  const rawDesc = (server.description || server.summary || '').trim();
+  if (!rawDesc || PLACEHOLDER_DESCS.has(rawDesc.toLowerCase())) {
+    return 'not set up';
+  }
+
+  return null;
+}
+
+export function isServerListable(server, bannedIds = null) {
+  return getServerHiddenReason(server, bannedIds) === null;
+}
+
+function getInviteStatusRank(server) {
+  const status = String(server?.invite_status || 'unknown').toLowerCase();
+  if (status === 'valid') return 0;
+  if (status === 'expired') return 2;
+  return 1; // 'unknown' or unverified
+}
+
+/** Get all promoted servers sorted with valid invites first, unknown next, expired last */
 export function getPromotedServers(includeHidden = false) {
   const data = loadDirectoryData();
   const bannedIds = getBannedUserIds();
   const activeServers = data.servers.filter(s => {
     if (!s) return false;
     if (s.ownerId && bannedIds.has(String(s.ownerId))) return false;
-    if (!includeHidden && (s.hidden || s.delisted)) return false;
+    if (!includeHidden) {
+      return isServerListable(s, bannedIds);
+    }
     return true;
   });
   return activeServers.sort((a, b) => {
+    const rankA = getInviteStatusRank(a);
+    const rankB = getInviteStatusRank(b);
+    if (rankA !== rankB) {
+      return rankA - rankB;
+    }
     const aTime = a.lastBumpedAt || a.createdAt || 0;
     const bTime = b.lastBumpedAt || b.createdAt || 0;
     return bTime - aTime;
@@ -448,8 +507,8 @@ export function upsertPromotedServer(serverData, owner) {
     iconUrl: cleanIcon,
     icon_hash: serverData.icon_hash || serverData.iconHash || (serverData.icon && !serverData.icon.startsWith('http') ? serverData.icon : null) || existing?.icon_hash || null,
     iconHash: serverData.icon_hash || serverData.iconHash || (serverData.icon && !serverData.icon.startsWith('http') ? serverData.icon : null) || existing?.iconHash || null,
-    category: serverData.category || serverData.serverCategory || existing?.category || 'Roleplay Server',
-    categories: Array.isArray(serverData.categories) ? serverData.categories : [serverData.category || existing?.category || 'Roleplay Server'],
+    category: serverData.category || serverData.serverCategory || existing?.category || '',
+    categories: Array.isArray(serverData.categories) ? serverData.categories : (serverData.category || existing?.category ? [serverData.category || existing?.category] : []),
     language: serverData.language || existing?.language || 'English',
     summary: safeString(serverData.summary || serverData.serverSummary || existing?.summary || ''),
     description: safeString(serverData.description || serverData.serverDescription || existing?.description || ''),
@@ -478,6 +537,27 @@ export function upsertPromotedServer(serverData, owner) {
     bumpReadyNoticeEnabled: bumpReadyEnabled,
     bumpNoticeEnabled: bumpReadyEnabled,
     inviteUrl: safeString(serverData.inviteUrl || existing?.inviteUrl || ''),
+    invite_status: existing && existing.inviteUrl && safeString(serverData.inviteUrl || existing?.inviteUrl || '') !== existing.inviteUrl
+      ? 'unknown'
+      : (serverData.invite_status || serverData.inviteStatus || existing?.invite_status || existing?.inviteStatus || 'unknown'),
+    last_checked: existing && existing.inviteUrl && safeString(serverData.inviteUrl || existing?.inviteUrl || '') !== existing.inviteUrl
+      ? null
+      : (serverData.last_checked || existing?.last_checked || null),
+    last_checked_error: existing && existing.inviteUrl && safeString(serverData.inviteUrl || existing?.inviteUrl || '') !== existing.inviteUrl
+      ? null
+      : (serverData.last_checked_error !== undefined ? serverData.last_checked_error : (existing?.last_checked_error || null)),
+    expired_click_count: existing && existing.inviteUrl && safeString(serverData.inviteUrl || existing?.inviteUrl || '') !== existing.inviteUrl
+      ? 0
+      : Number(serverData.expired_click_count || existing?.expired_click_count || 0),
+    last_expired_notified_at: existing && existing.inviteUrl && safeString(serverData.inviteUrl || existing?.inviteUrl || '') !== existing.inviteUrl
+      ? null
+      : (serverData.last_expired_notified_at || existing?.last_expired_notified_at || null),
+    autoRenewInvite: serverData.autoRenewInvite !== undefined
+      ? Boolean(serverData.autoRenewInvite)
+      : (existing?.autoRenewInvite !== undefined ? Boolean(existing.autoRenewInvite) : false),
+    autoRenewChannelId: serverData.autoRenewChannelId !== undefined
+      ? (serverData.autoRenewChannelId || null)
+      : (existing?.autoRenewChannelId || null),
     joinCode: serverData.joinCode !== undefined && serverData.joinCode !== null ? safeString(serverData.joinCode) : (existing?.joinCode || null),
     listedInDirectory: serverData.listedInDirectory !== undefined ? Boolean(serverData.listedInDirectory) : (existing?.listedInDirectory !== undefined ? Boolean(existing.listedInDirectory) : true),
     bannerUrl: safeString(serverData.bannerUrl || serverData.serverBannerUrl || existing?.bannerUrl || ''),
@@ -629,7 +709,7 @@ export function bumpPromotedServer(guildId, userId) {
       id: targetId,
       guildId: targetId,
       name: `Server (${targetId.slice(0, 6)})`,
-      category: 'Roleplay Server',
+      category: '',
       description: '',
       memberCount: 0,
       iconUrl: null,
@@ -975,7 +1055,24 @@ export function updatePromotedServerDetails(guildId, patch = {}) {
   if (patch.memberCount !== undefined) server.memberCount = Number(patch.memberCount) || 0;
   if (patch.bumps !== undefined) server.bumps = Number(patch.bumps) || 0;
   if (patch.rewardCoins !== undefined) server.rewardCoins = Number(patch.rewardCoins) || 2;
-  if (patch.inviteUrl !== undefined) server.inviteUrl = String(patch.inviteUrl).trim();
+  if (patch.invite_status !== undefined) server.invite_status = patch.invite_status;
+  if (patch.last_checked !== undefined) server.last_checked = patch.last_checked;
+  if (patch.last_checked_error !== undefined) server.last_checked_error = patch.last_checked_error;
+  if (patch.autoRenewInvite !== undefined) server.autoRenewInvite = Boolean(patch.autoRenewInvite);
+  if (patch.autoRenewChannelId !== undefined) server.autoRenewChannelId = patch.autoRenewChannelId || null;
+  if (patch.expired_click_count !== undefined) server.expired_click_count = Number(patch.expired_click_count);
+  if (patch.last_expired_notified_at !== undefined) server.last_expired_notified_at = patch.last_expired_notified_at;
+  if (patch.inviteUrl !== undefined) {
+    const oldInvite = server.inviteUrl;
+    server.inviteUrl = String(patch.inviteUrl).trim();
+    if (oldInvite && server.inviteUrl !== oldInvite) {
+      server.invite_status = 'unknown';
+      server.last_checked = null;
+      server.last_checked_error = null;
+      server.expired_click_count = 0;
+      server.last_expired_notified_at = null;
+    }
+  }
   if (patch.bannerUrl !== undefined) server.bannerUrl = String(patch.bannerUrl).trim();
   if (patch.representatives !== undefined) server.representatives = Array.isArray(patch.representatives) ? patch.representatives : [];
   if (patch.representativesWanted !== undefined) server.representativesWanted = Number(patch.representativesWanted);

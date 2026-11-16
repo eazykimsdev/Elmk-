@@ -116,10 +116,31 @@ import {
   createJoinIntent,
   findActiveJoinIntent,
   markJoinIntentConverted,
-  revalidateAllInvites,
-  startInviteRevalidationJob,
-  checkUserClickRateLimit
+  checkUserClickRateLimit,
+  checkServerInvite,
+  handleExpiredInviteReport,
+  getOwnerDashboardNotices,
+  clearOwnerDashboardNotices,
+  startScheduledInviteChecks
 } from './inviteValidator.js';
+import {
+  getAdminSettings,
+  updateAdminSettings,
+  isServerPremium,
+  buyServerPremium,
+  grantServerPremium,
+  removeServerPremium,
+  checkPremiumReminders,
+  startPremiumReminderJob
+} from './premiumManager.js';
+import {
+  addServerAdvertiser,
+  removeServerAdvertiser,
+  postPremiumAd,
+  adminRemoveAdPost,
+  loadAdPosts,
+  sendTestPremiumAd
+} from './advertisingManager.js';
 import {
   connectErlcServer,
   getErlcStatus,
@@ -1993,6 +2014,13 @@ export function createDashboardRouter() {
       return res.status(404).json({ error: 'Server not found in directory.' });
     }
 
+    // Check invite on server page view (at most once per 10 minutes per server)
+    const lastCheckTime = server.last_checked ? new Date(server.last_checked).getTime() : 0;
+    const nowTime = Date.now();
+    if (!lastCheckTime || (nowTime - lastCheckTime) >= 10 * 60 * 1000) {
+      checkServerInvite(server).catch(() => {});
+    }
+
     const erlc = await getErlcStatus(server.id).catch(() => null);
 
     const reviewData = getServerReviews(server.id, { page: 1, pageSize: 5 });
@@ -2091,6 +2119,14 @@ export function createDashboardRouter() {
         repRoleId: server.repRoleId || '',
         recruitRoleId: server.recruitRoleId || '',
         extraCreditsPerJoin: server.extraCreditsPerJoin !== undefined ? Number(server.extraCreditsPerJoin) : (server.offerHigherReward ? Math.max(1, Number(server.rewardCoins || 2) - 2) : 1),
+        invite_status: server.invite_status || 'unknown',
+        last_checked: server.last_checked || null,
+        last_checked_error: server.last_checked_error || null,
+        autoRenewInvite: Boolean(server.autoRenewInvite),
+        autoRenewChannelId: server.autoRenewChannelId || null,
+        expired_click_count: Number(server.expired_click_count || 0),
+        is_premium: isServerPremium(server),
+        premiumUntil: server.premiumUntil || null,
         erlc: erlc?.connected ? erlc : null,
       },
       owner: {
@@ -2386,6 +2422,8 @@ export function createDashboardRouter() {
             })).filter(q => q.question.length > 0)
           : undefined,
         joinCode: patch.joinCode ? String(patch.joinCode).trim() : null,
+        autoRenewInvite: Boolean(patch.autoRenewInvite),
+        autoRenewChannelId: patch.autoRenewChannelId ? String(patch.autoRenewChannelId).trim() : null,
         listedInDirectory: patch.listedInDirectory !== undefined ? Boolean(patch.listedInDirectory) : true
       };
 
@@ -2405,6 +2443,10 @@ export function createDashboardRouter() {
       }
 
       const allExisting = getPromotedServers(true);
+      const existingListing = allExisting.find(s => String(s.id) === String(id));
+      if (existingListing && cleanData.inviteUrl && cleanData.inviteUrl !== existingListing.inviteUrl) {
+        clearOwnerDashboardNotices(id, 'invite_expired');
+      }
       const isNewListing = !allExisting.some(s => String(s.id) === String(id));
       const server = upsertPromotedServer(cleanData, user);
       invalidateShowcaseCache();
@@ -2535,6 +2577,164 @@ export function createDashboardRouter() {
     } catch (err) {
       console.error('Error fetching popular tags:', err);
       res.json({ tags: [] });
+    }
+  });
+
+  // Report expired invite endpoint: POST /api/servers/:id/report-expired-invite
+  router.post('/servers/:id/report-expired-invite', async (req, res) => {
+    const { id } = req.params;
+    const userId = req.dashboardSession?.user?.id || req.session?.user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: 'Please sign in to report an expired invite.' });
+    }
+    const result = await handleExpiredInviteReport(userId, id);
+    res.json(result);
+  });
+
+  // Owner dashboard notices endpoint: GET /api/servers/:id/owner-notices
+  router.get('/servers/:id/owner-notices', (req, res) => {
+    const { id } = req.params;
+    const userId = req.dashboardSession?.user?.id || req.session?.user?.id;
+    const notices = getOwnerDashboardNotices(id, userId);
+    res.json({ notices });
+  });
+
+  // Premium status endpoint: GET /api/servers/:id/premium
+  router.get('/servers/:id/premium', (req, res) => {
+    const { id } = req.params;
+    const server = getPromotedServers(true).find(s => String(s.id) === String(id) || String(s.guildId) === String(id));
+    if (!server) return res.status(404).json({ error: 'Server not found' });
+
+    const settings = getAdminSettings();
+    const isPrem = isServerPremium(server);
+    const now = Date.now();
+    const daysLeft = isPrem && server.premiumUntil
+      ? Math.max(0, Math.ceil((Number(server.premiumUntil) - now) / (24 * 3600 * 1000)))
+      : 0;
+    const summary = getServerLedgerSummary(id);
+
+    res.json({
+      isPremium: isPrem,
+      premiumUntil: server.premiumUntil || null,
+      daysLeft,
+      price: Number(settings.premium_price_credits) || 500,
+      durationDays: Number(settings.premium_duration_days) || 30,
+      balance: Number(summary.balance || 0)
+    });
+  });
+
+  // Buy premium endpoint: POST /api/servers/:id/buy-premium
+  router.post('/servers/:id/buy-premium', async (req, res) => {
+    const { id } = req.params;
+    const userId = req.dashboardSession?.user?.id || req.session?.user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: 'Please sign in to purchase premium.' });
+    }
+
+    const server = getPromotedServers(true).find(s => String(s.id) === String(id) || String(s.guildId) === String(id));
+    if (!server) return res.status(404).json({ error: 'Server not found' });
+
+    const ownerId = server.ownerId || server.owner_discord_id;
+    if (ownerId && String(ownerId) !== String(userId)) {
+      return res.status(403).json({ error: 'Only the server owner can purchase premium.' });
+    }
+
+    try {
+      const result = await buyServerPremium(id, userId, {
+        idempotencyKey: req.body?.idempotencyKey
+      });
+      res.json(result);
+    } catch (err) {
+      if (err.code === 'INSUFFICIENT_CREDITS') {
+        return res.status(400).json({
+          error: err.message,
+          code: err.code,
+          required: err.required,
+          current: err.current
+        });
+      }
+      if (err.code === 'CONCURRENT_PURCHASE') {
+        return res.status(409).json({ error: err.message, code: err.code });
+      }
+      res.status(400).json({ error: err.message });
+    }
+  });
+
+  // Advertisers list: GET /api/servers/:id/advertisers
+  router.get('/servers/:id/advertisers', (req, res) => {
+    const { id } = req.params;
+    const server = getPromotedServers(true).find(s => String(s.id) === String(id) || String(s.guildId) === String(id));
+    if (!server) return res.status(404).json({ error: 'Server not found' });
+    const settings = getAdminSettings();
+    res.json({
+      advertisers: Array.isArray(server.advertisers) ? server.advertisers : [],
+      maxAdvertisers: Number(settings.max_advertisers_per_server) || 5,
+      isPremium: isServerPremium(server)
+    });
+  });
+
+  // Add advertiser: POST /api/servers/:id/advertisers
+  router.post('/servers/:id/advertisers', async (req, res) => {
+    const { id } = req.params;
+    const userId = req.dashboardSession?.user?.id || req.session?.user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: 'Please sign in to manage advertisers.' });
+    }
+    const { targetUserId } = req.body || {};
+    if (!targetUserId) {
+      return res.status(400).json({ error: 'targetUserId is required.' });
+    }
+    try {
+      const result = await addServerAdvertiser(id, targetUserId, userId);
+      res.json(result);
+    } catch (err) {
+      res.status(400).json({ error: err.message });
+    }
+  });
+
+  // Remove advertiser: DELETE /api/servers/:id/advertisers/:targetUserId
+  router.delete('/servers/:id/advertisers/:targetUserId', (req, res) => {
+    const { id, targetUserId } = req.params;
+    const userId = req.dashboardSession?.user?.id || req.session?.user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: 'Please sign in to manage advertisers.' });
+    }
+    const server = getPromotedServers(true).find(s => String(s.id) === String(id) || String(s.guildId) === String(id));
+    if (!server) return res.status(404).json({ error: 'Server not found' });
+
+    const ownerId = String(server.ownerId || server.owner_discord_id || '');
+    if (ownerId && ownerId !== String(userId)) {
+      return res.status(403).json({ error: 'Only the server owner can remove advertisers.' });
+    }
+
+    try {
+      const result = removeServerAdvertiser(id, targetUserId, userId, 'Removed by owner');
+      res.json(result);
+    } catch (err) {
+      res.status(400).json({ error: err.message });
+    }
+  });
+
+  // Post premium ad: POST /api/servers/:id/post-ad
+  router.post('/servers/:id/post-ad', async (req, res) => {
+    const { id } = req.params;
+    const userId = req.dashboardSession?.user?.id || req.session?.user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: 'Please sign in to post ads.' });
+    }
+    const { content } = req.body || {};
+    const username = req.dashboardSession?.user?.globalName || req.dashboardSession?.user?.username || req.session?.user?.username;
+
+    try {
+      const result = await postPremiumAd({
+        serverId: id,
+        actorUserId: userId,
+        customContent: content,
+        options: { actorUsername: username }
+      });
+      res.json(result);
+    } catch (err) {
+      res.status(400).json({ error: err.message });
     }
   });
 
@@ -5063,13 +5263,70 @@ export function createDashboardRouter() {
   router.get('/admin/bugs', requireAdminRole('Reviewer'), (req, res) => {
     const status = req.query.status || 'all';
     const bugs = getBugReports({ status });
-    res.json({ bugs });
+
+    const userMap = new Map();
+    try {
+      const knownFile = path.join(DATA_DIR, 'known_users.json');
+      if (fs.existsSync(knownFile)) {
+        const rawKnown = JSON.parse(fs.readFileSync(knownFile, 'utf8') || '[]');
+        if (Array.isArray(rawKnown)) {
+          for (const u of rawKnown) {
+            const uid = String(u.userId || u.id || '');
+            if (uid) userMap.set(uid, u);
+          }
+        }
+      }
+    } catch {}
+
+    const enriched = bugs.map(b => {
+      const uid = String(b.userId || '');
+      const user = userMap.get(uid);
+      let defaultAvatar = null;
+      try {
+        if (uid && /^\d+$/.test(uid)) {
+          const idx = Math.abs(Number((BigInt(uid) >> 22n) % 6n));
+          defaultAvatar = `https://cdn.discordapp.com/embed/avatars/${idx}.png`;
+        }
+      } catch {}
+
+      const avatarUrl = b.avatarUrl || user?.avatarUrl || defaultAvatar;
+      const displayName = b.displayName || user?.displayName || user?.username || b.username;
+      return {
+        ...b,
+        avatarUrl,
+        displayName
+      };
+    });
+
+    res.json({ bugs: enriched });
   });
 
   router.get('/admin/bugs/:id', requireAdminRole('Reviewer'), (req, res) => {
     const bug = getBugReportById(req.params.id);
     if (!bug) return res.status(404).json({ error: 'Bug report not found' });
-    res.json({ bug });
+
+    let avatarUrl = bug.avatarUrl || null;
+    let displayName = bug.displayName || bug.username;
+    try {
+      const knownFile = path.join(DATA_DIR, 'known_users.json');
+      if (fs.existsSync(knownFile)) {
+        const rawKnown = JSON.parse(fs.readFileSync(knownFile, 'utf8') || '[]');
+        const u = rawKnown.find(k => String(k.userId || k.id) === String(bug.userId));
+        if (u) {
+          avatarUrl = avatarUrl || u.avatarUrl;
+          displayName = displayName || u.displayName || u.username;
+        }
+      }
+    } catch {}
+
+    if (!avatarUrl && bug.userId && /^\d+$/.test(String(bug.userId))) {
+      try {
+        const idx = Math.abs(Number((BigInt(bug.userId) >> 22n) % 6n));
+        avatarUrl = `https://cdn.discordapp.com/embed/avatars/${idx}.png`;
+      } catch {}
+    }
+
+    res.json({ bug: { ...bug, avatarUrl, displayName } });
   });
 
   router.post('/admin/bugs/:id/action', requireAdminRole('Reviewer'), async (req, res) => {
@@ -5435,6 +5692,111 @@ export function createDashboardRouter() {
         actor: req.adminUser
       });
       res.json({ success: true, status, maintenance: status });
+    } catch (err) {
+      res.status(400).json({ error: err.message });
+    }
+  });
+
+  // Platform Settings: GET /api/admin/settings & PATCH /api/admin/settings
+  router.get('/admin/settings', requireAdminRole(), (_req, res) => {
+    res.json({ settings: getAdminSettings() });
+  });
+
+  router.patch('/admin/settings', requireAdminRole('Admin'), (req, res) => {
+    try {
+      const updated = updateAdminSettings(req.body || {}, req.adminUser);
+      res.json({ success: true, settings: updated });
+    } catch (err) {
+      res.status(400).json({ error: err.message });
+    }
+  });
+
+  // Admin Premium Servers list
+  router.get('/admin/premium-servers', requireAdminRole(), (_req, res) => {
+    const servers = getPromotedServers(true);
+    const now = Date.now();
+    const result = servers.map(s => {
+      const isPrem = isServerPremium(s, now);
+      const daysLeft = isPrem && s.premiumUntil
+        ? Math.max(0, Math.ceil((Number(s.premiumUntil) - now) / (24 * 3600 * 1000)))
+        : 0;
+      const summary = getServerLedgerSummary(s.id);
+      return {
+        id: s.id,
+        name: s.name,
+        icon: s.iconUrl || s.icon,
+        is_premium: isPrem,
+        premiumUntil: s.premiumUntil || null,
+        daysLeft,
+        balance: summary.balance || 0,
+        ownerId: s.ownerId || s.owner_discord_id,
+        ownerUsername: s.ownerUsername || s.owner_display_name,
+        grantedBy: s.premium_granted_by || null,
+        grantReason: s.premium_grant_reason || null
+      };
+    });
+    res.json({ servers: result });
+  });
+
+  // Admin Grant Premium
+  router.post('/admin/servers/:id/grant-premium', requireAdminRole('Admin'), (req, res) => {
+    const { id } = req.params;
+    const { days = 30, reason } = req.body || {};
+    try {
+      const result = grantServerPremium(id, days, reason, req.adminUser);
+      res.json(result);
+    } catch (err) {
+      res.status(400).json({ error: err.message });
+    }
+  });
+
+  // Admin Remove Premium
+  router.post('/admin/servers/:id/remove-premium', requireAdminRole('Admin'), (req, res) => {
+    const { id } = req.params;
+    const { reason } = req.body || {};
+    try {
+      const result = removeServerPremium(id, reason, req.adminUser);
+      res.json(result);
+    } catch (err) {
+      res.status(400).json({ error: err.message });
+    }
+  });
+
+  // Admin ad posts list
+  router.get('/admin/ad-posts', requireAdminRole(), (_req, res) => {
+    res.json({ posts: loadAdPosts() });
+  });
+
+  // Admin remove ad post
+  router.delete('/admin/ad-posts/:postId', requireAdminRole('Admin'), async (req, res) => {
+    const { postId } = req.params;
+    const { reason } = req.body || {};
+    try {
+      const result = await adminRemoveAdPost(postId, req.adminUser, reason);
+      res.json(result);
+    } catch (err) {
+      res.status(400).json({ error: err.message });
+    }
+  });
+
+  // Admin send test ad post
+  router.post('/admin/advertising/test-post', requireAdminRole('Admin'), async (req, res) => {
+    const { channelId } = req.body || {};
+    try {
+      const result = await sendTestPremiumAd({ channelId });
+      res.json(result);
+    } catch (err) {
+      res.status(400).json({ error: err.message });
+    }
+  });
+
+  // Admin remove advertiser
+  router.delete('/admin/servers/:serverId/advertisers/:targetUserId', requireAdminRole('Admin'), (req, res) => {
+    const { serverId, targetUserId } = req.params;
+    const { reason } = req.body || {};
+    try {
+      const result = removeServerAdvertiser(serverId, targetUserId, req.adminUser, reason);
+      res.json(result);
     } catch (err) {
       res.status(400).json({ error: err.message });
     }

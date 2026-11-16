@@ -38,6 +38,8 @@ import {
 import { createBugReport, checkBugReportRateLimit } from './bugReportManager.js';
 import { isUserBanned } from './adminManager.js';
 import { respondToPartnershipRequest, loadPartnershipsData } from './partnershipsManager.js';
+import { isServerPremium } from './premiumManager.js';
+import { postPremiumAd } from './advertisingManager.js';
 
 const BRAND_ORANGE = 16347158; // #F97316
 
@@ -91,6 +93,27 @@ export const GLOBAL_BOT_COMMANDS = [
     description: 'Get the ConnectingERLC website link, bot invite, and support server.',
     type: 1,
     contexts: [0, 1, 2] // Guilds, Bot DMs, Private Channels
+  },
+  {
+    name: 'premiumad',
+    description: 'Post your server ad in the Premium Advertising channel.',
+    type: 1,
+    contexts: [0, 1, 2],
+    options: [
+      {
+        name: 'server',
+        description: 'Choose which premium server you are advertising for.',
+        type: 3,
+        required: true,
+        autocomplete: true
+      },
+      {
+        name: 'message',
+        description: 'Optional custom ad message (max 1000 characters).',
+        type: 3,
+        required: false
+      }
+    ]
   }
 ];
 
@@ -519,6 +542,32 @@ export async function handleInteraction(interaction, token) {
     return;
   }
 
+  // ─── Autocomplete Interactions (type 4) ───────────────────────────────────
+  if (interaction.type === 4) {
+    if (data?.name === 'premiumad') {
+      const servers = getPromotedServers(true);
+      const eligible = servers.filter(s => {
+        if (!isServerPremium(s)) return false;
+        const ownerId = String(s.ownerId || s.owner_discord_id || '');
+        const advertisers = Array.isArray(s.advertisers) ? s.advertisers.map(a => String(a.userId)) : [];
+        return ownerId === callerId || advertisers.includes(callerId);
+      });
+      const choices = eligible.slice(0, 25).map(s => ({
+        name: (s.name || `Server ${s.id}`).slice(0, 100),
+        value: String(s.id)
+      }));
+      return fetch(`https://discord.com/api/v10/interactions/${id}/${interactionToken}/callback`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 8, // APPLICATION_COMMAND_AUTOCOMPLETE_RESULT
+          data: { choices }
+        })
+      }).catch(() => {});
+    }
+    return;
+  }
+
   // ─── Application Commands (type 2) ─────────────────────────────────────────
   if (interaction.type !== 2) return;
 
@@ -559,6 +608,45 @@ export async function handleInteraction(interaction, token) {
   // /yourcommand Components V2 showcase panel
   if (commandName === 'yourcommand') {
     return respond(buildYourCommandPayload());
+  }
+
+  // /premiumad command
+  if (commandName === 'premiumad') {
+    const serverOpt = data?.options?.find(o => o.name === 'server')?.value;
+    const msgOpt = data?.options?.find(o => o.name === 'message')?.value;
+    if (!serverOpt) {
+      return respond({
+        type: 4,
+        data: {
+          content: 'Please select which server you are posting an ad for.',
+          flags: 64
+        }
+      });
+    }
+
+    try {
+      const result = await postPremiumAd({
+        serverId: serverOpt,
+        actorUserId: callerId,
+        customContent: msgOpt,
+        options: { actorUsername: callerUser?.username }
+      });
+      return respond({
+        type: 4,
+        data: {
+          content: `Your ad for **${result.serverName}** has been posted to the Premium Advertising channel!`,
+          flags: 64
+        }
+      });
+    } catch (adErr) {
+      return respond({
+        type: 4,
+        data: {
+          content: `Could not post ad: ${adErr.message}`,
+          flags: 64
+        }
+      });
+    }
   }
 
   // /website Components V2 Card
