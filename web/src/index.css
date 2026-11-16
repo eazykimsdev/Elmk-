@@ -463,11 +463,6 @@
   --platform-color: #34D399 !important;
 }
 
-[data-theme="christmas"] .snow-toggle {
-  border-color: rgba(197, 160, 89, 0.75) !important;
-  color: #F4F4F5 !important;
-}
-
 [data-theme="christmas"] .badge,
 [data-theme="christmas"] [data-slot="badge"],
 [data-theme="christmas"] .tag-pill {
@@ -483,24 +478,4 @@
   pointer-events: none;
   z-index: 40;
 }
-.snow-toggle {
-  position: fixed;
-  right: 16px;
-  bottom: 16px;
-  z-index: 45;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 28px;
-  padding: 0 10px;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(14, 14, 17, 0.85);
-  backdrop-filter: blur(8px);
-  color: var(--muted-foreground, #A1A1AA);
-  font-size: 12px;
-  cursor: pointer;
-}
-.snow-toggle:hover { color: #F4F4F5; }
-@media (max-width: 767px) { .snow-toggle { bottom: 76px; } }
 @media (prefers-reduced-motion: reduce) { .snow-canvas { display: none; } }

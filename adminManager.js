@@ -46,7 +46,8 @@ function safeRead(filePath, fallback) {
       (Array.isArray(parsed) && parsed.length === 0) ||
       (typeof parsed === 'object' && !Array.isArray(parsed) && Object.keys(parsed).length === 0);
 
-    if (isEmpty && fs.existsSync(seedPath)) {
+    const isProd = process.env.NODE_ENV === 'production' || process.env.DATABASE_URL;
+    if (!isProd && isEmpty && fs.existsSync(seedPath)) {
       try {
         const seedContent = fs.readFileSync(seedPath, 'utf8');
         const seedParsed = JSON.parse(seedContent);

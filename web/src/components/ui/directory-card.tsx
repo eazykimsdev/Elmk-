@@ -1,13 +1,13 @@
 import React from 'react';
-import { Users, Coins, Check } from 'lucide-react';
+import { Users, Check, Coins } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { ServerIcon } from '@/components/ui/ServerIcon';
+import { stripMarkdown } from '@/components/ui/markdown-renderer';
 import { cn } from '@/lib/utils';
-import { stripMarkdown } from '@/lib/markdownSanitizer';
 
 export interface DirectoryServerData {
-  id?: string;
-  guildId?: string;
-  name?: string;
+  id: string;
+  name: string;
   icon?: string | null;
   iconUrl?: string | null;
   icon_hash?: string | null;
@@ -127,136 +127,139 @@ export function DirectoryCard({
           style={{
             filter: 'blur(14px) saturate(1.1)',
             transform: 'scale(1.15)',
-            opacity: 0.22,
+            opacity: 0.35,
           }}
         />
       )}
       <div
-        aria-hidden="true"
-        className="absolute inset-0 bg-gradient-to-t from-[#0E0E11] via-[#0E0E11]/85 to-[#0E0E11]/60 pointer-events-none select-none"
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background: 'linear-gradient(90deg, rgba(9,9,11,0.88) 0%, rgba(9,9,11,0.62) 100%)',
+        }}
       />
 
-      <div className="relative z-10 grid grid-cols-[auto_1fr] @[460px]:grid-cols-[auto_1fr_auto] items-start @[460px]:items-center gap-3 sm:gap-3.5">
-        {/* Column 1: Server Icon */}
-        <div
-          className="rounded-full bg-[#18181B] ring-1 ring-white/10 overflow-hidden shrink-0 flex items-center justify-center select-none"
-          style={{ width: iconSize, height: iconSize }}
-        >
-          {safeServer.iconUrl ? (
-            <img
-              src={safeServer.iconUrl}
-              alt=""
-              className="w-full h-full object-cover"
-              loading="lazy"
-            />
-          ) : (
-            <span className="text-zinc-400 font-semibold text-base sm:text-lg uppercase">
-              {serverName ? serverName.charAt(0) : '?'}
-            </span>
-          )}
+      {/* ── Grid Layout: [icon: 48px/56px] [content: 1fr] [actions: auto] with container wrap ── */}
+      <div className={cn(
+        "relative z-10 grid items-center gap-3.5 w-full",
+        iconSize === 48
+          ? "grid-cols-[48px_minmax(0,1fr)] @[460px]:grid-cols-[48px_minmax(0,1fr)_auto]"
+          : "grid-cols-[56px_minmax(0,1fr)] @[460px]:grid-cols-[56px_minmax(0,1fr)_auto]"
+      )}>
+        {/* Column 1: ServerIcon 48px or 56px */}
+        <div className="shrink-0 self-start @[460px]:self-center">
+          <ServerIcon
+            guildId={safeServer.id}
+            iconHash={safeServer.icon_hash || safeServer.iconHash || safeServer.icon}
+            iconUrl={safeServer.iconUrl || safeServer.icon}
+            name={serverName || 'Server'}
+            size={iconSize}
+            className={cn(
+              "rounded-[14px] shrink-0 object-cover shadow-md border border-white/10",
+              iconSize === 48 ? "size-12" : "size-[56px]"
+            )}
+          />
         </div>
 
-        {/* Column 2: Server Info */}
-        <div className="min-w-0 flex-1 space-y-1">
-          {/* Row 1: Title + Verified Badge */}
+        {/* Column 2: Name, Category + Members, 1-line Summary */}
+        <div className="flex flex-col justify-center gap-1 min-w-0 overflow-hidden">
+          {/* Row 1: Server name (16px/600, ellipsis) or skeleton line */}
           <div className="flex items-center gap-1.5 min-w-0">
-            <h3
-              className={cn(
-                'text-sm font-semibold text-white truncate leading-tight',
-                isOwnServer && 'text-[var(--accent)]'
-              )}
-            >
-              {serverName}
-            </h3>
+            {serverName ? (
+              <h4 className="text-[16px] font-semibold text-white truncate tracking-tight font-sans min-w-0">
+                {serverName}
+              </h4>
+            ) : (
+              <div className="h-4 bg-white/10 rounded-[4px] w-28 animate-pulse" />
+            )}
             {safeServer.verified && (
-              <span
-                title="Verified Community"
-                className="inline-flex items-center justify-center size-4 rounded-full bg-[var(--accent)] text-[var(--accent-foreground)] shrink-0"
-              >
-                <Check className="size-2.5 stroke-[3]" />
-              </span>
+              <Check className="size-3.5 text-[var(--accent)] stroke-[2.5] shrink-0" />
             )}
             {safeServer.is_premium && (
               <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-[var(--accent)]/15 text-[var(--accent)] border border-[var(--accent)]/30 tracking-wider shrink-0 select-none">
                 PREMIUM
               </span>
             )}
+            {safeServer.bot_in_guild === false && (
+              <span className="px-1.5 py-0.5 rounded-[4px] bg-[#141417] border border-white/10 text-zinc-400 text-[10px] font-medium shrink-0">
+                Joins can't be verified
+              </span>
+            )}
           </div>
 
-          {/* Row 2: Description */}
-          {displaySummary ? (
-            <p
-              className={cn(
-                'text-xs text-zinc-400 leading-snug',
-                lineClamp === 1 ? 'truncate' : 'line-clamp-2'
+          {/* Row 2: Category badge and member count */}
+          {(safeServer.category || (memberCount && memberCount > 1)) && (
+            <div className="flex items-center gap-2 text-xs text-zinc-400 min-w-0 flex-wrap">
+              {safeServer.category && (
+                <span className="px-2 py-0.5 rounded-[6px] bg-[#141417]/90 border border-white/[0.08] text-zinc-300 font-medium text-[11px] leading-none shrink-0">
+                  {safeServer.category}
+                </span>
               )}
-            >
-              {displaySummary}
-            </p>
-          ) : null}
+              {memberCount && memberCount > 1 ? (
+                <span className="flex items-center gap-1 tabular-nums text-zinc-400 text-xs shrink-0">
+                  <Users className="size-3.5 text-zinc-500 shrink-0" />
+                  <span>{Number(memberCount).toLocaleString()} members</span>
+                </span>
+              ) : null}
+            </div>
+          )}
 
-          {/* Row 3: Metadata Badges */}
-          {(() => {
-            const rawCat = safeServer.category?.trim();
-            const categoryLabel = rawCat && rawCat.toLowerCase() !== 'other' ? rawCat : '';
+          {/* Row 3: Summary or skeleton line */}
+          <div className={cn(
+            'text-[13px] text-zinc-400 font-sans min-w-0 leading-normal',
+            (lineClamp === 2 || variant === 'partnership') ? 'line-clamp-2 leading-snug' : 'truncate'
+          )}>
+            {displaySummary ? (
+              <span className={(lineClamp === 2 || variant === 'partnership') ? undefined : 'truncate block'}>{displaySummary}</span>
+            ) : (
+              <div className="h-3 bg-white/10 rounded-[4px] w-44 animate-pulse mt-1" />
+            )}
+          </div>
+
+          {/* Row 4: Terms row of small badges (for partnership variant) */}
+          {variant === 'partnership' && (() => {
+            if (!isSetUp) {
+              return (
+                <div className="flex items-center gap-1.5 flex-wrap pt-0.5 text-[11px] text-zinc-400">
+                  <span className="px-2 py-0.5 rounded-[6px] bg-[#141417]/90 border border-white/[0.08] text-zinc-500 font-medium shrink-0">
+                    Not set up
+                  </span>
+                </div>
+              );
+            }
+
+            const min = minMembers !== undefined ? minMembers : (safeServer.partnershipMinMembers ?? null);
+            const price = partnershipPrice !== undefined ? partnershipPrice : (safeServer.partnershipPrice ?? null);
+            const rawMentions = allowedMentions !== undefined
+              ? allowedMentions
+              : (safeServer.partnershipAllowedMentions || (safeServer.partnershipAllowHere ? 'here' : null));
+            const isEveryone = rawMentions === 'everyone' || rawMentions === '@everyone allowed';
+            const isHere = rawMentions === 'here' || rawMentions === '@here allowed';
+
             return (
-              <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-                {categoryLabel ? (
-                  <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-white/[0.04] border border-white/[0.06] text-[11px] font-medium text-zinc-300">
-                    {categoryLabel}
-                  </span>
-                ) : null}
-
-                {/* Member Count */}
-                {memberCount > 1 ? (
-                  <span className="inline-flex items-center gap-1 text-[11px] text-zinc-400 font-sans">
-                    <Users className="size-3 text-zinc-400 shrink-0" />
-                    <span>{memberCount.toLocaleString()}</span>
-                  </span>
-                ) : null}
-
-                {/* ER:LC In-Game Indicator */}
-                {safeServer.erlc?.connected && typeof safeServer.erlc.currentPlayers === 'number' && (
-                  <span className="inline-flex items-center gap-1 text-[11px] text-emerald-400 font-medium">
-                    <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                    <span>{safeServer.erlc.currentPlayers} in-game</span>
+              <div className="flex items-center gap-1.5 flex-wrap pt-0.5 text-[11px] text-zinc-400">
+                {min !== null && min > 0 && (
+                  <span className="px-2 py-0.5 rounded-[6px] bg-[#141417]/90 border border-white/[0.08] text-zinc-300 font-medium shrink-0">
+                    Min {min} members
                   </span>
                 )}
-
-                {/* Reward pill for directory variant */}
-                {variant !== 'partnership' && reward > 0 ? (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[var(--accent-soft)] border border-[var(--accent-border)] text-[11px] font-medium text-[var(--accent)] font-sans">
-                    <Coins className="size-3 shrink-0" />
-                    <span>+{reward}</span>
+                {price !== null && price > 0 && (
+                  <span className="px-2 py-0.5 rounded-[6px] bg-[#141417]/90 border border-white/[0.08] text-zinc-300 font-medium shrink-0">
+                    Price {price} credits
                   </span>
-                ) : null}
-
-                {/* Partnership Requirements Badges */}
-                {variant === 'partnership' ? (
-                  !isSetUp ? null : (
-                    <>
-                      {minMembers !== undefined && minMembers !== null && minMembers > 0 ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/[0.04] border border-white/[0.06] text-[11px] font-medium text-zinc-300 font-sans">
-                          <Users className="size-3 text-zinc-400 shrink-0" />
-                          <span>{minMembers.toLocaleString()}+</span>
-                        </span>
-                      ) : null}
-                      {partnershipPrice !== undefined && partnershipPrice !== null && partnershipPrice > 0 ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[var(--accent-soft)] border border-[var(--accent-border)] text-[11px] font-medium text-[var(--accent)] font-sans">
-                          <Coins className="size-3 shrink-0" />
-                          <span>{partnershipPrice} cr</span>
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[11px] font-medium text-emerald-400 font-sans">
-                          Free
-                        </span>
-                      )}
-                      {allowedMentions ? (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-white/[0.04] border border-white/[0.06] text-[11px] font-medium text-zinc-400 font-sans">
-                          @{allowedMentions}
-                        </span>
-                      ) : null}
-                    </>
+                )}
+                {rawMentions ? (
+                  isEveryone ? (
+                    <span className="px-2 py-0.5 rounded-[6px] bg-[var(--accent-soft)] border border-[var(--accent-border)] text-[var(--accent)] font-medium shrink-0">
+                      @everyone allowed
+                    </span>
+                  ) : isHere ? (
+                    <span className="px-2 py-0.5 rounded-[6px] bg-[#141417]/90 border border-white/[0.08] text-zinc-300 font-medium shrink-0">
+                      @here allowed
+                    </span>
+                  ) : (
+                    <span className="px-2 py-0.5 rounded-[6px] bg-[#141417]/90 border border-white/[0.08] text-zinc-500 font-medium shrink-0">
+                      No mentions
+                    </span>
                   )
                 ) : null}
               </div>
@@ -343,7 +346,7 @@ export function DirectoryCard({
                 onClick={async (e) => {
                   e.stopPropagation();
                   try {
-                    const res = await fetch(`/api/servers/${safeServer.id || safeServer.guildId}/report-expired-invite`, {
+                    const res = await fetch(`/api/servers/${safeServer.id || (safeServer as any).guildId}/report-expired-invite`, {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
                       credentials: 'include'

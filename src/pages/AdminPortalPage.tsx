@@ -945,13 +945,13 @@ export function AdminPortalPage() {
       const res = await adminFetch(`/api/admin/bugs/${bugId}/test-dm`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ adminUserId: user?.id })
+        body: JSON.stringify({ adminUserId: currentAdmin?.userId || currentAdmin?.id })
       });
       const data = await res.json().catch(() => ({}));
       if (res.ok && data.delivered) {
         showFeedback('[TEST] DM panel sent to your Discord account.', 'success');
       } else {
-        showFeedback(data.note || data.error || 'Could not deliver test DM. Check if DMs are enabled.', 'warning');
+        showFeedback(data.note || data.error || 'Could not deliver test DM. Check if DMs are enabled.', 'error');
       }
     } catch (err: any) {
       showFeedback(err.message || 'Failed to dispatch test DM.', 'error');

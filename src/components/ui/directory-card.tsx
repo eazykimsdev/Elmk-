@@ -346,7 +346,7 @@ export function DirectoryCard({
                 onClick={async (e) => {
                   e.stopPropagation();
                   try {
-                    const res = await fetch(`/api/servers/${safeServer.id || safeServer.guildId}/report-expired-invite`, {
+                    const res = await fetch(`/api/servers/${safeServer.id || (safeServer as any).guildId}/report-expired-invite`, {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
                       credentials: 'include'

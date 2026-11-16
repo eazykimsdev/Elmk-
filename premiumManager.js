@@ -18,7 +18,12 @@ const DEFAULT_SETTINGS = {
   max_advertisers_per_server: 5,
   premium_ad_guild_id: process.env.DISCORD_MAIN_GUILD_ID || '',
   premium_ad_channel_id: process.env.PREMIUM_AD_CHANNEL_ID || '',
-  premium_ad_cooldown_hours: 6
+  premium_ad_cooldown_hours: 6,
+  bump_reward_credits: 2,
+  join_reward_credits: 2,
+  join_minimum_stay_seconds: 120,
+  join_retention_window_hours: 72,
+  recruiter_reward_credits: 4
 };
 
 function safeRead(filePath, fallback) {

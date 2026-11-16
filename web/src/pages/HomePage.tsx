@@ -383,7 +383,7 @@ export function HomePage() {
               </div>
               <div className="space-y-1 text-left sm:text-center p-2 border-r border-white/[0.06] last:border-r-0">
                 <div className="text-2xl sm:text-3xl font-bold text-white tracking-tight font-sans tabular-nums">
-                  {liveStats.membersCount.toLocaleString()}+
+                  {liveStats.membersCount.toLocaleString()}
                 </div>
                 <div className="text-[11px] sm:text-xs text-zinc-400 uppercase tracking-wider font-medium font-sans">
                   Members Reached
@@ -391,7 +391,7 @@ export function HomePage() {
               </div>
               <div className={`space-y-1 text-left sm:text-center p-2 ${liveStats.uptime ? 'border-r border-white/[0.06]' : ''}`}>
                 <div className="text-2xl sm:text-3xl font-bold text-[var(--accent)] tracking-tight font-sans tabular-nums">
-                  {liveStats.bumpsCount.toLocaleString()}+
+                  {liveStats.bumpsCount.toLocaleString()}
                 </div>
                 <div className="text-[11px] sm:text-xs text-zinc-400 uppercase tracking-wider font-medium font-sans">
                   Total Bumps

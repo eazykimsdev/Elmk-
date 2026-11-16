@@ -51,8 +51,9 @@ export function loadBugReports() {
       const raw = fs.readFileSync(BUG_REPORTS_FILE, 'utf8');
       list = JSON.parse(raw) || [];
     }
+    const isProd = process.env.NODE_ENV === 'production' || process.env.DATABASE_URL;
     const seedPath = path.join(process.cwd(), 'seeds', 'bug_reports.json');
-    if ((!Array.isArray(list) || list.length === 0) && fs.existsSync(seedPath)) {
+    if (!isProd && (!Array.isArray(list) || list.length === 0) && fs.existsSync(seedPath)) {
       try {
         const seedRaw = fs.readFileSync(seedPath, 'utf8');
         const seedBugs = JSON.parse(seedRaw) || [];

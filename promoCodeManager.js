@@ -181,8 +181,9 @@ function loadPromoCodes() {
     if (fs.existsSync(PROMO_CODES_FILE)) {
       list = JSON.parse(fs.readFileSync(PROMO_CODES_FILE, 'utf8') || '[]');
     }
+    const isProd = process.env.NODE_ENV === 'production' || process.env.DATABASE_URL;
     const seedPath = path.join(process.cwd(), 'seeds', 'promo_codes.json');
-    if ((!Array.isArray(list) || list.length === 0) && fs.existsSync(seedPath)) {
+    if (!isProd && (!Array.isArray(list) || list.length === 0) && fs.existsSync(seedPath)) {
       try {
         const seedList = JSON.parse(fs.readFileSync(seedPath, 'utf8') || '[]');
         if (Array.isArray(seedList) && seedList.length > 0) {

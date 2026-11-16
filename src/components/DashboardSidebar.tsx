@@ -981,7 +981,7 @@ export function DashboardSidebar({
                 </DropdownMenuItem>
 
                 <DropdownMenuItem
-                  onClick={() => window.open(BRAND.supportInvite || 'https://discord.gg/connectingerlc', '_blank', 'noopener,noreferrer')}
+                  onClick={() => window.open('https://discord.gg/connectingerlc', '_blank', 'noopener,noreferrer')}
                   className="h-9 flex items-center gap-2.5 px-2.5 rounded-[8px] text-[14px] text-[#A1A1AA] hover:text-[#F4F4F5] hover:bg-[#19191D] cursor-pointer"
                 >
                   <HelpCircle className="size-4 text-[#71717A]" />

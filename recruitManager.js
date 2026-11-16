@@ -3,7 +3,9 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { randomBytes } from 'node:crypto';
 import { recordLedgerTransaction } from './ledgerManager.js';
-import { getPromotedServers } from './directoryManager.js';
+import { getPromotedServers, isServerListable, loadDirectoryData, saveDirectoryData } from './directoryManager.js';
+import { siteUrl } from './shared/siteUrl.js';
+import { getAdminSettings } from './premiumManager.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -125,24 +127,13 @@ export function getOrCreateRecruitLink(guildId, userId, userProfile = {}) {
   const gid = String(guildId);
   const uid = String(userId);
 
-  // Check if server has a configured inviteUrl
-  let baseInvite = process.env.SUPPORT_INVITE_URL || 'https://discord.gg/connectingerlc';
-  try {
-    const promoted = getPromotedServers().find((s) => s.id === gid);
-    if (promoted?.inviteUrl) {
-      baseInvite = promoted.inviteUrl;
-    }
-  } catch {}
-
   let link = data.links.find((l) => l.guild_id === gid && l.recruiter_user_id === uid && l.active !== false);
 
   if (!link) {
     // Generate clean unique invite code using cryptographically secure random bytes
     const randomHex = randomBytes(4).toString('hex');
     const code = randomHex;
-    const cleanUrl = baseInvite.includes('discord.gg/')
-      ? `${baseInvite}?rep=${code}`
-      : `https://discord.gg/${code}`;
+    const cleanUrl = siteUrl(`/r/${code}`);
 
     link = {
       id: `link_${Date.now()}_${randomBytes(4).toString('hex')}`,
@@ -154,14 +145,27 @@ export function getOrCreateRecruitLink(guildId, userId, userProfile = {}) {
       discord_invite_url: cleanUrl,
       created_at: Date.now(),
       uses: 0,
+      clicks: 0,
       active: true,
     };
     data.links.push(link);
     saveRecruitData(data);
-  } else if (userProfile.name || userProfile.username) {
-    link.recruiter_name = userProfile.name || userProfile.globalName || userProfile.username || link.recruiter_name;
-    if (userProfile.avatar) link.recruiter_avatar = userProfile.avatar;
-    saveRecruitData(data);
+  } else {
+    let changed = false;
+    if (userProfile.name || userProfile.username) {
+      link.recruiter_name = userProfile.name || userProfile.globalName || userProfile.username || link.recruiter_name;
+      if (userProfile.avatar) link.recruiter_avatar = userProfile.avatar;
+      changed = true;
+    }
+    // Upgrade legacy ?rep= or raw discord.gg links to /r/<code>
+    if (!link.discord_invite_code || !link.discord_invite_url || link.discord_invite_url.includes('?rep=')) {
+      if (!link.discord_invite_code) {
+        link.discord_invite_code = randomBytes(4).toString('hex');
+      }
+      link.discord_invite_url = siteUrl(`/r/${link.discord_invite_code}`);
+      changed = true;
+    }
+    if (changed) saveRecruitData(data);
   }
 
   return link;
@@ -740,9 +744,242 @@ export function exportRecruitsToCsv(guildId) {
   return rows.join('\n');
 }
 
+const REFERRALS_FILE = path.join(__dirname, 'data', 'referrals.json');
+
+function loadReferralsData() {
+  try {
+    if (fs.existsSync(REFERRALS_FILE)) {
+      const parsed = JSON.parse(fs.readFileSync(REFERRALS_FILE, 'utf8') || '{}');
+      return {
+        attributions: typeof parsed.attributions === 'object' && parsed.attributions !== null ? parsed.attributions : {},
+        rewards: Array.isArray(parsed.rewards) ? parsed.rewards : []
+      };
+    }
+  } catch {}
+  return { attributions: {}, rewards: [] };
+}
+
+function saveReferralsData(data) {
+  try {
+    const dir = path.dirname(REFERRALS_FILE);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    const tmp = `${REFERRALS_FILE}.tmp`;
+    fs.writeFileSync(tmp, JSON.stringify(data, null, 2), 'utf8');
+    try {
+      fs.renameSync(tmp, REFERRALS_FILE);
+    } catch {
+      fs.writeFileSync(REFERRALS_FILE, JSON.stringify(data, null, 2), 'utf8');
+      if (fs.existsSync(tmp)) fs.unlinkSync(tmp);
+    }
+  } catch (err) {
+    console.error('[REFERRALS] Error saving referrals data:', err);
+  }
+}
+
+/** Resolve and track short link /r/<code> */
+export function resolveRecruitRedirect(code) {
+  if (!code) return { status: 'dead', error: 'No referral code provided' };
+  const data = loadRecruitData();
+  const cleanCode = String(code).trim().toLowerCase();
+
+  const link = data.links.find(
+    (l) => l.active !== false && (
+      String(l.discord_invite_code || '').toLowerCase() === cleanCode ||
+      String(l.id || '').toLowerCase() === cleanCode
+    )
+  );
+
+  if (!link) {
+    return { status: 'dead', error: 'Referral link not found or inactive' };
+  }
+
+  // Check server listing status
+  const servers = getPromotedServers(true);
+  const server = servers.find((s) => String(s.id) === String(link.guild_id));
+
+  if (!server || !isServerListable(server)) {
+    return { status: 'dead', error: 'Community is currently not listed or setup is incomplete', server, link };
+  }
+
+  // Check invite status & validity
+  if (server.invite_status === 'expired') {
+    return { status: 'expired', error: 'Discord invite for this community has expired', server, link };
+  }
+
+  const rawInvite = (server.inviteUrl || '').trim();
+  if (!rawInvite) {
+    return { status: 'expired', error: 'No Discord invite link configured for this community', server, link };
+  }
+
+  // Strictly enforce discord invite URL format: discord.gg/ or discord.com/invite/
+  let sanitizedInvite = rawInvite;
+  if (!sanitizedInvite.startsWith('http://') && !sanitizedInvite.startsWith('https://')) {
+    sanitizedInvite = `https://${sanitizedInvite}`;
+  }
+  try {
+    const parsed = new URL(sanitizedInvite);
+    const host = parsed.hostname.toLowerCase();
+    const isDiscordInvite = (host === 'discord.gg' || host === 'discord.com' || host === 'www.discord.gg' || host === 'www.discord.com');
+    if (!isDiscordInvite || (!parsed.pathname.startsWith('/invite/') && host !== 'discord.gg')) {
+      return { status: 'dead', error: 'Invalid Discord invite target', server, link };
+    }
+    sanitizedInvite = parsed.href;
+  } catch {
+    return { status: 'dead', error: 'Malformed invite URL', server, link };
+  }
+
+  // Record click
+  link.clicks = (Number(link.clicks) || 0) + 1;
+  data.activity = data.activity || [];
+  data.activity.push({
+    id: `act_click_${Date.now()}_${randomBytes(3).toString('hex')}`,
+    guild_id: link.guild_id,
+    type: 'link_clicked',
+    recruiter_user_id: link.recruiter_user_id,
+    code: link.discord_invite_code,
+    timestamp: Date.now()
+  });
+  saveRecruitData(data);
+
+  return {
+    status: 'valid',
+    redirectUrl: sanitizedInvite,
+    link,
+    server
+  };
+}
+
+/** Record referral attribution for a user who clicked a recruit link */
+export function recordUserReferralAttribution(userId, attribution) {
+  if (!userId || !attribution) return;
+  const data = loadReferralsData();
+  data.attributions = data.attributions || {};
+  const uid = String(userId);
+  if (!data.attributions[uid]) {
+    data.attributions[uid] = {
+      recruiterUserId: String(attribution.recruiterUserId || attribution.recruiter_user_id),
+      guildId: String(attribution.guildId || attribution.guild_id),
+      code: attribution.code || attribution.discord_invite_code || null,
+      recordedAt: Date.now()
+    };
+    saveReferralsData(data);
+  }
+}
+
+/** Get stored referral attribution for a user */
+export function getUserReferralAttribution(userId) {
+  if (!userId) return null;
+  const data = loadReferralsData();
+  return data.attributions?.[String(userId)] || null;
+}
+
+/** Evaluate and award credits when an invited user lists a real server */
+export async function evaluateReferralRewardForListedServer(newServer, ownerUserId, overrideAttribution = null) {
+  if (!newServer || !ownerUserId) return { awarded: false, reason: 'missing_params' };
+
+  // 1. Must be listable
+  if (!isServerListable(newServer)) {
+    return { awarded: false, reason: 'server_not_listable' };
+  }
+
+  // 2. Blacklist check on owner
+  const { getBannedUserIds } = await import('./directoryManager.js');
+  const banned = getBannedUserIds();
+  const ownerUid = String(ownerUserId);
+  if (banned.has(ownerUid)) {
+    return { awarded: false, reason: 'owner_blacklisted' };
+  }
+
+  // 3. Attribution
+  const attribution = overrideAttribution || getUserReferralAttribution(ownerUid);
+  if (!attribution || !attribution.guildId || !attribution.recruiterUserId) {
+    return { awarded: false, reason: 'no_referral_attribution' };
+  }
+
+  const recruiterUid = String(attribution.recruiterUserId);
+  const recruiterGid = String(attribution.guildId);
+  const newServerId = String(newServer.id || newServer.guildId);
+
+  // 4. Anti-abuse: Self-invites prohibited
+  if (recruiterUid === ownerUid || recruiterGid === newServerId) {
+    return { awarded: false, reason: 'self_invite_prohibited' };
+  }
+
+  // 5. Anti-abuse: Recruiter user blacklisted
+  if (banned.has(recruiterUid)) {
+    return { awarded: false, reason: 'recruiter_blacklisted' };
+  }
+
+  // 6. Idempotency check: once per new server
+  const referralsData = loadReferralsData();
+  referralsData.rewards = Array.isArray(referralsData.rewards) ? referralsData.rewards : [];
+  const idempotencyKey = `recruiter_server_listed_${recruiterGid}_${newServerId}`;
+  const alreadyRewarded = referralsData.rewards.some(
+    (r) => String(r.newServerId) === newServerId || String(r.referenceId) === idempotencyKey
+  );
+  if (alreadyRewarded) {
+    return { awarded: false, reason: 'already_rewarded' };
+  }
+
+  // 7. Recruiter server must exist
+  const dir = loadDirectoryData();
+  const recruiterServer = dir.servers.find((s) => String(s.id) === recruiterGid);
+  if (!recruiterServer) {
+    return { awarded: false, reason: 'recruiter_server_not_found' };
+  }
+
+  // 8. Reward amount from settings (default 4)
+  const settings = getAdminSettings();
+  const rewardCredits = Math.max(0, Number(settings.recruiter_reward_credits !== undefined ? settings.recruiter_reward_credits : 4));
+  if (rewardCredits === 0) {
+    return { awarded: false, reason: 'reward_credits_zero' };
+  }
+
+  // 9. Append-only ledger entry
+  await recordLedgerTransaction({
+    guildId: recruiterGid,
+    serverId: recruiterGid,
+    amount: rewardCredits,
+    type: 'earned',
+    reason: `Recruiter referral reward: invited owner listed new community (${newServer.name || newServerId})`,
+    description: `Referral bonus: invited community (${newServer.name || newServerId}) listed`,
+    idempotencyKey,
+    metadata: {
+      recruiterUserId: recruiterUid,
+      recruiterGuildId: recruiterGid,
+      newServerId,
+      newServerOwnerId: ownerUid,
+      recruitCode: attribution.code || null
+    }
+  });
+
+  // Update recruiter server balance in directory
+  recruiterServer.balance = (Number(recruiterServer.balance) || 0) + rewardCredits;
+  recruiterServer.credits = (Number(recruiterServer.credits) || 0) + rewardCredits;
+  saveDirectoryData(dir);
+
+  // Record reward in referrals data
+  referralsData.rewards.push({
+    id: `rew_${Date.now()}_${randomBytes(3).toString('hex')}`,
+    referenceId: idempotencyKey,
+    recruiterGuildId: recruiterGid,
+    recruiterUserId: recruiterUid,
+    newServerId,
+    newServerOwnerId: ownerUid,
+    creditsAwarded: rewardCredits,
+    awardedAt: Date.now()
+  });
+  saveReferralsData(referralsData);
+
+  return { awarded: true, credits: rewardCredits, recruiterGuildId: recruiterGid };
+}
+
 // Background check every hour
-setInterval(() => {
+const recruitRetentionInterval = setInterval(() => {
   try {
     checkRecruitRetention();
   } catch {}
 }, 60 * 60 * 1000);
+if (recruitRetentionInterval?.unref) {
+  recruitRetentionInterval.unref();
+}

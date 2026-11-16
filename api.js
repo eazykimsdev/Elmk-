@@ -57,7 +57,8 @@ import {
   loadUserBalances,
   recordBotMemberJoin,
   recordBotMemberLeave,
-  processMaturePendingJoins
+  processMaturePendingJoins,
+  getUserJoinedCommunities
 } from './directoryManager.js';
 import {
   getServerReviews,
@@ -166,7 +167,11 @@ import {
   removeRepresentative,
   revokeAllRepresentativeInvites,
   getOwnerAuditLog,
-  exportRecruitsToCsv
+  exportRecruitsToCsv,
+  resolveRecruitRedirect,
+  recordUserReferralAttribution,
+  getUserReferralAttribution,
+  evaluateReferralRewardForListedServer
 } from './recruitManager.js';
 import {
   checkAdminRateLimit,
@@ -1767,28 +1772,13 @@ export function createDashboardRouter() {
         timestamp: s.updatedAt || Date.now()
       }));
 
-      // Public home stats: start at the configured starting numbers, then grow with real activity.
-      // A snapshot of the real values is stored once; displayed = start + max(0, real - snapshot).
-      const homeStats = (() => {
-        const startNums = {
-          connectedCommunities: Number(process.env.HOME_STATS_START_COMMUNITIES || 41),
-          membersReached: Number(process.env.HOME_STATS_START_MEMBERS || 2000),
-          totalBumps: Number(process.env.HOME_STATS_START_BUMPS || 800)
-        };
-        const real = { connectedCommunities, membersReached, totalBumps };
-        const snapFile = path.join(__dirname, 'data', 'home_stats_baseline.json');
-        let snap = null;
-        try { snap = JSON.parse(fs.readFileSync(snapFile, 'utf8')); } catch {}
-        if (!snap || typeof snap !== 'object') {
-          snap = { ...real, createdAt: new Date().toISOString() };
-          try { fs.mkdirSync(path.dirname(snapFile), { recursive: true }); fs.writeFileSync(snapFile, JSON.stringify(snap, null, 2)); } catch {}
-        }
-        const out = {};
-        for (const k of Object.keys(startNums)) {
-          out[k] = startNums[k] + Math.max(0, real[k] - (Number(snap[k]) || 0));
-        }
-        return out;
-      })();
+      // Live from database, cached 60 seconds at most (Point B4).
+      // No stored counters, no "+" rounding, no artificial baseline offsets.
+      const homeStats = {
+        connectedCommunities,
+        membersReached,
+        totalBumps
+      };
 
       const payload = {
         servers: listings,
@@ -1849,13 +1839,13 @@ export function createDashboardRouter() {
       servers = servers.filter(s => (s.category && s.category.toLowerCase() === cat));
     }
 
-    // Section 3: Sort Select: only "Most members" (default) and "Fewest members".
+    // Sort: bump (default, valid first then lastBumpedAt), members_desc, or members_asc
     if (sort === 'members_asc') {
       servers.sort((a, b) => (a.memberCount || 0) - (b.memberCount || 0));
-    } else {
-      // Default: Most members
+    } else if (sort === 'members_desc') {
       servers.sort((a, b) => (b.memberCount || 0) - (a.memberCount || 0));
     }
+    // Otherwise keep the default getPromotedServers() sort (valid > unknown > expired, most recent bump first)
 
     const total = servers.length;
     const isUnpaginated = all === 'true' || all === '1' || (page === undefined && pageSize === undefined);
@@ -2453,6 +2443,7 @@ export function createDashboardRouter() {
       if (isNewListing) {
         tryClaimLaunchGiveaway({ server, ownerUser: user, botInGuild: botStatus.bot_in_guild, isNewListing: true, siteUrl: appOrigin(req) }).catch(err => console.warn('[GIVEAWAY] Claim evaluation error:', err.message));
       }
+      evaluateReferralRewardForListedServer(server, user?.id || userId).catch(err => console.warn('[RECRUITS] Reward evaluation error:', err.message));
 
       try {
         updateRecruitSettings(id, {
@@ -2813,7 +2804,7 @@ export function createDashboardRouter() {
     const { id } = req.params;
     const userId = req.dashboardSession?.user?.id || (req.dashboardSession?.user?.id || req.session?.user?.id);
     try {
-      const result = bumpPromotedServer(id, userId);
+      const result = bumpPromotedServer(id, userId, { interactionId: req.body?.interactionId });
       invalidateShowcaseCache();
       sendDiscordBumpNotice(id, userId).catch(() => {});
       res.json({ success: true, ...result, message: 'Bumped. Your server is now #1.' });
@@ -4040,13 +4031,14 @@ export function createDashboardRouter() {
     const allServers = getPromotedServers(true);
     const knownServerIds = new Set(allServers.map(s => String(s.id || s.guildId || '')).filter(Boolean));
     try {
+      const isProd = process.env.NODE_ENV === 'production' || process.env.DATABASE_URL;
       const knownFile = path.join(DATA_DIR, 'known_users.json');
       const seedFile = path.join(process.cwd(), 'seeds', 'known_users.json');
       let rawKnown = [];
       if (fs.existsSync(knownFile)) {
         try { rawKnown = JSON.parse(fs.readFileSync(knownFile, 'utf8') || '[]'); } catch {}
       }
-      if (fs.existsSync(seedFile)) {
+      if (!isProd && fs.existsSync(seedFile)) {
         try {
           const rawSeed = JSON.parse(fs.readFileSync(seedFile, 'utf8') || '[]');
           for (const s of rawSeed) {
@@ -4074,13 +4066,14 @@ export function createDashboardRouter() {
 
     // Load backfilled accounts from Cloudflare D1 legacy migration / seeds fallback
     try {
+      const isProd = process.env.NODE_ENV === 'production' || process.env.DATABASE_URL;
       const accountsFile = path.join(DATA_DIR, 'known_accounts.json');
       const seedAccounts = path.join(process.cwd(), 'seeds', 'known_accounts.json');
       let rawAccounts = [];
       if (fs.existsSync(accountsFile)) {
         try { rawAccounts = JSON.parse(fs.readFileSync(accountsFile, 'utf8') || '[]'); } catch {}
       }
-      if (fs.existsSync(seedAccounts)) {
+      if (!isProd && fs.existsSync(seedAccounts)) {
         try {
           const rawSeed = JSON.parse(fs.readFileSync(seedAccounts, 'utf8') || '[]');
           for (const s of rawSeed) {
@@ -4832,6 +4825,17 @@ export function createDashboardRouter() {
     all[userId] = { ...current, ...patch };
     saveUserSettings(all);
     res.json({ ok: true, settings: all[userId] });
+  });
+
+  router.get('/user/joined-communities', (req, res) => {
+    const userId = req.dashboardSession?.user?.id || req.session?.user?.id;
+    if (!userId) return res.json({ joined: [] });
+    try {
+      const list = getUserJoinedCommunities(userId);
+      res.json({ joined: list });
+    } catch (err) {
+      res.status(500).json({ error: 'Failed to load joined communities.' });
+    }
   });
 
   // Public Changelog Route
@@ -6242,6 +6246,93 @@ export function createDashboardRouter() {
     return res.redirect(targetInviteUrl);
   });
 
+  // Route: /r/:code (Recruit referral short link)
+  router.get('/r/:code', (req, res) => {
+    const { code } = req.params;
+    const isJson = req.query.format === 'json' || req.headers.accept?.includes('application/json');
+
+    const result = resolveRecruitRedirect(code);
+
+    if (result.status === 'dead') {
+      if (isJson) {
+        return res.status(404).json({ ok: false, error: result.error || 'Referral link not found or inactive.' });
+      }
+      return res.status(404).send(`<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Community Link Inactive — ConnectingERLC</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body { background: #09090B; color: #F4F4F5; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 24px; box-sizing: border-box; }
+    .card { max-width: 440px; width: 100%; text-align: center; }
+    h1 { font-size: 24px; font-weight: 700; margin-bottom: 8px; letter-spacing: -0.02em; }
+    p { font-size: 14px; color: #A1A1AA; line-height: 1.5; margin-bottom: 24px; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; height: 38px; padding: 0 18px; border-radius: 999px; background: #FFFFFF; color: #09090B; font-size: 13px; font-weight: 600; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Community Link Inactive</h1>
+    <p>The referral link you followed does not exist, has expired, or the community is currently not listed.</p>
+    <a href="/dashboard?tab=earn" class="btn">Browse communities</a>
+  </div>
+</body>
+</html>`);
+    }
+
+    if (result.status === 'expired') {
+      if (isJson) {
+        return res.status(410).json({ ok: false, error: result.error || 'The Discord invite for this community has expired.' });
+      }
+      return res.status(410).send(`<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Invite Expired — ConnectingERLC</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body { background: #09090B; color: #F4F4F5; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 24px; box-sizing: border-box; }
+    .card { max-width: 440px; width: 100%; text-align: center; }
+    h1 { font-size: 24px; font-weight: 700; margin-bottom: 8px; letter-spacing: -0.02em; }
+    p { font-size: 14px; color: #A1A1AA; line-height: 1.5; margin-bottom: 24px; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; height: 38px; padding: 0 18px; border-radius: 999px; background: #27272A; color: #FFFFFF; font-size: 13px; font-weight: 600; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Invite Expired</h1>
+    <p>The Discord invite for <strong>${result.server?.name || 'this community'}</strong> is no longer valid. The server owner has been notified.</p>
+    <a href="/dashboard?tab=earn" class="btn">Back to directory</a>
+  </div>
+</body>
+</html>`);
+    }
+
+    // Status is 'valid': set attribution cookie & redirect to verified Discord invite only
+    const attributionPayload = JSON.stringify({
+      code: result.link.discord_invite_code,
+      recruiterUserId: result.link.recruiter_user_id,
+      guildId: result.link.guild_id,
+      ts: Date.now()
+    });
+    res.cookie('connectingerlc_ref', attributionPayload, cookieOptions(req, { maxAge: 30 * 24 * 3600 * 1000 }));
+
+    const user = req.dashboardSession?.user || req.session?.user;
+    if (user && user.id) {
+      recordUserReferralAttribution(user.id, {
+        recruiterUserId: result.link.recruiter_user_id,
+        guildId: result.link.guild_id,
+        code: result.link.discord_invite_code
+      });
+    }
+
+    if (isJson) {
+      return res.json({ ok: true, redirectUrl: result.redirectUrl });
+    }
+    return res.redirect(302, result.redirectUrl);
+  });
+
   // Join Server click flow with immediate invite validation & join intent creation
   router.post('/servers/:id/join', async (req, res) => {
     const { id } = req.params;
@@ -6797,7 +6888,7 @@ export function createDashboardRouter() {
         });
       }
 
-      const result = bumpPromotedServer(guildId, userId);
+      const result = bumpPromotedServer(guildId, userId, { interactionId: req.body?.interactionId });
       invalidateShowcaseCache();
       sendDiscordBumpNotice(guildId, userId).catch(() => {});
       res.json({ ...result, servers: getPromotedServers() });
@@ -6838,7 +6929,7 @@ export function createDashboardRouter() {
         });
       }
 
-      const result = bumpPromotedServer(guildId, userId);
+      const result = bumpPromotedServer(guildId, userId, { interactionId: req.body?.interactionId });
       invalidateShowcaseCache();
       // Trigger bump notification to configured bump channel if available
       postBumpToChannel(guildId, userId, cust.bumpChannelId, existing?.name || cust.serverName).catch(() => {});
@@ -8813,6 +8904,16 @@ async function completeDiscordAuth(req, res) {
     res.cookie(SESSION_COOKIE, sessionId, cookieOptions(req));
     res.clearCookie('mavely_session', cookieOptions(req));
     res.clearCookie('erlcus_session', cookieOptions(req));
+
+    // Capture referral attribution if user arrived via an /r/<code> link before logging in
+    const refCookie = cookieValue(req, 'connectingerlc_ref') || req.cookies?.connectingerlc_ref;
+    if (refCookie) {
+      try {
+        const refData = typeof refCookie === 'string' && refCookie.startsWith('{') ? JSON.parse(refCookie) : { code: refCookie };
+        recordUserReferralAttribution(user.id, refData);
+      } catch {}
+    }
+
     console.log(`[WEB OAuth] Successfully signed in Discord user: ${user.username} (${user.id})`);
     if (wantsJson) {
       return res.json({ ok: true, user: sessions.get(sessionId).user, redirectUrl: pending?.returnTo || `${fallback}/dashboard` });

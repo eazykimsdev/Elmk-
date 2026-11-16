@@ -33,12 +33,13 @@ export function loadLedgerData() {
     if (fs.existsSync(LEDGER_FILE)) {
       raw = fs.readFileSync(LEDGER_FILE, 'utf8');
     }
+    const isProd = process.env.NODE_ENV === 'production' || process.env.DATABASE_URL;
     const seedPath = path.join(process.cwd(), 'seeds', 'ledger.json');
     let parsed = null;
     if (raw) {
       try { parsed = JSON.parse(raw); } catch {}
     }
-    if ((!parsed || !Array.isArray(parsed.transactions) || parsed.transactions.length === 0) && fs.existsSync(seedPath)) {
+    if (!isProd && (!parsed || !Array.isArray(parsed.transactions) || parsed.transactions.length === 0) && fs.existsSync(seedPath)) {
       try {
         const seedRaw = fs.readFileSync(seedPath, 'utf8');
         const seedParsed = JSON.parse(seedRaw);
@@ -92,7 +93,7 @@ export function getUserLedgerSummary(userId) {
 
   for (const tx of txs) {
     if (tx.type === 'earned') earned += Number(tx.amount || 0);
-    else if (tx.type === 'spent') spent += Number(tx.amount || 0);
+    else if (tx.type === 'spent' || tx.type === 'deducted' || tx.type === 'reversal') spent += Number(tx.amount || 0);
   }
 
   const balance = Math.max(0, earned - spent);
@@ -115,7 +116,7 @@ export function getServerLedgerSummary(serverId) {
 
   for (const tx of txs) {
     if (tx.type === 'earned') earned += Number(tx.amount || 0);
-    else if (tx.type === 'spent') spent += Number(tx.amount || 0);
+    else if (tx.type === 'spent' || tx.type === 'deducted' || tx.type === 'reversal') spent += Number(tx.amount || 0);
   }
 
   const balance = Math.max(0, earned - spent);

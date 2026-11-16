@@ -156,27 +156,9 @@ export function Snow() {
     };
   }, [running]);
 
-  if (!active) return null;
-
-  const toggle = () => {
-    const next = !enabled;
-    setEnabled(next);
-    try { localStorage.setItem(KEY, next ? 'on' : 'off'); } catch {}
-    window.dispatchEvent(new Event('erlc-snow-change'));
-  };
+  if (!active || !running) return null;
 
   return (
-    <>
-      {running && <canvas ref={canvasRef} aria-hidden="true" className="snow-canvas" />}
-      <button
-        type="button"
-        onClick={toggle}
-        className="snow-toggle"
-        aria-label={enabled ? 'Turn off snowfall animation' : 'Turn on snowfall animation'}
-        title={enabled ? 'Snow: On (Click to turn off)' : 'Snow: Off (Click to turn on)'}
-      >
-        <span className="text-xs">{enabled ? '❄ Snow on' : 'Snow off'}</span>
-      </button>
-    </>
+    <canvas ref={canvasRef} aria-hidden="true" className="snow-canvas" />
   );
 }

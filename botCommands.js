@@ -879,7 +879,7 @@ export async function handleInteraction(interaction, token) {
 
     // 7. Execute Bump!
     try {
-      const bumpRes = bumpPromotedServer(guild_id, callerId);
+      const bumpRes = bumpPromotedServer(guild_id, callerId, { interactionId: interaction.id });
       recentBumps.push(now);
       userBumpRateLimits.set(callerId, recentBumps);
 

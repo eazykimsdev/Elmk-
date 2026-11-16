@@ -6,7 +6,8 @@ import {
   Check,
   Clock,
   Compass,
-  Coins
+  Coins,
+  ChevronDown
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -96,7 +97,25 @@ export function EarnCoinsTab({
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
-  const [sortBy, setSortBy] = useState<'members_desc' | 'members_asc'>('members_desc');
+  const [sortBy, setSortBy] = useState<'bump' | 'members_desc' | 'members_asc'>('bump');
+  const [isJoinedOpen, setIsJoinedOpen] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('connectingerlc_joined_open') === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  const toggleJoinedOpen = () => {
+    setIsJoinedOpen(prev => {
+      const next = !prev;
+      try {
+        localStorage.setItem('connectingerlc_joined_open', String(next));
+      } catch {}
+      return next;
+    });
+  };
+
   const [currentPage, setCurrentPage] = useState<number>(() => {
     try {
       const p = Number(new URLSearchParams(window.location.search).get('page'));
@@ -198,6 +217,32 @@ export function EarnCoinsTab({
     loadServers();
   }, []);
 
+  // Sync user's joined communities live from backend (Point B1)
+  useEffect(() => {
+    let active = true;
+    if (user?.id) {
+      api<{ joined: any[] }>('/user/joined-communities').then((res) => {
+        if (!active || !Array.isArray(res?.joined)) return;
+        const map: Record<string, UserJoinRecord> = {};
+        for (const item of res.joined) {
+          map[item.serverId] = {
+            serverId: item.serverId,
+            serverName: item.serverName,
+            joinedAt: item.joinedAt,
+            retentionHours: 72,
+            status: item.status?.toLowerCase() === 'joined' ? 'verified' : (item.status?.toLowerCase() as any),
+            reward: item.reward || 2,
+            claimed: item.status?.toLowerCase() === 'joined'
+          };
+        }
+        if (Object.keys(map).length > 0) {
+          setUserJoins((prev) => ({ ...prev, ...map }));
+        }
+      }).catch(() => {});
+    }
+    return () => { active = false; };
+  }, [user?.id]);
+
   // Check ?server={slug} on load and URL change
   useEffect(() => {
     if (promotedServers.length === 0) return;
@@ -276,7 +321,22 @@ export function EarnCoinsTab({
       if (sortBy === 'members_asc') {
         return (a.memberCount || 0) - (b.memberCount || 0);
       }
-      return (b.memberCount || 0) - (a.memberCount || 0);
+      if (sortBy === 'members_desc') {
+        return (b.memberCount || 0) - (a.memberCount || 0);
+      }
+      // 'bump' (default): valid invites first, sorted by most recent bump; unknown next, expired last (Point B3)
+      const getRank = (s: any) => {
+        const st = String(s.invite_status || 'unknown').toLowerCase();
+        if (st === 'valid') return 0;
+        if (st === 'expired') return 2;
+        return 1;
+      };
+      const rankA = getRank(a);
+      const rankB = getRank(b);
+      if (rankA !== rankB) return rankA - rankB;
+      const timeA = Number(a.lastBumpedAt || a.createdAt || 0);
+      const timeB = Number(b.lastBumpedAt || b.createdAt || 0);
+      return timeB - timeA;
     });
 
     return list;
@@ -296,58 +356,107 @@ export function EarnCoinsTab({
   return (
     <div className="flex flex-col min-h-[calc(100dvh-12rem)] space-y-6 w-full max-w-[1120px] mx-auto pb-8 font-sans">
       {/* Top Banner mounted globally by AppShell on all dashboard tabs: <BugReportBanner /> */}
-      {/* ── LIST 1: YOUR JOINED COMMUNITIES (Point 2: Redesigned clean, 10 per page, matching style) ── */}
+      {/* ── LIST 1: YOUR JOINED COMMUNITIES (Point B1: Collapsible section, closed by default, remember choice) ── */}
       {joinedServersList.length > 0 && (
-        <div className="space-y-3.5 pb-2">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <h2 className="text-sm font-semibold text-white">Your Joined Communities</h2>
+        <div className="rounded-xl border border-white/10 bg-[#0E0E11] p-4 space-y-3.5">
+          <button
+            type="button"
+            onClick={toggleJoinedOpen}
+            className="w-full flex items-center justify-between text-left group"
+          >
+            <div className="flex items-center gap-2.5">
+              <ChevronDown
+                className={`size-4 text-zinc-400 transition-transform duration-200 ${
+                  isJoinedOpen ? 'rotate-180' : ''
+                }`}
+              />
+              <h2 className="text-sm font-semibold text-white group-hover:text-zinc-200 transition-colors">
+                Your Joined Communities
+              </h2>
               <span className="px-2 py-0.5 rounded-full bg-[#141417] border border-white/10 text-xs font-mono text-zinc-400">
                 {joinedServersList.length}
               </span>
             </div>
-            <span className="text-xs text-zinc-500 hidden sm:inline">2-minute retention verification</span>
-          </div>
+            <span className="text-xs text-zinc-500 group-hover:text-zinc-400 transition-colors">
+              {isJoinedOpen ? 'Click to hide' : 'Click to expand'}
+            </span>
+          </button>
 
-          {/* Restored 2-column Grid (1 column on mobile, 2 from 900px) */}
-          <div className="grid grid-cols-1 min-[900px]:grid-cols-2 gap-4">
-            {paginatedJoined.map((join) => {
-              const match = promotedServers.find(s => String(s.id) === String(join.serverId));
-              const iconUrl = join.iconUrl || (match ? getResolvedServerIcon(match) : null);
-              const cardData: DirectoryServerData = {
-                id: join.serverId,
-                name: join.serverName,
-                icon: iconUrl,
-                iconUrl: iconUrl,
-                category: join.category,
-                description: match?.description,
-                summary: match?.summary,
-                tags: match?.tags,
-                bannerUrl: match?.bannerUrl,
-                memberCount: match?.memberCount,
-                verified: join.verified,
-                rewardCoins: join.reward || 2,
-              };
-              return (
-                <DirectoryCard
-                  key={join.serverId}
-                  server={cardData}
-                  rewardCoins={join.reward || 2}
-                  isJoined={true}
-                  onClick={() => openServerProfile(join.serverId, match)}
+          {isJoinedOpen && (
+            <div className="pt-2 space-y-3">
+              <div className="divide-y divide-white/5 border border-white/5 rounded-lg overflow-hidden bg-[#141417]">
+                {paginatedJoined.map((join) => {
+                  const match = promotedServers.find((s) => String(s.id) === String(join.serverId));
+                  const iconUrl = join.iconUrl || (match ? getResolvedServerIcon(match) : null);
+                  const rawStatus = String(join.status || 'verifying').toLowerCase();
+
+                  let statusBadge = (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                      <Clock className="size-3" />
+                      Verifying
+                    </span>
+                  );
+
+                  if (rawStatus === 'joined' || rawStatus === 'verified') {
+                    statusBadge = (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                        <Check className="size-3" />
+                        Joined
+                      </span>
+                    );
+                  } else if (rawStatus === 'left') {
+                    statusBadge = (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-zinc-800 text-zinc-400 border border-white/10">
+                        Left
+                      </span>
+                    );
+                  } else if (rawStatus === 'not confirmed' || rawStatus === 'not_confirmed' || rawStatus === 'left_early') {
+                    statusBadge = (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-500/10 text-red-400 border border-red-500/20">
+                        Not confirmed
+                      </span>
+                    );
+                  }
+
+                  return (
+                    <div
+                      key={join.serverId}
+                      className="flex items-center justify-between p-3 hover:bg-white/[0.02] transition-colors"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <ServerIcon
+                          iconUrl={iconUrl}
+                          name={join.serverName}
+                          size="md"
+                          className="shrink-0"
+                        />
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-white truncate">
+                            {join.serverName}
+                          </p>
+                          <p className="text-xs text-zinc-500">
+                            Joined {new Date(join.joinedAt || Date.now()).toLocaleDateString()}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3 shrink-0">
+                        {statusBadge}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {joinedServersList.length > pageSize && (
+                <Pagination
+                  page={joinedPage}
+                  pageSize={pageSize}
+                  total={joinedServersList.length}
+                  onPageChange={setJoinedPage}
+                  syncUrl={false}
                 />
-              );
-            })}
-          </div>
-
-          {joinedServersList.length > pageSize && (
-            <Pagination
-              page={joinedPage}
-              pageSize={pageSize}
-              total={joinedServersList.length}
-              onPageChange={setJoinedPage}
-              syncUrl={false}
-            />
+              )}
+            </div>
           )}
         </div>
       )}
@@ -366,14 +475,15 @@ export function EarnCoinsTab({
             />
           </div>
 
-          {/* Sort Dropdown: ONLY "Most members" (default) and "Fewest members" */}
+          {/* Sort Dropdown: "Recently bumped" (default), "Most members", "Fewest members" */}
           <div className="flex items-center gap-2 shrink-0">
             <span className="text-[13px] text-[#A1A1AA] hidden sm:inline font-sans">Sort:</span>
             <Select value={sortBy} onValueChange={(val: any) => setSortBy(val)}>
-              <SelectTrigger className="w-[160px] h-9 bg-[#141417] border-[rgba(255,255,255,0.07)] text-[13px] font-sans">
+              <SelectTrigger className="w-[170px] h-9 bg-[#141417] border-[rgba(255,255,255,0.07)] text-[13px] font-sans">
                 <SelectValue placeholder="Sort by" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="bump">Recently bumped</SelectItem>
                 <SelectItem value="members_desc">Most members</SelectItem>
                 <SelectItem value="members_asc">Fewest members</SelectItem>
               </SelectContent>

@@ -1,5 +1,7 @@
 # ConnectingERLC (ConnectingERLC)
 
+No fake, sample, seed or placeholder data anywhere, ever.
+
 ConnectingERLC is the community management platform and web dashboard for Discord communities. Sign in with Discord, pick a server you manage, and configure growth campaigns, directory listings, partner exchanges, and server telemetry.
 
 ---

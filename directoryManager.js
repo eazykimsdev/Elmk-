@@ -5,6 +5,7 @@ import { randomBytes } from 'node:crypto';
 import { getUserLedgerSummary, getServerLedgerSummary, recordLedgerTransaction, appendServerActivity, REWARD_DEBT_FLOOR } from './ledgerManager.js';
 import { cleanSqlReplace } from './markdownSanitizer.js';
 import { findActiveJoinIntent, markJoinIntentConverted } from './inviteValidator.js';
+import { getAdminSettings } from './premiumManager.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -29,12 +30,29 @@ export function savePendingJoins(list) {
   try {
     const tmp = `${PENDING_JOINS_FILE}.tmp`;
     fs.writeFileSync(tmp, JSON.stringify(list, null, 2), 'utf8');
-    fs.renameSync(tmp, PENDING_JOINS_FILE);
+    try {
+      fs.renameSync(tmp, PENDING_JOINS_FILE);
+    } catch {
+      fs.writeFileSync(PENDING_JOINS_FILE, JSON.stringify(list, null, 2), 'utf8');
+      try { fs.unlinkSync(tmp); } catch {}
+    }
     return true;
   } catch (err) {
     console.error('[PENDING JOINS] Failed to save:', err.message);
     return false;
   }
+}
+
+export function getJoinSettings() {
+  const adminSettings = getAdminSettings();
+  const reward = typeof adminSettings.join_reward_credits === 'number' ? adminSettings.join_reward_credits : 2;
+  const minStayMs = typeof adminSettings.join_minimum_stay_seconds === 'number'
+    ? adminSettings.join_minimum_stay_seconds * 1000
+    : 120000;
+  const retentionMs = typeof adminSettings.join_retention_window_hours === 'number'
+    ? adminSettings.join_retention_window_hours * 3600000
+    : 72 * 3600000;
+  return { reward, minStayMs, retentionMs };
 }
 
 export function recordBotMemberJoin(guildId, userId, options = {}) {
@@ -62,9 +80,12 @@ export function recordBotMemberJoin(guildId, userId, options = {}) {
     return null;
   }
 
-  // Already verified & rewarded member
+  // Already verified & rewarded member (or completed stay)
   const joinRecKey = `${uid}:${sid}`;
-  if (data.userJoinRecords?.[joinRecKey]?.rewarded || (Array.isArray(data.userJoins[uid]) && data.userJoins[uid].includes(sid))) {
+  const pendingList = loadPendingJoins();
+  const alreadyCompleted = pendingList.some(p => p.userId === uid && p.serverId === sid && (p.status === 'completed' || p.stayCompleted));
+  if (alreadyCompleted || data.userJoinRecords?.[joinRecKey]?.rewarded || data.userJoinRecords?.[joinRecKey]?.stayCompleted || (Array.isArray(data.userJoins?.[uid]) && data.userJoins[uid].includes(sid))) {
+    console.log(`[BOT JOIN] Repeat join blocked for user ${uid} in ${sid}.`);
     return null;
   }
 
@@ -83,13 +104,13 @@ export function recordBotMemberJoin(guildId, userId, options = {}) {
     options.recipientServerId || activeIntent.recipientServerId || userOwnedServer?.id || userOwnedServer?.guildId || sid
   );
 
-  const pendingList = loadPendingJoins();
   const existingPending = pendingList.find(p => p.userId === uid && p.serverId === sid && p.status === 'pending');
   if (existingPending) return existingPending;
 
-  const rewardAmt = Math.min(22, Math.max(2, Number(server.rewardCoins || 2)));
+  const joinSettings = getJoinSettings();
+  const rewardAmt = typeof options.reward === 'number' ? options.reward : (server.rewardCoins ? Number(server.rewardCoins) : joinSettings.reward);
   const now = Date.now();
-  const stayRequiredMs = typeof options.stayRequiredMs === 'number' ? Math.max(0, options.stayRequiredMs) : 120000; // 2 minutes minimum stay
+  const stayRequiredMs = typeof options.stayRequiredMs === 'number' ? Math.max(0, options.stayRequiredMs) : joinSettings.minStayMs;
 
   const record = {
     id: `pjoin_${now}_${randomBytes(4).toString('hex')}`,
@@ -123,27 +144,90 @@ export function recordBotMemberLeave(guildId, userId) {
 
   let handled = false;
   const pendingList = loadPendingJoins();
-  const pending = pendingList.find(p => p.userId === uid && p.serverId === sid && p.status === 'pending');
+  const pending = pendingList.find(p => p.userId === uid && p.serverId === sid);
   if (pending) {
-    pending.status = 'left_early';
-    pending.leftAt = Date.now();
-    pending.failureReason = 'Member left before completing minimum stay';
+    if (pending.status === 'pending') {
+      pending.status = 'left_early';
+      pending.leftAt = Date.now();
+      pending.failureReason = 'Member left before completing minimum stay';
+      appendServerActivity(sid, {
+        type: 'join',
+        text: 'Member left before completing minimum stay requirement',
+        timestamp: Date.now()
+      });
+      console.log(`[BOT LEAVE] Pending join cancelled for ${uid} in ${sid}: left before minimum stay.`);
+    } else {
+      pending.status = 'left';
+      pending.leftAt = Date.now();
+    }
     savePendingJoins(pendingList);
-    appendServerActivity(sid, {
-      type: 'join',
-      text: 'Member left before completing minimum stay requirement',
-      timestamp: Date.now()
-    });
-    console.log(`[BOT LEAVE] Pending join cancelled for ${uid} in ${sid}: left before minimum stay.`);
     handled = true;
   }
 
-  // If member had already completed stay, decrement verifiedJoins counter
+  // If member had already completed stay, check retention window and add reversal entry once only
   const data = loadDirectoryData();
   const joinKey = `${uid}:${sid}`;
-  if (data.userJoinRecords?.[joinKey]?.stayCompleted) {
-    data.userJoinRecords[joinKey].stayCompleted = false;
-    data.userJoinRecords[joinKey].leftAt = new Date().toISOString();
+  if (!data.userJoinRecords) data.userJoinRecords = {};
+  if (pending && pending.status === 'left_early') {
+    data.userJoinRecords[joinKey] = {
+      ...(data.userJoinRecords[joinKey] || {}),
+      userId: uid,
+      serverId: sid,
+      status: 'left_early',
+      leftAt: Date.now()
+    };
+    saveDirectoryData(data);
+  }
+  const rec = data.userJoinRecords?.[joinKey];
+  if (rec?.stayCompleted || rec?.rewarded) {
+    const joinSettings = getJoinSettings();
+    const completedTime = rec.completedAt || (rec.stayEndsAt ? new Date(rec.stayEndsAt).getTime() : 0);
+    const insideRetention = (Date.now() - completedTime) <= joinSettings.retentionMs;
+
+    if (insideRetention && !rec.reversed) {
+      const rewardAmt = Number(rec.reward || joinSettings.reward);
+      const recipientServerId = String(rec.recipientServerId || sid);
+      const recipientServer = data.servers.find(s => String(s.id) === recipientServerId || String(s.guildId) === recipientServerId);
+      const srv = data.servers.find(s => String(s.id) === sid || String(s.guildId) === sid);
+
+      try {
+        recordLedgerTransaction({
+          userId: uid,
+          type: 'deducted',
+          amount: rewardAmt,
+          reason: 'join_reversal_left_early',
+          description: `Reversal: Member left ${srv?.name || 'server'} inside ${Math.round(joinSettings.retentionMs / 3600000)}h retention window (-${rewardAmt} cr)`,
+          guildId: recipientServerId,
+          serverId: recipientServerId,
+          joinedServerId: sid,
+          guildName: recipientServer?.name || srv?.name,
+          triggeredBy: 'ConnectingERLC Bot Retention Enforcement',
+          status: 'posted',
+          idempotencyKey: `join_reversal:${uid}:${sid}`
+        });
+
+        // Server balance adjustment: if balance is too low, clamp to 0 (never negative)
+        if (recipientServer) {
+          const curBal = Number(recipientServer.balance || 0);
+          recipientServer.balance = Math.max(0, curBal - rewardAmt);
+          recipientServer.credits = Math.max(0, Number(recipientServer.credits || 0) - rewardAmt);
+        }
+        if (data.userBalances) {
+          data.userBalances[uid] = Math.max(0, Number(data.userBalances[uid] || 0) - rewardAmt);
+        }
+        rec.reversed = true;
+        rec.reversedAt = Date.now();
+        console.log(`[BOT LEAVE] Reversal entry recorded for ${uid} leaving ${sid} inside retention window.`);
+      } catch (revErr) {
+        if (revErr.code === 'DUPLICATE_LEDGER_ENTRY') {
+          console.warn(`[BOT LEAVE] Duplicate reversal blocked for ${uid}:${sid}`);
+        }
+      }
+    }
+
+    rec.stayCompleted = false;
+    rec.leftAt = new Date().toISOString();
+    rec.status = 'left';
     const srv = data.servers.find(s => String(s.id) === sid || String(s.guildId) === sid);
     if (srv) {
       srv.verifiedJoins = Math.max(0, (Number(srv.verifiedJoins) || 0) - 1);
@@ -197,6 +281,18 @@ export async function processMaturePendingJoins(botToken = null) {
     if (!stillInServer) {
       p.status = 'left_early';
       p.failureReason = 'Member no longer in server';
+      data.userJoinRecords[joinKey] = {
+        userId: p.userId,
+        serverId: p.serverId,
+        recipientServerId: p.recipientServerId,
+        joinedAt: new Date(p.joinedAt).toISOString(),
+        stayEndsAt: new Date(now).toISOString(),
+        completedAt: now,
+        stayCompleted: false,
+        rewarded: false,
+        status: 'not_confirmed',
+        failureReason: 'Member no longer in server'
+      };
       continue;
     }
 
@@ -246,6 +342,7 @@ export async function processMaturePendingJoins(botToken = null) {
         completedAt: now,
         stayCompleted: true,
         rewarded: true,
+        status: 'joined',
         reward: p.reward
       };
 
@@ -285,14 +382,15 @@ export function loadDirectoryData() {
     if (fs.existsSync(DIRECTORY_FILE)) {
       raw = fs.readFileSync(DIRECTORY_FILE, 'utf-8');
     }
+    const isProd = process.env.NODE_ENV === 'production' || process.env.DATABASE_URL;
     const seedFile = path.join(process.cwd(), 'seeds', 'promoted_servers.json');
-    if ((!raw || raw.trim().length <= 16) && fs.existsSync(seedFile)) {
+    if (!isProd && (!raw || raw.trim().length <= 16) && fs.existsSync(seedFile)) {
       raw = fs.readFileSync(seedFile, 'utf-8');
     }
     if (raw) {
       const parsed = JSON.parse(raw);
       let rawServers = Array.isArray(parsed?.servers) ? parsed.servers : (Array.isArray(parsed) ? parsed : []);
-      if (rawServers.length === 0 && fs.existsSync(seedFile)) {
+      if (!isProd && rawServers.length === 0 && fs.existsSync(seedFile)) {
         try {
           const seedParsed = JSON.parse(fs.readFileSync(seedFile, 'utf-8'));
           rawServers = Array.isArray(seedParsed?.servers) ? seedParsed.servers : (Array.isArray(seedParsed) ? seedParsed : []);
@@ -346,7 +444,12 @@ export function saveDirectoryData(data) {
   try {
     const tmp = `${DIRECTORY_FILE}.tmp`;
     fs.writeFileSync(tmp, JSON.stringify(data, null, 2), 'utf-8');
-    fs.renameSync(tmp, DIRECTORY_FILE);
+    try {
+      fs.renameSync(tmp, DIRECTORY_FILE);
+    } catch {
+      fs.writeFileSync(DIRECTORY_FILE, JSON.stringify(data, null, 2), 'utf-8');
+      try { fs.unlinkSync(tmp); } catch {}
+    }
     return true;
   } catch (err) {
     console.error('[DIRECTORY] Error writing directory file:', err);
@@ -354,20 +457,34 @@ export function saveDirectoryData(data) {
   }
 }
 
-function getBannedUserIds() {
+export function getBannedUserIds() {
+  const set = new Set();
+  const now = Date.now();
   try {
     const bannedFile = path.join(DATA_DIR, 'banned_users.json');
     if (fs.existsSync(bannedFile)) {
       const list = JSON.parse(fs.readFileSync(bannedFile, 'utf8'));
-      const now = Date.now();
-      return new Set(
-        list
-          .filter(b => !b.expiresAt || new Date(b.expiresAt).getTime() > now)
-          .map(b => String(b.userId))
-      );
+      for (const b of list) {
+        if (!b.expiresAt || new Date(b.expiresAt).getTime() > now) {
+          if (b.userId) set.add(String(b.userId));
+        }
+      }
     }
   } catch {}
-  return new Set();
+  try {
+    const blFile = path.join(DATA_DIR, 'blacklist.json');
+    if (fs.existsSync(blFile)) {
+      const list = JSON.parse(fs.readFileSync(blFile, 'utf8'));
+      for (const b of list) {
+        if (!b.expiresAt || new Date(b.expiresAt).getTime() > now) {
+          if (b.value && (b.type === 'discord_id' || b.type === 'user')) {
+            set.add(String(b.value));
+          }
+        }
+      }
+    }
+  } catch {}
+  return set;
 }
 
 // ── Server Listability & Hidden Checks ──
@@ -584,8 +701,13 @@ export function upsertPromotedServer(serverData, owner) {
     data.servers.unshift(cleanServer);
   }
 
-  // If server is listed and owner is known, auto-claim any pending rewards for this user
+  // If server is listed and owner is known, auto-claim any pending rewards for this user and evaluate recruiter referral
   if (cleanServer.isListed !== false && !cleanServer.hidden && !cleanServer.delisted && safeOwnerUserId) {
+    try {
+      import('./recruitManager.js').then(({ evaluateReferralRewardForListedServer }) => {
+        evaluateReferralRewardForListedServer(cleanServer, safeOwnerUserId).catch(() => {});
+      });
+    } catch {}
     try {
       import('./bugReportManager.js').then(({ claimPendingRewardsForUser }) => {
         const claimed = claimPendingRewardsForUser(safeOwnerUserId, id, cleanServer.name, cleanServer.iconUrl);
@@ -700,7 +822,7 @@ function scheduleServerBumpReminderOnDisk(serverId, dueAt, cycleId) {
 }
 
 /** Bump a server to #1 position (enforces BUMP_COOLDOWN_HOURS cooldown) */
-export function bumpPromotedServer(guildId, userId) {
+export function bumpPromotedServer(guildId, userId, options = {}) {
   const data = loadDirectoryData();
   const targetId = String(guildId);
   let server = data.servers.find(s => s.id === targetId || s.guildId === targetId);
@@ -792,6 +914,32 @@ export function bumpPromotedServer(guildId, userId) {
           } catch {}
         }
       }
+    }
+  }
+
+  // Award bump credits to bumping server (Point B2)
+  const adminSettings = getAdminSettings();
+  const bumpCredits = typeof adminSettings.bump_reward_credits === 'number' ? adminSettings.bump_reward_credits : 2;
+  const interactionId = options.interactionId || `bump_${targetId}_${now}`;
+  const idempotencyKey = `bump_credit_${interactionId}`;
+
+  try {
+    recordLedgerTransaction({
+      userId: effectiveUserId || server.ownerId,
+      type: 'earned',
+      amount: bumpCredits,
+      reason: 'bump_reward',
+      description: `Bump reward (+${bumpCredits} cr) for bumping ${server.name || 'server'}`,
+      guildId: targetId,
+      serverId: targetId,
+      status: 'posted',
+      idempotencyKey
+    });
+    server.credits = Number(server.credits || 0) + bumpCredits;
+    server.balance = Number(server.balance || 0) + bumpCredits;
+  } catch (txErr) {
+    if (txErr.code !== 'DUPLICATE_LEDGER_ENTRY') {
+      console.warn('[BUMP REWARD] Error recording bump credit:', txErr.message);
     }
   }
 
@@ -1132,4 +1280,71 @@ export function setUserBalance(userId, amount) {
   saveUserBalances(balances);
   return balances[userId];
 }
+
+/** Get list of joined communities for user with exact Discord info & live statuses */
+export function getUserJoinedCommunities(userId) {
+  if (!userId) return [];
+  const uid = String(userId);
+  const data = loadDirectoryData();
+  const pendingList = loadPendingJoins();
+
+  const results = [];
+  const seenServers = new Set();
+
+  // 1. Pending joins (Status: Verifying or Not confirmed)
+  const userPending = pendingList.filter(p => p.userId === uid);
+  for (const p of userPending) {
+    seenServers.add(p.serverId);
+    const server = data.servers.find(s => String(s.id) === p.serverId || String(s.guildId) === p.serverId);
+    let statusText = 'Verifying';
+    const rec = data.userJoinRecords?.[`${uid}:${p.serverId}`];
+    if (p.status === 'left' || rec?.status === 'left' || rec?.reversed) {
+      statusText = 'Left';
+    } else if (p.status === 'left_early' || rec?.status === 'left_early' || rec?.status === 'not_confirmed') {
+      statusText = 'Not confirmed';
+    } else if (p.status === 'completed' || rec?.rewarded || rec?.stayCompleted) {
+      statusText = 'Joined';
+    }
+    results.push({
+      serverId: p.serverId,
+      serverName: server?.name || p.serverName || 'Community Server',
+      iconUrl: server?.iconUrl || server?.icon || null,
+      status: statusText,
+      joinedAt: p.joinedAt,
+      reward: p.reward
+    });
+  }
+
+  // 2. Historical joins from userJoinRecords
+  if (data.userJoinRecords && typeof data.userJoinRecords === 'object') {
+    for (const [key, rec] of Object.entries(data.userJoinRecords)) {
+      if (key.startsWith(`${uid}:`)) {
+        const sid = rec.serverId || key.split(':')[1];
+        if (seenServers.has(sid)) continue;
+        seenServers.add(sid);
+        const server = data.servers.find(s => String(s.id) === sid || String(s.guildId) === sid);
+        let statusText = 'Verifying';
+        if (rec.reversed || rec.status === 'left') {
+          statusText = 'Left';
+        } else if (rec.rewarded || rec.status === 'joined' || rec.stayCompleted) {
+          statusText = 'Joined';
+        } else if (rec.status === 'not_confirmed' || rec.status === 'left_early') {
+          statusText = 'Not confirmed';
+        }
+        results.push({
+          serverId: sid,
+          serverName: server?.name || 'Community Server',
+          iconUrl: server?.iconUrl || server?.icon || null,
+          status: statusText,
+          joinedAt: rec.joinedAt ? new Date(rec.joinedAt).getTime() : Date.now(),
+          reward: rec.reward || 2
+        });
+      }
+    }
+  }
+
+  results.sort((a, b) => (b.joinedAt || 0) - (a.joinedAt || 0));
+  return results;
+}
+
 

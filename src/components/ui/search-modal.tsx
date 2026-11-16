@@ -148,6 +148,7 @@ export function SearchModal({
       }
 
       // Quick action keys if search input is not focused or is empty
+      const key = e.key.toLowerCase();
       if (openRef.current && !isCmdOrCtrl && document.activeElement !== inputRef.current) {
         if (key === "d") {
           e.preventDefault();

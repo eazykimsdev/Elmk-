@@ -217,8 +217,8 @@ function PromoteTabInner({
   const guildId = guild?.id || '';
   const serverName = guild?.name || config?.serverName || 'Server';
 
-  // Sub-tabs: Listing | Appearance | Invite and rewards | Partnerships
-  const [activeTab, setActiveTab] = useState<'listing' | 'appearance' | 'rewards' | 'partnerships'>('listing');
+  // Sub-tabs: Listing | Appearance | Invite and rewards | Partnerships | Premium
+  const [activeTab, setActiveTab] = useState<'listing' | 'appearance' | 'rewards' | 'partnerships' | 'premium'>('listing');
 
   // Initial cached listing fallback
   const cachedListing = useMemo(() => {
@@ -463,6 +463,143 @@ function PromoteTabInner({
   const [activeRepsCount, setActiveRepsCount] = useState<number>(0);
   const [confirmTurnOffRecruitingOpen, setConfirmTurnOffRecruitingOpen] = useState(false);
   const [isSendingTestPanel, setIsSendingTestPanel] = useState(false);
+
+  // Premium state (Phase A / Item 4 & 5)
+  const [premiumInfo, setPremiumInfo] = useState<{
+    isPremium: boolean;
+    daysLeft: number;
+    price: number;
+    durationDays: number;
+    balance: number;
+  }>({
+    isPremium: false,
+    daysLeft: 0,
+    price: 500,
+    durationDays: 30,
+    balance: 0,
+  });
+  const [isBuyModalOpen, setIsBuyModalOpen] = useState(false);
+  const [isBuyingPremium, setIsBuyingPremium] = useState(false);
+  const [isPostAdModalOpen, setIsPostAdModalOpen] = useState(false);
+  const [isPostingAd, setIsPostingAd] = useState(false);
+  const [adContent, setAdContent] = useState('');
+  const [advertisersList, setAdvertisersList] = useState<{ userId: string; username?: string; avatarUrl?: string }[]>([]);
+  const [maxAdvertisers] = useState(5);
+  const [newAdvertiserId, setNewAdvertiserId] = useState('');
+  const [isAddingAdvertiser, setIsAddingAdvertiser] = useState(false);
+
+  const loadPremiumData = useCallback(async () => {
+    if (!guildId) return;
+    try {
+      const res = await fetch(`/api/servers/${guildId}/premium`);
+      if (res.ok) {
+        const data = await res.json();
+        setPremiumInfo({
+          isPremium: Boolean(data.isPremium),
+          daysLeft: Number(data.daysLeft || 0),
+          price: Number(data.price || 500),
+          durationDays: Number(data.durationDays || 30),
+          balance: Number(data.balance || 0),
+        });
+        if (Array.isArray(data.advertisers)) {
+          setAdvertisersList(data.advertisers);
+        }
+      }
+    } catch {}
+  }, [guildId]);
+
+  useEffect(() => {
+    loadPremiumData();
+  }, [loadPremiumData]);
+
+  const handleConfirmBuyPremium = async () => {
+    if (!guildId) return;
+    setIsBuyingPremium(true);
+    try {
+      const res = await fetch(`/api/servers/${guildId}/premium/buy`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        addToast('error', 'Purchase Failed', data.error || 'Failed to purchase premium');
+        return;
+      }
+      addToast('success', 'Premium Activated', 'Successfully updated Premium subscription!');
+      setIsBuyModalOpen(false);
+      await loadPremiumData();
+    } catch (err: any) {
+      addToast('error', 'Purchase Error', err.message || 'Network error');
+    } finally {
+      setIsBuyingPremium(false);
+    }
+  };
+
+  const handleAddAdvertiser = async () => {
+    if (!guildId || !newAdvertiserId.trim()) return;
+    setIsAddingAdvertiser(true);
+    try {
+      const res = await fetch(`/api/servers/${guildId}/advertisers`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: newAdvertiserId.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        addToast('error', 'Add Failed', data.error || 'Failed to add advertiser');
+        return;
+      }
+      addToast('success', 'Advertiser Added', 'User has been granted advertiser permissions.');
+      setNewAdvertiserId('');
+      await loadPremiumData();
+    } catch (err: any) {
+      addToast('error', 'Error', err.message || 'Network error');
+    } finally {
+      setIsAddingAdvertiser(false);
+    }
+  };
+
+  const handleRemoveAdvertiser = async (userId: string) => {
+    if (!guildId || !userId) return;
+    try {
+      const res = await fetch(`/api/servers/${guildId}/advertisers/${userId}`, {
+        method: 'DELETE',
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        addToast('error', 'Remove Failed', data.error || 'Failed to remove advertiser');
+        return;
+      }
+      addToast('success', 'Advertiser Removed', 'Advertiser removed successfully.');
+      await loadPremiumData();
+    } catch (err: any) {
+      addToast('error', 'Error', err.message || 'Network error');
+    }
+  };
+
+  const handlePostAd = async () => {
+    if (!guildId || !adContent.trim()) return;
+    setIsPostingAd(true);
+    try {
+      const res = await fetch(`/api/servers/${guildId}/premium/post-ad`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: adContent.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        addToast('error', 'Post Failed', data.error || 'Failed to post premium ad');
+        return;
+      }
+      addToast('success', 'Ad Posted', 'Your premium ad has been dispatched to the Discord channel!');
+      setIsPostAdModalOpen(false);
+      setAdContent('');
+    } catch (err: any) {
+      addToast('error', 'Error', err.message || 'Network error');
+    } finally {
+      setIsPostingAd(false);
+    }
+  };
 
   // Fetch discord channels and user balance
   useEffect(() => {

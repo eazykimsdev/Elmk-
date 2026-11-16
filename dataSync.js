@@ -65,6 +65,10 @@ function walk(dir, base = '') {
 const sha = (buf) => crypto.createHash('sha1').update(buf).digest('hex');
 
 export function seedDataDir() {
+  // Never read or merge seeds in production or when connected to PostgreSQL
+  if (process.env.NODE_ENV === 'production' || process.env.DATABASE_URL) {
+    return;
+  }
   const seedDir = path.join(process.cwd(), 'seeds');
   if (!fs.existsSync(seedDir)) return;
   fs.mkdirSync(DATA_DIR, { recursive: true });

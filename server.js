@@ -191,6 +191,13 @@ app.get('/discovery/:serverId', (req, res) => {
   res.redirect(`/discovery/${req.params.serverId}/invite`);
 });
 
+// Recruit referral redirect: connectingerlc.xyz/r/:code
+app.get('/r/:code', (req, res, next) => {
+  const queryStr = req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : '';
+  req.url = `/r/${req.params.code}${queryStr}`;
+  dashboardRouter(req, res, next);
+});
+
 // /api/health, /api/status, Discord login and the dashboard settings all live in web/api.js.
 
 // ─── SERVE FRONTEND STATIC FILES IN PRODUCTION ──────────────────────────────
