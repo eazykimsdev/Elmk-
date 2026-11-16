@@ -350,6 +350,31 @@ export function AdminPortalPage() {
   const [adminRole, setAdminRole] = useState<'Owner' | 'Admin' | 'Moderator'>('Moderator');
   const [currentAdmin, setCurrentAdmin] = useState<any>(null);
 
+  // Authenticated fetch wrapper for admin APIs
+  const getAuthUserId = useCallback(() => {
+    try {
+      const raw = localStorage.getItem('erlcus_user');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed?.id) return parsed.id;
+      }
+    } catch {}
+    return undefined;
+  }, []);
+
+  const adminFetch = useCallback((input: RequestInfo | URL, init: RequestInit = {}) => {
+    const headers = new Headers(init.headers || {});
+    const uid = getAuthUserId();
+    if (uid && !headers.has('x-user-id')) {
+      headers.set('x-user-id', uid);
+    }
+    return fetch(input, {
+      ...init,
+      credentials: 'include',
+      headers,
+    });
+  }, [getAuthUserId]);
+
   // Active Tab
   const activeTab = useMemo(() => {
     const valid = NAV_TABS.map(t => t.id);
@@ -585,7 +610,7 @@ export function AdminPortalPage() {
     const checkAuth = async () => {
       setAuthLoading(true);
       try {
-        const res = await fetch('/api/admin/check');
+        const res = await adminFetch('/api/admin/check');
         if (res.ok) {
           const data = await res.json();
           if (mounted) {
@@ -610,7 +635,7 @@ export function AdminPortalPage() {
   useEffect(() => {
     if (!isAdmin) return;
     const sendHeartbeat = () => {
-      fetch('/api/admin/heartbeat', { method: 'POST' }).catch(() => {});
+      adminFetch('/api/admin/heartbeat', { method: 'POST' }).catch(() => {});
     };
     sendHeartbeat();
     const interval = setInterval(sendHeartbeat, 30000);
@@ -653,7 +678,7 @@ export function AdminPortalPage() {
   const fetchOverview = async () => {
     setOverviewLoading(true);
     try {
-      const res = await fetch('/api/admin/overview');
+      const res = await adminFetch('/api/admin/overview');
       if (res.ok) setOverview(await res.json());
     } catch {} finally {
       setOverviewLoading(false);
@@ -670,7 +695,7 @@ export function AdminPortalPage() {
         subtab: userSubtab
       });
       if (userSearch.trim()) q.set('search', userSearch.trim());
-      const res = await fetch(`/api/admin/users?${q.toString()}`);
+      const res = await adminFetch(`/api/admin/users?${q.toString()}`);
       if (res.ok) {
         const data = await res.json();
         setUsers(data.users || []);
@@ -689,7 +714,7 @@ export function AdminPortalPage() {
     setSheetLoading(true);
     setSelectedUserSheet({ id: userId, username: 'Loading...', credits: 0, servers: 0, status: 'active' });
     try {
-      const res = await fetch(`/api/admin/users/${userId}`);
+      const res = await adminFetch(`/api/admin/users/${userId}`);
       if (res.ok) {
         setSelectedUserSheet(await res.json());
       }
@@ -705,7 +730,7 @@ export function AdminPortalPage() {
         category: serverCategory,
         search: serverSearch
       });
-      const res = await fetch(`/api/admin/servers?${q.toString()}`);
+      const res = await adminFetch(`/api/admin/servers?${q.toString()}`);
       if (res.ok) {
         const data = await res.json();
         setServers(data.servers || []);
@@ -718,7 +743,7 @@ export function AdminPortalPage() {
   const fetchBlacklist = async () => {
     setBlacklistLoading(true);
     try {
-      const res = await fetch('/api/admin/blacklist');
+      const res = await adminFetch('/api/admin/blacklist');
       if (res.ok) {
         const data = await res.json();
         setBlacklistEntries(data.entries || data.blacklist || []);
@@ -732,7 +757,7 @@ export function AdminPortalPage() {
     setLedgerLoading(true);
     try {
       const q = new URLSearchParams({ type: ledgerTypeFilter, search: ledgerSearch, limit: '100' });
-      const res = await fetch(`/api/admin/ledger?${q.toString()}`);
+      const res = await adminFetch(`/api/admin/ledger?${q.toString()}`);
       if (res.ok) {
         const data = await res.json();
         setLedgerTxs(data.transactions || []);
@@ -745,7 +770,7 @@ export function AdminPortalPage() {
   const fetchReports = async () => {
     setReportsLoading(true);
     try {
-      const res = await fetch('/api/admin/reports');
+      const res = await adminFetch('/api/admin/reports');
       if (res.ok) {
         const data = await res.json();
         let list = data.reports || [];
@@ -766,7 +791,7 @@ export function AdminPortalPage() {
   const fetchBugs = async (filter = bugFilter) => {
     setBugsLoading(true);
     try {
-      const res = await fetch(`/api/admin/bugs?status=${filter}`);
+      const res = await adminFetch(`/api/admin/bugs?status=${filter}`);
       if (res.ok) {
         const data = await res.json();
         setBugs(Array.isArray(data.bugs) ? data.bugs : []);
@@ -781,7 +806,7 @@ export function AdminPortalPage() {
   const handleBugAction = async (bugId: string, status: 'accepted' | 'rejected' | 'duplicate') => {
     setBugSubmitting(true);
     try {
-      const res = await fetch(`/api/admin/bugs/${bugId}/action`, {
+      const res = await adminFetch(`/api/admin/bugs/${bugId}/action`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status, notes: bugStaffNote.trim() })
@@ -814,7 +839,7 @@ export function AdminPortalPage() {
   const handleSendTestDM = async (bugId: string) => {
     setBugSubmitting(true);
     try {
-      const res = await fetch(`/api/admin/bugs/${bugId}/test-dm`, {
+      const res = await adminFetch(`/api/admin/bugs/${bugId}/test-dm`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ adminUserId: user?.id })
@@ -835,7 +860,7 @@ export function AdminPortalPage() {
   const fetchFlags = async () => {
     setFlagsLoading(true);
     try {
-      const res = await fetch('/api/admin/flags');
+      const res = await adminFetch('/api/admin/flags');
       if (res.ok) {
         const data = await res.json();
         setFlags(data.flags || []);
@@ -848,7 +873,7 @@ export function AdminPortalPage() {
   const fetchRules = async () => {
     setRulesLoading(true);
     try {
-      const res = await fetch('/api/admin/rules');
+      const res = await adminFetch('/api/admin/rules');
       if (res.ok) {
         const data = await res.json();
         if (data.rules) setDetectorRules(data.rules);
@@ -861,7 +886,7 @@ export function AdminPortalPage() {
   const handleSaveRules = async () => {
     setSavingRules(true);
     try {
-      const res = await fetch('/api/admin/rules', {
+      const res = await adminFetch('/api/admin/rules', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(detectorRules)
@@ -883,7 +908,7 @@ export function AdminPortalPage() {
   const handleSendTestAlert = async () => {
     setSendingTestAlert(true);
     try {
-      const res = await fetch('/api/admin/system/test-alert', { method: 'POST' });
+      const res = await adminFetch('/api/admin/system/test-alert', { method: 'POST' });
       const data = await res.json();
       if (res.ok && data.success) {
         showFeedback(`Test alert delivered to ${data.delivered} recipient(s).`);
@@ -900,7 +925,7 @@ export function AdminPortalPage() {
   const handleSendTestPartnershipDM = async () => {
     setSendingTestPartnershipDM(true);
     try {
-      const res = await fetch('/api/admin/partnerships/test-dm', {
+      const res = await adminFetch('/api/admin/partnerships/test-dm', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       });
@@ -920,12 +945,12 @@ export function AdminPortalPage() {
   const fetchAnnouncements = async () => {
     setAnnouncementsLoading(true);
     try {
-      const res = await fetch('/api/admin/announcements');
+      const res = await adminFetch('/api/admin/announcements');
       if (res.ok) {
         const data = await res.json();
         setAnnouncements(data.announcements || []);
       }
-      const bRes = await fetch('/api/public/default-banner');
+      const bRes = await adminFetch('/api/public/default-banner');
       if (bRes.ok) {
         const bData = await bRes.json();
         if (bData?.text) setDefaultBannerText(bData.text);
@@ -938,7 +963,7 @@ export function AdminPortalPage() {
   const handleSaveDefaultBanner = async () => {
     setDefaultBannerSaving(true);
     try {
-      const res = await fetch('/api/admin/default-banner', {
+      const res = await adminFetch('/api/admin/default-banner', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: defaultBannerText })
@@ -957,7 +982,7 @@ export function AdminPortalPage() {
 
   const fetchMaintenance = async () => {
     try {
-      const res = await fetch('/api/admin/maintenance');
+      const res = await adminFetch('/api/admin/maintenance');
       if (res.ok) {
         const data = await res.json();
         const next = data.status || data.maintenance || data;
@@ -978,7 +1003,7 @@ export function AdminPortalPage() {
   const fetchChangelog = async () => {
     setChangelogLoading(true);
     try {
-      const res = await fetch('/api/admin/changelog');
+      const res = await adminFetch('/api/admin/changelog');
       if (res.ok) {
         const data = await res.json();
         setChangelogEntries(data.entries || data.changelogs || []);
@@ -992,7 +1017,7 @@ export function AdminPortalPage() {
     setAuditLoading(true);
     try {
       const q = new URLSearchParams({ action: auditActionFilter, search: auditSearch, limit: '100' });
-      const res = await fetch(`/api/admin/audit?${q.toString()}`);
+      const res = await adminFetch(`/api/admin/audit?${q.toString()}`);
       if (res.ok) {
         const data = await res.json();
         setAuditLogs(data.audit || []);
@@ -1005,7 +1030,7 @@ export function AdminPortalPage() {
   const fetchSystem = async () => {
     setSystemLoading(true);
     try {
-      const res = await fetch('/api/admin/system');
+      const res = await adminFetch('/api/admin/system');
       if (res.ok) {
         setSystemChecks(await res.json());
       }
@@ -1017,7 +1042,7 @@ export function AdminPortalPage() {
   const fetchAdmins = async () => {
     setAdminsLoading(true);
     try {
-      const res = await fetch('/api/admin/admins');
+      const res = await adminFetch('/api/admin/admins');
       if (res.ok) {
         const data = await res.json();
         setAdminsList(data.admins || []);
@@ -1037,7 +1062,7 @@ export function AdminPortalPage() {
     }
     setActionSubmitting(true);
     try {
-      const res = await fetch('/api/admin/bans', {
+      const res = await adminFetch('/api/admin/bans', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1070,12 +1095,12 @@ export function AdminPortalPage() {
     if (!unbanTargetUser) return;
     setActionSubmitting(true);
     try {
-      const res = await fetch(`/api/admin/bans/${unbanTargetUser.id}`, {
+      const res = await adminFetch(`/api/admin/bans/${unbanTargetUser.id}`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ reason: unbanReason.trim() })
       });
-      await fetch('/api/admin/blacklist/unblacklist', {
+      await adminFetch('/api/admin/blacklist/unblacklist', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: unbanTargetUser.id, target: unbanTargetUser.id, reason: unbanReason.trim() })
@@ -1121,7 +1146,7 @@ export function AdminPortalPage() {
 
     setActionSubmitting(true);
     try {
-      const res = await fetch('/api/admin/credits/transact', {
+      const res = await adminFetch('/api/admin/credits/transact', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1163,7 +1188,7 @@ export function AdminPortalPage() {
     }
     setActionSubmitting(true);
     try {
-      const res = await fetch('/api/admin/blacklist', {
+      const res = await adminFetch('/api/admin/blacklist', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1198,7 +1223,7 @@ export function AdminPortalPage() {
     setActionSubmitting(true);
     try {
       const targetId = removeBlacklistTarget.id || removeBlacklistTarget.value || removeBlacklistTarget.userId;
-      const res = await fetch('/api/admin/blacklist/unblacklist', {
+      const res = await adminFetch('/api/admin/blacklist/unblacklist', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1235,7 +1260,7 @@ export function AdminPortalPage() {
     }
     setActionSubmitting(true);
     try {
-      const res = await fetch('/api/admin/blacklist/unblacklist', {
+      const res = await adminFetch('/api/admin/blacklist/unblacklist', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ target: val, reason: 'Instant unblacklist from admin portal' })
@@ -1260,7 +1285,7 @@ export function AdminPortalPage() {
   const fetchPromos = async () => {
     setPromosLoading(true);
     try {
-      const res = await fetch('/api/admin/promos');
+      const res = await adminFetch('/api/admin/promos');
       if (res.ok) {
         const data = await res.json();
         setPromos(data.promos || []);
@@ -1279,7 +1304,7 @@ export function AdminPortalPage() {
     }
     setActionSubmitting(true);
     try {
-      const res = await fetch('/api/admin/promos', {
+      const res = await adminFetch('/api/admin/promos', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1307,7 +1332,7 @@ export function AdminPortalPage() {
 
   const handleTogglePromo = async (id: string, active: boolean) => {
     try {
-      const res = await fetch(`/api/admin/promos/${id}/toggle`, {
+      const res = await adminFetch(`/api/admin/promos/${id}/toggle`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ active })
@@ -1322,7 +1347,7 @@ export function AdminPortalPage() {
   const handleDeletePromo = async (id: string) => {
     if (!window.confirm('Are you sure you want to delete this promotional code?')) return;
     try {
-      const res = await fetch(`/api/admin/promos/${id}`, { method: 'DELETE' });
+      const res = await adminFetch(`/api/admin/promos/${id}`, { method: 'DELETE' });
       if (res.ok) {
         showFeedback('Promo code deleted.');
         fetchPromos();
@@ -1334,7 +1359,7 @@ export function AdminPortalPage() {
     setRedemptionsLoading(true);
     setSelectedPromoRedemptions([]);
     try {
-      const res = await fetch(`/api/admin/promos/${id}/redemptions`);
+      const res = await adminFetch(`/api/admin/promos/${id}/redemptions`);
       if (res.ok) {
         const data = await res.json();
         setSelectedPromoRedemptions(data.redemptions || []);
@@ -1357,7 +1382,7 @@ export function AdminPortalPage() {
   const fetchGiveaway = async () => {
     setGiveawayLoading(true);
     try {
-      const res = await fetch('/api/admin/giveaway');
+      const res = await adminFetch('/api/admin/giveaway');
       if (res.ok) {
         const data = await res.json();
         const s = data.settings || null;
@@ -1393,7 +1418,7 @@ export function AdminPortalPage() {
         support_server_url: giveawaySupportUrlInput.trim() || undefined
       };
       if (enableToo) payload.enabled = true;
-      const res = await fetch('/api/admin/giveaway/settings', {
+      const res = await adminFetch('/api/admin/giveaway/settings', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -1416,7 +1441,7 @@ export function AdminPortalPage() {
     if (!window.confirm('Reset all claimed spots to 0 so you can start a fresh giveaway round? (Past credit ledger entries are kept.)')) return;
     setGiveawaySaving(true);
     try {
-      const res = await fetch('/api/admin/giveaway/reset', { method: 'POST' });
+      const res = await adminFetch('/api/admin/giveaway/reset', { method: 'POST' });
       if (res.ok) {
         const data = await res.json();
         setGiveawaySettings(data.settings || giveawaySettings);
@@ -1437,7 +1462,7 @@ export function AdminPortalPage() {
     const nextState = !giveawaySettings.enabled;
     setGiveawayToggling(true);
     try {
-      const res = await fetch('/api/admin/giveaway/toggle', {
+      const res = await adminFetch('/api/admin/giveaway/toggle', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ enabled: nextState })
@@ -1466,7 +1491,7 @@ export function AdminPortalPage() {
     }
     setActionSubmitting(true);
     try {
-      const res = await fetch(`/api/admin/servers/${server.id}/action`, {
+      const res = await adminFetch(`/api/admin/servers/${server.id}/action`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action, reason: reason ? reason.trim() : undefined, patch })
@@ -1500,7 +1525,7 @@ export function AdminPortalPage() {
     if (!report) return;
     setActionSubmitting(true);
     try {
-      const res = await fetch(`/api/admin/reports/${report.id}/action`, {
+      const res = await adminFetch(`/api/admin/reports/${report.id}/action`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status, adminNotes: notes.trim(), deleteContent })
@@ -1523,7 +1548,7 @@ export function AdminPortalPage() {
   // Flag Action
   const handleExecuteFlagAction = async (flagId: string, action: string, reason: string) => {
     try {
-      const res = await fetch(`/api/admin/flags/${flagId}/action`, {
+      const res = await adminFetch(`/api/admin/flags/${flagId}/action`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action, reason: reason || 'Moderator action' })
@@ -1549,7 +1574,7 @@ export function AdminPortalPage() {
   const handleSaveMaintenance = async (newMode?: 'operational' | 'maintenance') => {
     setMaintenanceSaving(true);
     try {
-      const res = await fetch('/api/admin/maintenance', {
+      const res = await adminFetch('/api/admin/maintenance', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1587,7 +1612,7 @@ export function AdminPortalPage() {
   const handleCreateAnnouncement = async () => {
     if (!announcementText.trim()) return;
     try {
-      const res = await fetch('/api/admin/announcements', {
+      const res = await adminFetch('/api/admin/announcements', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1615,7 +1640,7 @@ export function AdminPortalPage() {
 
   const handleToggleAnnouncement = async (item: AnnouncementItem) => {
     try {
-      const res = await fetch(`/api/admin/announcements/${item.id}`, {
+      const res = await adminFetch(`/api/admin/announcements/${item.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ active: !item.active })
@@ -1631,7 +1656,7 @@ export function AdminPortalPage() {
 
   const handleDeleteAnnouncement = async (id: string) => {
     try {
-      const res = await fetch(`/api/admin/announcements/${id}`, { method: 'DELETE' });
+      const res = await adminFetch(`/api/admin/announcements/${id}`, { method: 'DELETE' });
       if (res.ok) {
         showFeedback('Announcement deleted.');
         fetchAnnouncements();
@@ -1655,7 +1680,7 @@ export function AdminPortalPage() {
   const handleDeleteChangelog = async (version: string) => {
     if (!window.confirm(`Are you sure you want to delete changelog release ${version}?`)) return;
     try {
-      const res = await fetch(`/api/admin/changelog/${encodeURIComponent(version)}`, {
+      const res = await adminFetch(`/api/admin/changelog/${encodeURIComponent(version)}`, {
         method: 'DELETE'
       });
       if (res.ok) {
@@ -1676,7 +1701,7 @@ export function AdminPortalPage() {
     }
     const itemsArray = clItems.split('\n').map(s => s.trim()).filter(Boolean);
     try {
-      const res = await fetch('/api/admin/changelog', {
+      const res = await adminFetch('/api/admin/changelog', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1709,7 +1734,7 @@ export function AdminPortalPage() {
     reasonText?: string
   ) => {
     try {
-      const res = await fetch(`/api/admin/reports/${reportId}/action`, {
+      const res = await adminFetch(`/api/admin/reports/${reportId}/action`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1741,7 +1766,7 @@ export function AdminPortalPage() {
       return;
     }
     try {
-      const res = await fetch('/api/admin/admins', {
+      const res = await adminFetch('/api/admin/admins', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1769,7 +1794,7 @@ export function AdminPortalPage() {
   const handleRemoveAdmin = async () => {
     if (!removeAdminTarget) return;
     try {
-      const res = await fetch(`/api/admin/admins/${removeAdminTarget.userId}`, {
+      const res = await adminFetch(`/api/admin/admins/${removeAdminTarget.userId}`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ reason: removeAdminReason.trim() })
@@ -5134,7 +5159,7 @@ export function AdminPortalPage() {
                   onClick={async () => {
                     if (!selectedUserSheet?.user?.id) return;
                     try {
-                      const res = await fetch(`/api/admin/users/${selectedUserSheet.user.id}/clear-promo-lock`, {
+                      const res = await adminFetch(`/api/admin/users/${selectedUserSheet.user.id}/clear-promo-lock`, {
                         method: 'POST',
                         credentials: 'include'
                       });
@@ -5158,7 +5183,7 @@ export function AdminPortalPage() {
                   onClick={async () => {
                     const uid = selectedUserSheet.user.id;
                     try {
-                      await fetch('/api/admin/blacklist/unblacklist', {
+                      await adminFetch('/api/admin/blacklist/unblacklist', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ userId: uid, target: uid, reason: 'Unblacklisted from user sheet' })

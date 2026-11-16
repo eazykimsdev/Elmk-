@@ -1,14 +1,53 @@
 [
   {
     "userId": "523693281541095424",
-    "username": "kims3166",
-    "displayName": "Eazykims",
+    "username": "admin",
+    "displayName": "Administrator",
     "role": "Owner",
-    "avatar": "https://cdn.discordapp.com/avatars/523693281541095424/b7fc5bd1ca84c56c9144b7a02ba4e904.png",
-    "avatarUrl": "https://cdn.discordapp.com/avatars/523693281541095424/b7fc5bd1ca84c56c9144b7a02ba4e904.png",
-    "addedAt": "2026-11-06T18:38:04.572Z",
+    "addedAt": "2026-11-08T06:38:35.708Z",
     "addedBy": "System (ADMIN_DISCORD_IDS)",
-    "last_seen_at": "2026-11-08T08:17:55.332Z"
+    "last_seen_at": "2026-11-14T19:06:09.417Z"
+  },
+  {
+    "userId": "1400351264415682621",
+    "username": "James",
+    "displayName": "Zyvro",
+    "role": "Admin",
+    "addedAt": "2026-11-08T19:09:26.974Z",
+    "addedBy": "admin",
+    "last_seen_at": "2026-11-14T04:48:31.222Z"
+  },
+  {
+    "userId": "1317231689361133650",
+    "username": "y0ur_loss",
+    "displayName": "⁶𓅓",
+    "avatar": "https://cdn.discordapp.com/avatars/1317231689361133650/f068fda80be655faa59ec43123230b06.png?size=128",
+    "avatarUrl": "https://cdn.discordapp.com/avatars/1317231689361133650/f068fda80be655faa59ec43123230b06.png?size=128",
+    "role": "Admin",
+    "addedAt": "2026-11-10T03:54:50.686Z",
+    "addedBy": "Administrator",
+    "last_seen_at": "2026-11-13T03:59:33.896Z"
+  },
+  {
+    "userId": "1382619167060131911",
+    "username": ".iqy1",
+    "displayName": "11",
+    "avatar": "https://cdn.discordapp.com/avatars/1382619167060131911/80edde439106212e78cec35504c79e4b.png?size=128",
+    "avatarUrl": "https://cdn.discordapp.com/avatars/1382619167060131911/80edde439106212e78cec35504c79e4b.png?size=128",
+    "role": "Admin",
+    "addedAt": "2026-11-14T02:22:36.785Z",
+    "addedBy": "Zyvro"
+  },
+  {
+    "userId": "236470812008382464",
+    "username": "4jw7",
+    "displayName": "itzveltrix8x",
+    "avatar": "https://cdn.discordapp.com/avatars/236470812008382464/1611fea01097a6e8502defa55cff775d.png?size=128",
+    "avatarUrl": "https://cdn.discordapp.com/avatars/236470812008382464/1611fea01097a6e8502defa55cff775d.png?size=128",
+    "role": "Admin",
+    "addedAt": "2026-11-14T02:23:00.544Z",
+    "addedBy": "Zyvro",
+    "last_seen_at": "2026-11-14T02:27:11.059Z"
   },
   {
     "userId": "888777666555444333",

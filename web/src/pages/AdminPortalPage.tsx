@@ -88,7 +88,7 @@ interface AdminUser {
   userId: string;
   username: string;
   displayName: string;
-  role: 'Owner' | 'Admin' | 'Moderator' | 'Reviewer';
+  role: 'Owner' | 'Admin' | 'Moderator';
   avatar?: string | null;
   avatarUrl?: string | null;
   addedAt: string;
@@ -253,7 +253,6 @@ const SIDEBAR_GROUPS = [
       { id: 'users', label: 'Users', icon: Users },
       { id: 'servers', label: 'Servers', icon: Globe },
       { id: 'reports', label: 'Reports', icon: ShieldAlert },
-      { id: 'verifications', label: 'Verifications', icon: CheckCircle2 },
       { id: 'bugs', label: 'Bug reports', icon: Bug },
       { id: 'flags', label: 'Flags', icon: AlertTriangle },
       { id: 'blacklist', label: 'Blacklist', icon: UserX },
@@ -348,17 +347,39 @@ export function AdminPortalPage() {
   // ── AUTH & ROLE CHECK ──
   const [authLoading, setAuthLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [adminRole, setAdminRole] = useState<'Owner' | 'Admin' | 'Moderator' | 'Reviewer'>('Moderator');
+  const [adminRole, setAdminRole] = useState<'Owner' | 'Admin' | 'Moderator'>('Moderator');
   const [currentAdmin, setCurrentAdmin] = useState<any>(null);
 
-  // Active Tab (Reviewer restricted to verifications & bugs only)
+  // Authenticated fetch wrapper for admin APIs
+  const getAuthUserId = useCallback(() => {
+    try {
+      const raw = localStorage.getItem('erlcus_user');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed?.id) return parsed.id;
+      }
+    } catch {}
+    return undefined;
+  }, []);
+
+  const adminFetch = useCallback((input: RequestInfo | URL, init: RequestInit = {}) => {
+    const headers = new Headers(init.headers || {});
+    const uid = getAuthUserId();
+    if (uid && !headers.has('x-user-id')) {
+      headers.set('x-user-id', uid);
+    }
+    return fetch(input, {
+      ...init,
+      credentials: 'include',
+      headers,
+    });
+  }, [getAuthUserId]);
+
+  // Active Tab
   const activeTab = useMemo(() => {
-    const valid = adminRole === 'Reviewer'
-      ? ['verifications', 'bugs']
-      : NAV_TABS.map(t => t.id);
-    if (tab && valid.includes(tab)) return tab;
-    return adminRole === 'Reviewer' ? 'verifications' : 'overview';
-  }, [tab, adminRole]);
+    const valid = NAV_TABS.map(t => t.id);
+    return tab && valid.includes(tab) ? tab : 'overview';
+  }, [tab]);
 
   const handleTabChange = (t: string) => {
     navigate(`/admin-portal/${t}`);
@@ -481,56 +502,6 @@ export function AdminPortalPage() {
     deleteContent?: boolean;
   }>({ open: false, report: null, status: 'resolved', notes: '', deleteContent: false });
 
-  // Verifications Tab (Item 5 & 6)
-  const [verifications, setVerifications] = useState<any[]>([]);
-  const [verificationsLoading, setVerificationsLoading] = useState(false);
-  const [verificationsFilter, setVerificationsFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
-  const [verificationModal, setVerificationModal] = useState<{
-    open: boolean;
-    app: any | null;
-    action: 'approve' | 'reject';
-    reason: string;
-    submitting: boolean;
-  }>({ open: false, app: null, action: 'approve', reason: '', submitting: false });
-
-  const fetchVerifications = async () => {
-    setVerificationsLoading(true);
-    try {
-      const res = await fetch('/api/admin/verifications');
-      if (res.ok) {
-        const data = await res.json();
-        setVerifications(Array.isArray(data.applications) ? data.applications : []);
-      }
-    } catch {} finally {
-      setVerificationsLoading(false);
-    }
-  };
-
-  const handleVerificationAction = async () => {
-    if (!verificationModal.app) return;
-    setVerificationModal(prev => ({ ...prev, submitting: true }));
-    try {
-      const endpoint = `/api/admin/verifications/${verificationModal.app.id}/${verificationModal.action}`;
-      const res = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reason: verificationModal.reason || (verificationModal.action === 'approve' ? 'Meets all verification criteria' : 'Requirements not met') })
-      });
-      if (res.ok) {
-        setFeedback({ type: 'success', message: `Verification application ${verificationModal.action}d successfully.` });
-        setVerificationModal({ open: false, app: null, action: 'approve', reason: '', submitting: false });
-        fetchVerifications();
-      } else {
-        const d = await res.json().catch(() => ({}));
-        setFeedback({ type: 'error', message: d.error || 'Failed to process application.' });
-      }
-    } catch {
-      setFeedback({ type: 'error', message: 'Network error.' });
-    } finally {
-      setVerificationModal(prev => ({ ...prev, submitting: false }));
-    }
-  };
-
   // Bug Reports Tab
   const [bugs, setBugs] = useState<any[]>([]);
   const [bugsLoading, setBugsLoading] = useState(false);
@@ -627,7 +598,7 @@ export function AdminPortalPage() {
   const [addAdminModalOpen, setAddAdminModalOpen] = useState(false);
   const [newAdminId, setNewAdminId] = useState('');
   const [newAdminUsername, setNewAdminUsername] = useState('');
-  const [newAdminRole, setNewAdminRole] = useState<'Admin' | 'Moderator' | 'Reviewer'>('Moderator');
+  const [newAdminRole, setNewAdminRole] = useState<'Admin' | 'Moderator'>('Moderator');
   const [newAdminReason, setNewAdminReason] = useState('Promoted to staff roster');
   const [removeAdminModalOpen, setRemoveAdminModalOpen] = useState(false);
   const [removeAdminTarget, setRemoveAdminTarget] = useState<AdminUser | null>(null);
@@ -639,7 +610,7 @@ export function AdminPortalPage() {
     const checkAuth = async () => {
       setAuthLoading(true);
       try {
-        const res = await fetch('/api/admin/check');
+        const res = await adminFetch('/api/admin/check');
         if (res.ok) {
           const data = await res.json();
           if (mounted) {
@@ -664,7 +635,7 @@ export function AdminPortalPage() {
   useEffect(() => {
     if (!isAdmin) return;
     const sendHeartbeat = () => {
-      fetch('/api/admin/heartbeat', { method: 'POST' }).catch(() => {});
+      adminFetch('/api/admin/heartbeat', { method: 'POST' }).catch(() => {});
     };
     sendHeartbeat();
     const interval = setInterval(sendHeartbeat, 30000);
@@ -680,7 +651,6 @@ export function AdminPortalPage() {
     else if (activeTab === 'servers') fetchServers();
     else if (activeTab === 'credits') fetchLedger();
     else if (activeTab === 'reports') fetchReports();
-    else if (activeTab === 'verifications') fetchVerifications();
     else if (activeTab === 'bugs') fetchBugs();
     else if (activeTab === 'flags') {
       fetchFlags();
@@ -708,7 +678,7 @@ export function AdminPortalPage() {
   const fetchOverview = async () => {
     setOverviewLoading(true);
     try {
-      const res = await fetch('/api/admin/overview');
+      const res = await adminFetch('/api/admin/overview');
       if (res.ok) setOverview(await res.json());
     } catch {} finally {
       setOverviewLoading(false);
@@ -725,7 +695,7 @@ export function AdminPortalPage() {
         subtab: userSubtab
       });
       if (userSearch.trim()) q.set('search', userSearch.trim());
-      const res = await fetch(`/api/admin/users?${q.toString()}`);
+      const res = await adminFetch(`/api/admin/users?${q.toString()}`);
       if (res.ok) {
         const data = await res.json();
         setUsers(data.users || []);
@@ -744,7 +714,7 @@ export function AdminPortalPage() {
     setSheetLoading(true);
     setSelectedUserSheet({ id: userId, username: 'Loading...', credits: 0, servers: 0, status: 'active' });
     try {
-      const res = await fetch(`/api/admin/users/${userId}`);
+      const res = await adminFetch(`/api/admin/users/${userId}`);
       if (res.ok) {
         setSelectedUserSheet(await res.json());
       }
@@ -760,7 +730,7 @@ export function AdminPortalPage() {
         category: serverCategory,
         search: serverSearch
       });
-      const res = await fetch(`/api/admin/servers?${q.toString()}`);
+      const res = await adminFetch(`/api/admin/servers?${q.toString()}`);
       if (res.ok) {
         const data = await res.json();
         setServers(data.servers || []);
@@ -773,7 +743,7 @@ export function AdminPortalPage() {
   const fetchBlacklist = async () => {
     setBlacklistLoading(true);
     try {
-      const res = await fetch('/api/admin/blacklist');
+      const res = await adminFetch('/api/admin/blacklist');
       if (res.ok) {
         const data = await res.json();
         setBlacklistEntries(data.entries || data.blacklist || []);
@@ -787,7 +757,7 @@ export function AdminPortalPage() {
     setLedgerLoading(true);
     try {
       const q = new URLSearchParams({ type: ledgerTypeFilter, search: ledgerSearch, limit: '100' });
-      const res = await fetch(`/api/admin/ledger?${q.toString()}`);
+      const res = await adminFetch(`/api/admin/ledger?${q.toString()}`);
       if (res.ok) {
         const data = await res.json();
         setLedgerTxs(data.transactions || []);
@@ -800,7 +770,7 @@ export function AdminPortalPage() {
   const fetchReports = async () => {
     setReportsLoading(true);
     try {
-      const res = await fetch('/api/admin/reports');
+      const res = await adminFetch('/api/admin/reports');
       if (res.ok) {
         const data = await res.json();
         let list = data.reports || [];
@@ -821,7 +791,7 @@ export function AdminPortalPage() {
   const fetchBugs = async (filter = bugFilter) => {
     setBugsLoading(true);
     try {
-      const res = await fetch(`/api/admin/bugs?status=${filter}`);
+      const res = await adminFetch(`/api/admin/bugs?status=${filter}`);
       if (res.ok) {
         const data = await res.json();
         setBugs(Array.isArray(data.bugs) ? data.bugs : []);
@@ -836,7 +806,7 @@ export function AdminPortalPage() {
   const handleBugAction = async (bugId: string, status: 'accepted' | 'rejected' | 'duplicate') => {
     setBugSubmitting(true);
     try {
-      const res = await fetch(`/api/admin/bugs/${bugId}/action`, {
+      const res = await adminFetch(`/api/admin/bugs/${bugId}/action`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status, notes: bugStaffNote.trim() })
@@ -869,7 +839,7 @@ export function AdminPortalPage() {
   const handleSendTestDM = async (bugId: string) => {
     setBugSubmitting(true);
     try {
-      const res = await fetch(`/api/admin/bugs/${bugId}/test-dm`, {
+      const res = await adminFetch(`/api/admin/bugs/${bugId}/test-dm`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ adminUserId: user?.id })
@@ -890,7 +860,7 @@ export function AdminPortalPage() {
   const fetchFlags = async () => {
     setFlagsLoading(true);
     try {
-      const res = await fetch('/api/admin/flags');
+      const res = await adminFetch('/api/admin/flags');
       if (res.ok) {
         const data = await res.json();
         setFlags(data.flags || []);
@@ -903,7 +873,7 @@ export function AdminPortalPage() {
   const fetchRules = async () => {
     setRulesLoading(true);
     try {
-      const res = await fetch('/api/admin/rules');
+      const res = await adminFetch('/api/admin/rules');
       if (res.ok) {
         const data = await res.json();
         if (data.rules) setDetectorRules(data.rules);
@@ -916,7 +886,7 @@ export function AdminPortalPage() {
   const handleSaveRules = async () => {
     setSavingRules(true);
     try {
-      const res = await fetch('/api/admin/rules', {
+      const res = await adminFetch('/api/admin/rules', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(detectorRules)
@@ -938,7 +908,7 @@ export function AdminPortalPage() {
   const handleSendTestAlert = async () => {
     setSendingTestAlert(true);
     try {
-      const res = await fetch('/api/admin/system/test-alert', { method: 'POST' });
+      const res = await adminFetch('/api/admin/system/test-alert', { method: 'POST' });
       const data = await res.json();
       if (res.ok && data.success) {
         showFeedback(`Test alert delivered to ${data.delivered} recipient(s).`);
@@ -955,7 +925,7 @@ export function AdminPortalPage() {
   const handleSendTestPartnershipDM = async () => {
     setSendingTestPartnershipDM(true);
     try {
-      const res = await fetch('/api/admin/partnerships/test-dm', {
+      const res = await adminFetch('/api/admin/partnerships/test-dm', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       });
@@ -975,12 +945,12 @@ export function AdminPortalPage() {
   const fetchAnnouncements = async () => {
     setAnnouncementsLoading(true);
     try {
-      const res = await fetch('/api/admin/announcements');
+      const res = await adminFetch('/api/admin/announcements');
       if (res.ok) {
         const data = await res.json();
         setAnnouncements(data.announcements || []);
       }
-      const bRes = await fetch('/api/public/default-banner');
+      const bRes = await adminFetch('/api/public/default-banner');
       if (bRes.ok) {
         const bData = await bRes.json();
         if (bData?.text) setDefaultBannerText(bData.text);
@@ -993,7 +963,7 @@ export function AdminPortalPage() {
   const handleSaveDefaultBanner = async () => {
     setDefaultBannerSaving(true);
     try {
-      const res = await fetch('/api/admin/default-banner', {
+      const res = await adminFetch('/api/admin/default-banner', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: defaultBannerText })
@@ -1012,7 +982,7 @@ export function AdminPortalPage() {
 
   const fetchMaintenance = async () => {
     try {
-      const res = await fetch('/api/admin/maintenance');
+      const res = await adminFetch('/api/admin/maintenance');
       if (res.ok) {
         const data = await res.json();
         const next = data.status || data.maintenance || data;
@@ -1033,7 +1003,7 @@ export function AdminPortalPage() {
   const fetchChangelog = async () => {
     setChangelogLoading(true);
     try {
-      const res = await fetch('/api/admin/changelog');
+      const res = await adminFetch('/api/admin/changelog');
       if (res.ok) {
         const data = await res.json();
         setChangelogEntries(data.entries || data.changelogs || []);
@@ -1047,7 +1017,7 @@ export function AdminPortalPage() {
     setAuditLoading(true);
     try {
       const q = new URLSearchParams({ action: auditActionFilter, search: auditSearch, limit: '100' });
-      const res = await fetch(`/api/admin/audit?${q.toString()}`);
+      const res = await adminFetch(`/api/admin/audit?${q.toString()}`);
       if (res.ok) {
         const data = await res.json();
         setAuditLogs(data.audit || []);
@@ -1060,7 +1030,7 @@ export function AdminPortalPage() {
   const fetchSystem = async () => {
     setSystemLoading(true);
     try {
-      const res = await fetch('/api/admin/system');
+      const res = await adminFetch('/api/admin/system');
       if (res.ok) {
         setSystemChecks(await res.json());
       }
@@ -1072,7 +1042,7 @@ export function AdminPortalPage() {
   const fetchAdmins = async () => {
     setAdminsLoading(true);
     try {
-      const res = await fetch('/api/admin/admins');
+      const res = await adminFetch('/api/admin/admins');
       if (res.ok) {
         const data = await res.json();
         setAdminsList(data.admins || []);
@@ -1092,7 +1062,7 @@ export function AdminPortalPage() {
     }
     setActionSubmitting(true);
     try {
-      const res = await fetch('/api/admin/bans', {
+      const res = await adminFetch('/api/admin/bans', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1125,12 +1095,12 @@ export function AdminPortalPage() {
     if (!unbanTargetUser) return;
     setActionSubmitting(true);
     try {
-      const res = await fetch(`/api/admin/bans/${unbanTargetUser.id}`, {
+      const res = await adminFetch(`/api/admin/bans/${unbanTargetUser.id}`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ reason: unbanReason.trim() })
       });
-      await fetch('/api/admin/blacklist/unblacklist', {
+      await adminFetch('/api/admin/blacklist/unblacklist', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: unbanTargetUser.id, target: unbanTargetUser.id, reason: unbanReason.trim() })
@@ -1176,7 +1146,7 @@ export function AdminPortalPage() {
 
     setActionSubmitting(true);
     try {
-      const res = await fetch('/api/admin/credits/transact', {
+      const res = await adminFetch('/api/admin/credits/transact', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1218,7 +1188,7 @@ export function AdminPortalPage() {
     }
     setActionSubmitting(true);
     try {
-      const res = await fetch('/api/admin/blacklist', {
+      const res = await adminFetch('/api/admin/blacklist', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1253,7 +1223,7 @@ export function AdminPortalPage() {
     setActionSubmitting(true);
     try {
       const targetId = removeBlacklistTarget.id || removeBlacklistTarget.value || removeBlacklistTarget.userId;
-      const res = await fetch('/api/admin/blacklist/unblacklist', {
+      const res = await adminFetch('/api/admin/blacklist/unblacklist', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1290,7 +1260,7 @@ export function AdminPortalPage() {
     }
     setActionSubmitting(true);
     try {
-      const res = await fetch('/api/admin/blacklist/unblacklist', {
+      const res = await adminFetch('/api/admin/blacklist/unblacklist', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ target: val, reason: 'Instant unblacklist from admin portal' })
@@ -1315,7 +1285,7 @@ export function AdminPortalPage() {
   const fetchPromos = async () => {
     setPromosLoading(true);
     try {
-      const res = await fetch('/api/admin/promos');
+      const res = await adminFetch('/api/admin/promos');
       if (res.ok) {
         const data = await res.json();
         setPromos(data.promos || []);
@@ -1334,7 +1304,7 @@ export function AdminPortalPage() {
     }
     setActionSubmitting(true);
     try {
-      const res = await fetch('/api/admin/promos', {
+      const res = await adminFetch('/api/admin/promos', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1362,7 +1332,7 @@ export function AdminPortalPage() {
 
   const handleTogglePromo = async (id: string, active: boolean) => {
     try {
-      const res = await fetch(`/api/admin/promos/${id}/toggle`, {
+      const res = await adminFetch(`/api/admin/promos/${id}/toggle`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ active })
@@ -1377,7 +1347,7 @@ export function AdminPortalPage() {
   const handleDeletePromo = async (id: string) => {
     if (!window.confirm('Are you sure you want to delete this promotional code?')) return;
     try {
-      const res = await fetch(`/api/admin/promos/${id}`, { method: 'DELETE' });
+      const res = await adminFetch(`/api/admin/promos/${id}`, { method: 'DELETE' });
       if (res.ok) {
         showFeedback('Promo code deleted.');
         fetchPromos();
@@ -1389,7 +1359,7 @@ export function AdminPortalPage() {
     setRedemptionsLoading(true);
     setSelectedPromoRedemptions([]);
     try {
-      const res = await fetch(`/api/admin/promos/${id}/redemptions`);
+      const res = await adminFetch(`/api/admin/promos/${id}/redemptions`);
       if (res.ok) {
         const data = await res.json();
         setSelectedPromoRedemptions(data.redemptions || []);
@@ -1412,7 +1382,7 @@ export function AdminPortalPage() {
   const fetchGiveaway = async () => {
     setGiveawayLoading(true);
     try {
-      const res = await fetch('/api/admin/giveaway');
+      const res = await adminFetch('/api/admin/giveaway');
       if (res.ok) {
         const data = await res.json();
         const s = data.settings || null;
@@ -1448,7 +1418,7 @@ export function AdminPortalPage() {
         support_server_url: giveawaySupportUrlInput.trim() || undefined
       };
       if (enableToo) payload.enabled = true;
-      const res = await fetch('/api/admin/giveaway/settings', {
+      const res = await adminFetch('/api/admin/giveaway/settings', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -1471,7 +1441,7 @@ export function AdminPortalPage() {
     if (!window.confirm('Reset all claimed spots to 0 so you can start a fresh giveaway round? (Past credit ledger entries are kept.)')) return;
     setGiveawaySaving(true);
     try {
-      const res = await fetch('/api/admin/giveaway/reset', { method: 'POST' });
+      const res = await adminFetch('/api/admin/giveaway/reset', { method: 'POST' });
       if (res.ok) {
         const data = await res.json();
         setGiveawaySettings(data.settings || giveawaySettings);
@@ -1492,7 +1462,7 @@ export function AdminPortalPage() {
     const nextState = !giveawaySettings.enabled;
     setGiveawayToggling(true);
     try {
-      const res = await fetch('/api/admin/giveaway/toggle', {
+      const res = await adminFetch('/api/admin/giveaway/toggle', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ enabled: nextState })
@@ -1521,7 +1491,7 @@ export function AdminPortalPage() {
     }
     setActionSubmitting(true);
     try {
-      const res = await fetch(`/api/admin/servers/${server.id}/action`, {
+      const res = await adminFetch(`/api/admin/servers/${server.id}/action`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action, reason: reason ? reason.trim() : undefined, patch })
@@ -1555,7 +1525,7 @@ export function AdminPortalPage() {
     if (!report) return;
     setActionSubmitting(true);
     try {
-      const res = await fetch(`/api/admin/reports/${report.id}/action`, {
+      const res = await adminFetch(`/api/admin/reports/${report.id}/action`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status, adminNotes: notes.trim(), deleteContent })
@@ -1578,7 +1548,7 @@ export function AdminPortalPage() {
   // Flag Action
   const handleExecuteFlagAction = async (flagId: string, action: string, reason: string) => {
     try {
-      const res = await fetch(`/api/admin/flags/${flagId}/action`, {
+      const res = await adminFetch(`/api/admin/flags/${flagId}/action`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action, reason: reason || 'Moderator action' })
@@ -1604,7 +1574,7 @@ export function AdminPortalPage() {
   const handleSaveMaintenance = async (newMode?: 'operational' | 'maintenance') => {
     setMaintenanceSaving(true);
     try {
-      const res = await fetch('/api/admin/maintenance', {
+      const res = await adminFetch('/api/admin/maintenance', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1642,7 +1612,7 @@ export function AdminPortalPage() {
   const handleCreateAnnouncement = async () => {
     if (!announcementText.trim()) return;
     try {
-      const res = await fetch('/api/admin/announcements', {
+      const res = await adminFetch('/api/admin/announcements', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1670,7 +1640,7 @@ export function AdminPortalPage() {
 
   const handleToggleAnnouncement = async (item: AnnouncementItem) => {
     try {
-      const res = await fetch(`/api/admin/announcements/${item.id}`, {
+      const res = await adminFetch(`/api/admin/announcements/${item.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ active: !item.active })
@@ -1686,7 +1656,7 @@ export function AdminPortalPage() {
 
   const handleDeleteAnnouncement = async (id: string) => {
     try {
-      const res = await fetch(`/api/admin/announcements/${id}`, { method: 'DELETE' });
+      const res = await adminFetch(`/api/admin/announcements/${id}`, { method: 'DELETE' });
       if (res.ok) {
         showFeedback('Announcement deleted.');
         fetchAnnouncements();
@@ -1710,7 +1680,7 @@ export function AdminPortalPage() {
   const handleDeleteChangelog = async (version: string) => {
     if (!window.confirm(`Are you sure you want to delete changelog release ${version}?`)) return;
     try {
-      const res = await fetch(`/api/admin/changelog/${encodeURIComponent(version)}`, {
+      const res = await adminFetch(`/api/admin/changelog/${encodeURIComponent(version)}`, {
         method: 'DELETE'
       });
       if (res.ok) {
@@ -1731,7 +1701,7 @@ export function AdminPortalPage() {
     }
     const itemsArray = clItems.split('\n').map(s => s.trim()).filter(Boolean);
     try {
-      const res = await fetch('/api/admin/changelog', {
+      const res = await adminFetch('/api/admin/changelog', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1764,7 +1734,7 @@ export function AdminPortalPage() {
     reasonText?: string
   ) => {
     try {
-      const res = await fetch(`/api/admin/reports/${reportId}/action`, {
+      const res = await adminFetch(`/api/admin/reports/${reportId}/action`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1796,7 +1766,7 @@ export function AdminPortalPage() {
       return;
     }
     try {
-      const res = await fetch('/api/admin/admins', {
+      const res = await adminFetch('/api/admin/admins', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1824,7 +1794,7 @@ export function AdminPortalPage() {
   const handleRemoveAdmin = async () => {
     if (!removeAdminTarget) return;
     try {
-      const res = await fetch(`/api/admin/admins/${removeAdminTarget.userId}`, {
+      const res = await adminFetch(`/api/admin/admins/${removeAdminTarget.userId}`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ reason: removeAdminReason.trim() })
@@ -1990,7 +1960,7 @@ export function AdminPortalPage() {
       <div className="flex-1 flex flex-col md:flex-row">
         {/* Mobile Horizontal Subnav */}
         <div className="md:hidden border-b border-white/[0.08] bg-[#0E0E11] px-3 overflow-x-auto scrollbar-none flex items-center gap-1 py-2">
-          {(adminRole === 'Reviewer' ? NAV_TABS.filter(t => t.id === 'verifications' || t.id === 'bugs') : NAV_TABS).map((tabItem) => {
+          {NAV_TABS.map((tabItem) => {
             const Icon = tabItem.icon;
             const isActive = activeTab === tabItem.id;
             return (
@@ -2012,15 +1982,7 @@ export function AdminPortalPage() {
 
         {/* Desktop Sidebar with Groups (Section 6.1) */}
         <aside className="hidden md:flex w-56 shrink-0 flex-col border-r border-white/[0.08] bg-[#0E0E11] p-3 space-y-4">
-          {(adminRole === 'Reviewer' ? [
-            {
-              group: 'Staff Review',
-              items: [
-                { id: 'verifications', label: 'Verifications', icon: CheckCircle2 },
-                { id: 'bugs', label: 'Bug reports', icon: Bug }
-              ]
-            }
-          ] : SIDEBAR_GROUPS).map((groupObj, gIdx) => (
+          {SIDEBAR_GROUPS.map((groupObj, gIdx) => (
             <div key={gIdx} className="space-y-1">
               {groupObj.group && (
                 <div className="px-3 pb-1 text-[12px] font-medium text-zinc-500 font-sans">
@@ -2926,197 +2888,6 @@ export function AdminPortalPage() {
                   ))}
                 </div>
               )}
-            </div>
-          )}
-
-          {/* ═══════════════════════════════════════════════════════════
-              4a. VERIFICATIONS TAB (Server Verification Applications)
-             ═══════════════════════════════════════════════════════════ */}
-          {activeTab === 'verifications' && (
-            <AdminTabErrorBoundary tabName="Verifications">
-              <div className="space-y-4 animate-in fade-in-50 duration-200">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <div>
-                    <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white flex items-center gap-2">
-                      <span>Server Verification Applications</span>
-                      <span className="text-[#38BDF8] inline-flex items-center">
-                        <CheckCircle2 className="size-5 fill-[#38BDF8] text-[#0E0E11]" />
-                      </span>
-                    </h1>
-                    <p className="text-xs sm:text-sm text-zinc-400 mt-0.5">
-                      Review applications submitted by server managers for the verified blue checkmark.
-                    </p>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <Select value={verificationsFilter} onValueChange={(val: any) => setVerificationsFilter(val)}>
-                      <SelectTrigger className="w-[140px] text-xs bg-[#0E0E11] border-white/[0.08]">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="bg-[#0E0E11] border-white/[0.08] text-xs">
-                        <SelectItem value="all">All statuses</SelectItem>
-                        <SelectItem value="pending">Pending</SelectItem>
-                        <SelectItem value="approved">Approved</SelectItem>
-                        <SelectItem value="rejected">Rejected</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <Button variant="outline" size="sm" onClick={fetchVerifications} className="text-xs border-white/[0.08] h-8">
-                      Refresh
-                    </Button>
-                  </div>
-                </div>
-
-                {verificationsLoading ? (
-                  <div className="p-8 text-center text-xs text-zinc-500 font-sans">
-                    Loading verification applications...
-                  </div>
-                ) : verifications.filter(a => verificationsFilter === 'all' || a.status === verificationsFilter).length === 0 ? (
-                  <div className="rounded-2xl border border-white/[0.08] bg-[#0E0E11] p-12 text-center text-xs text-zinc-500 font-sans">
-                    No verification applications found.
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {verifications
-                      .filter(a => verificationsFilter === 'all' || a.status === verificationsFilter)
-                      .map((app) => (
-                        <div key={app.id} className="rounded-2xl border border-white/[0.08] bg-[#0E0E11] p-5 space-y-3 font-sans">
-                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-white/[0.06]">
-                            <div className="flex items-center gap-2.5">
-                              <h3 className="text-sm font-semibold text-white">{app.serverName || 'Server'}</h3>
-                              <span className="text-xs font-mono text-zinc-500">ID: {app.serverId}</span>
-                              {app.status === 'approved' ? (
-                                <span className="text-[11px] font-semibold text-[#38BDF8] bg-[#38BDF8]/10 border border-[#38BDF8]/20 px-2 py-0.5 rounded-full inline-flex items-center gap-1">
-                                  <CheckCircle2 className="size-3 fill-[#38BDF8] text-[#0E0E11]" />
-                                  Approved
-                                </span>
-                              ) : app.status === 'rejected' ? (
-                                <span className="text-[11px] font-medium text-rose-400 bg-rose-500/10 border border-rose-500/20 px-2 py-0.5 rounded-full">
-                                  Rejected
-                                </span>
-                              ) : (
-                                <span className="text-[11px] font-medium text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full">
-                                  Pending review
-                                </span>
-                              )}
-                            </div>
-
-                            <div className="flex items-center gap-2 text-xs text-zinc-500">
-                              <span>Submitted by: <strong className="text-zinc-300 font-medium">@{app.username || app.userId}</strong></span>
-                              <span>•</span>
-                              <span>{new Date(app.submittedAt).toLocaleDateString()}</span>
-                            </div>
-                          </div>
-
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
-                            <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.06] space-y-1">
-                              <span className="text-zinc-400 font-medium block">Why qualify:</span>
-                              <p className="text-zinc-200 whitespace-pre-wrap leading-relaxed">{app.why}</p>
-                            </div>
-                            <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.06] space-y-1">
-                              <span className="text-zinc-400 font-medium block">Community offerings:</span>
-                              <p className="text-zinc-200 whitespace-pre-wrap leading-relaxed">{app.offerings}</p>
-                            </div>
-                          </div>
-
-                          {app.links && (
-                            <div className="text-xs text-zinc-400 flex items-center gap-2">
-                              <span className="text-zinc-500 font-medium">Links:</span>
-                              <span className="text-zinc-300 font-mono">{app.links}</span>
-                            </div>
-                          )}
-
-                          {app.reason && (
-                            <div className="text-xs p-2.5 rounded-lg bg-white/[0.02] border border-white/[0.04] text-zinc-400">
-                              <strong className="text-zinc-300">Staff decision note:</strong> {app.reason} (by {app.processedBy || 'Staff'})
-                            </div>
-                          )}
-
-                          {app.status === 'pending' && (
-                            <div className="flex items-center justify-end gap-2 pt-2 border-t border-white/[0.06]">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => setVerificationModal({
-                                  open: true,
-                                  app,
-                                  action: 'reject',
-                                  reason: '',
-                                  submitting: false
-                                })}
-                                className="h-8 text-xs border-rose-500/30 text-rose-400 hover:bg-rose-500/10 hover:text-rose-300"
-                              >
-                                Reject
-                              </Button>
-                              <Button
-                                size="sm"
-                                onClick={() => setVerificationModal({
-                                  open: true,
-                                  app,
-                                  action: 'approve',
-                                  reason: 'Meets all quality and community requirements',
-                                  submitting: false
-                                })}
-                                className="h-8 text-xs bg-[var(--accent)] text-[var(--accent-foreground)] font-semibold"
-                              >
-                                Approve verification
-                              </Button>
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                  </div>
-                )}
-              </div>
-            </AdminTabErrorBoundary>
-          )}
-
-          {/* Verification Decision Modal */}
-          {verificationModal.open && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-xs p-4">
-              <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#0E0E11] p-6 shadow-2xl space-y-4 font-sans">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-base font-semibold text-white">
-                    {verificationModal.action === 'approve' ? 'Approve Server Verification' : 'Reject Server Verification'}
-                  </h3>
-                  <button onClick={() => setVerificationModal({ open: false, app: null, action: 'approve', reason: '', submitting: false })} className="text-zinc-500 hover:text-white p-1">
-                    <X className="size-4" />
-                  </button>
-                </div>
-
-                <div className="space-y-1.5 text-xs">
-                  <p className="text-zinc-400">
-                    Server: <strong className="text-white font-medium">{verificationModal.app?.serverName}</strong> ({verificationModal.app?.serverId})
-                  </p>
-                  <label className="text-zinc-300 font-medium block pt-2">
-                    {verificationModal.action === 'approve' ? 'Approval note (saved to audit log):' : 'Reason for rejection (shown to server manager):'}
-                  </label>
-                  <textarea
-                    rows={3}
-                    value={verificationModal.reason}
-                    onChange={(e) => setVerificationModal(prev => ({ ...prev, reason: e.target.value }))}
-                    placeholder={verificationModal.action === 'approve' ? 'e.g. Meets verified server criteria' : 'e.g. Server does not yet meet active membership standards'}
-                    className="w-full p-2.5 rounded-xl bg-[#141417] border border-white/10 text-white focus:outline-none focus:border-white/20 resize-none"
-                  />
-                </div>
-
-                <div className="flex items-center justify-end gap-2 pt-2 border-t border-white/[0.06]">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setVerificationModal({ open: false, app: null, action: 'approve', reason: '', submitting: false })}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    size="sm"
-                    disabled={verificationModal.submitting || (verificationModal.action === 'reject' && !verificationModal.reason.trim())}
-                    onClick={handleVerificationAction}
-                    className={verificationModal.action === 'approve' ? 'bg-[var(--accent)] text-[var(--accent-foreground)] font-semibold' : 'bg-rose-600 hover:bg-rose-700 text-white font-semibold'}
-                  >
-                    {verificationModal.submitting ? 'Processing…' : verificationModal.action === 'approve' ? 'Confirm Approval' : 'Confirm Rejection'}
-                  </Button>
-                </div>
-              </div>
             </div>
           )}
 
@@ -5388,7 +5159,7 @@ export function AdminPortalPage() {
                   onClick={async () => {
                     if (!selectedUserSheet?.user?.id) return;
                     try {
-                      const res = await fetch(`/api/admin/users/${selectedUserSheet.user.id}/clear-promo-lock`, {
+                      const res = await adminFetch(`/api/admin/users/${selectedUserSheet.user.id}/clear-promo-lock`, {
                         method: 'POST',
                         credentials: 'include'
                       });
@@ -5412,7 +5183,7 @@ export function AdminPortalPage() {
                   onClick={async () => {
                     const uid = selectedUserSheet.user.id;
                     try {
-                      await fetch('/api/admin/blacklist/unblacklist', {
+                      await adminFetch('/api/admin/blacklist/unblacklist', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ userId: uid, target: uid, reason: 'Unblacklisted from user sheet' })
@@ -6366,7 +6137,6 @@ export function AdminPortalPage() {
                   {adminRole === 'Owner' && <SelectItem value="Owner">Owner</SelectItem>}
                   <SelectItem value="Admin">Admin</SelectItem>
                   <SelectItem value="Moderator">Moderator</SelectItem>
-                  <SelectItem value="Reviewer">Reviewer (Verifications & Bugs only)</SelectItem>
                 </SelectContent>
               </Select>
             </div>

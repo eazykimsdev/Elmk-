@@ -135,7 +135,10 @@ export function DashboardSidebar({
 
   useEffect(() => {
     if (user?.id) {
-      fetch('/api/admin/check')
+      fetch('/api/admin/check', {
+        credentials: 'include',
+        headers: { 'x-user-id': user.id }
+      })
         .then((res) => (res.ok ? res.json() : null))
         .then((data) => {
           setIsAdmin(Boolean(data?.isAdmin));
@@ -489,8 +492,27 @@ export function DashboardSidebar({
           },
         ],
       },
+      ...(isAdmin
+        ? [
+            {
+              label: 'Administration',
+              items: [
+                {
+                  label: 'Admin Portal',
+                  href: '/admin-portal',
+                  icon: Shield,
+                  badge: (
+                    <span className="text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 font-sans">
+                      Staff
+                    </span>
+                  ),
+                },
+              ],
+            },
+          ]
+        : []),
     ];
-  }, [currentGuildId, canBump, pendingRequestsCount, myJoinsExpanded, isRecruiter]);
+  }, [currentGuildId, canBump, pendingRequestsCount, myJoinsExpanded, isRecruiter, isAdmin]);
 
   const isItemActive = (item: NavigationItem) => {
     if (item.href.includes('?')) {
