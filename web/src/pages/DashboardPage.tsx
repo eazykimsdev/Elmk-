@@ -1125,7 +1125,7 @@ export function DashboardPage() {
                 guild={selectedGuild}
                 workspace={workspace}
                 config={config}
-                onNavigateTab={handleTabChange}
+                onNavigateTab={(t) => navigate(`/dashboard/${currentGuildId}/${t}`)}
                 addToast={addToast}
               />
             </TabErrorBoundary>
