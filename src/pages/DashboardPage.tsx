@@ -35,6 +35,7 @@ import { MyJoinsTab } from './dashboard/MyJoinsTab';
 import { HistoryTab } from './dashboard/HistoryTab';
 import { TransferTab } from './dashboard/TransferTab';
 import { UptimeTab } from './dashboard/UptimeTab';
+import { PremiumTab } from './dashboard/PremiumTab';
 import { ChangelogTab } from './dashboard/ChangelogTab';
 import { ServerDetailsTab } from './dashboard/ServerDetailsTab';
 import { BotManagementTab } from './dashboard/BotManagementTab';
@@ -60,6 +61,7 @@ const VALID_DASHBOARD_TABS = new Set([
   'joins',
   'my-joins',
   'partnerships',
+  'premium',
   'recruits',
   'history',
   'transfer',
@@ -763,6 +765,7 @@ export function DashboardPage() {
       leaderboard: 'Leaderboard',
       joins: 'My joins',
       partnerships: 'Partnerships',
+      premium: 'Premium',
       history: 'Credit history',
       discord: 'Discord connection',
       'discord-connection': 'Discord connection',
@@ -1164,6 +1167,18 @@ export function DashboardPage() {
           {activeTabKey === 'uptime' && (
             <TabErrorBoundary tabTitle="System status">
               <UptimeTab addToast={addToast} />
+            </TabErrorBoundary>
+          )}
+
+          {activeTabKey === 'premium' && (
+            <TabErrorBoundary tabTitle="Premium">
+              <PremiumTab
+                guild={selectedGuild}
+                workspace={workspace}
+                config={config}
+                onNavigateTab={handleTabChange}
+                addToast={addToast}
+              />
             </TabErrorBoundary>
           )}
 

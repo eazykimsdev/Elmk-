@@ -413,6 +413,9 @@ function PromoteTabInner({
   const [partnershipBroadcastChannel, setPartnershipBroadcastChannel] = useState<string>(() => {
     return cachedListing?.partnershipBroadcastChannel ?? (config as any)?.partnershipBroadcastChannel ?? '';
   });
+  const [partnershipAdText, setPartnershipAdText] = useState<string>(() => {
+    return cachedListing?.partnershipAdText ?? (config as any)?.partnershipAdText ?? '';
+  });
   const [partnershipAcceptedCategories, setPartnershipAcceptedCategories] = useState<string[]>(() => {
     if (Array.isArray(cachedListing?.partnershipAcceptedCategories)) return cachedListing.partnershipAcceptedCategories;
     if (Array.isArray((config as any)?.partnershipAcceptedCategories)) return (config as any).partnershipAcceptedCategories;
@@ -516,20 +519,14 @@ function PromoteTabInner({
     if (!guildId) return;
     setIsBuyingPremium(true);
     try {
-      const res = await fetch(`/api/servers/${guildId}/premium/buy`, {
+      const data = await api<any>(`/servers/${guildId}/premium/buy`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
       });
-      const data = await res.json();
-      if (!res.ok) {
-        addToast('error', 'Purchase Failed', data.error || 'Failed to purchase premium');
-        return;
-      }
       addToast('success', 'Premium Activated', 'Successfully updated Premium subscription!');
       setIsBuyModalOpen(false);
       await loadPremiumData();
     } catch (err: any) {
-      addToast('error', 'Purchase Error', err.message || 'Network error');
+      addToast('error', 'Purchase Failed', err.message || 'Failed to purchase premium');
     } finally {
       setIsBuyingPremium(false);
     }
@@ -632,6 +629,20 @@ function PromoteTabInner({
       } catch {}
     }
     loadExtraData();
+    return () => { mounted = false; };
+  }, [guildId]);
+
+  // Fetch owner dashboard notices (e.g. expired invite notifications)
+  const [ownerNotices, setOwnerNotices] = useState<any[]>([]);
+  useEffect(() => {
+    if (!guildId) return;
+    let mounted = true;
+    fetch(`/api/servers/${guildId}/owner-notices`, { credentials: 'include' })
+      .then((res) => res.json())
+      .then((data) => {
+        if (mounted && Array.isArray(data?.notices)) setOwnerNotices(data.notices);
+      })
+      .catch(() => {});
     return () => { mounted = false; };
   }, [guildId]);
 
@@ -1401,6 +1412,35 @@ function PromoteTabInner({
           />
         </div>
       </div>
+
+      {/* ── EXPIRED INVITE WARNING WITH LIVE COUNTDOWN ── */}
+      {(cachedListing?.invite_status === 'expired' || inviteStatus === 'invalid' || ownerNotices.some((n: any) => n.type === 'invite_expired')) && (
+        <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-4 space-y-2">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div className="flex items-center gap-2 text-rose-400 font-semibold text-sm font-sans">
+              <AlertTriangle className="size-4 shrink-0 animate-pulse" />
+              <span>Discord Invite Expired or Invalid</span>
+            </div>
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-mono font-semibold bg-rose-500/20 text-rose-300 border border-rose-500/30">
+              <Clock className="size-3" />
+              Grace Period: 48h to update
+            </span>
+          </div>
+          <p className="text-xs text-zinc-300 font-sans leading-relaxed">
+            The Discord invite for <strong>{serverName}</strong> is invalid or expired. Members cannot join your server.
+            Your community is temporarily hidden from Earn Credits and Partnerships until you generate and save a fresh permanent Discord invite.
+          </p>
+          <div className="pt-1">
+            <Button
+              size="sm"
+              onClick={() => setActiveTab('rewards')}
+              className="bg-rose-500 hover:bg-rose-600 text-white font-semibold text-xs h-7 px-3 font-sans cursor-pointer"
+            >
+              Update invite link now &rarr;
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* ── SEGMENTED TABS: Listing | Appearance | Invite and rewards | Partnerships ── */}
       <div className="space-y-3">
@@ -2887,6 +2927,42 @@ function PromoteTabInner({
                     <p className="text-[12px] text-[#71717A] font-sans">
                       Where approved partner advertisements will be posted automatically.
                     </p>
+                  </div>
+
+                  {/* Partnership Server Ad (Required for broadcasts to activate) */}
+                  <div className="space-y-2 pt-2">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[14px] font-medium text-[#F4F4F5] font-sans">
+                        Partnership server ad
+                      </label>
+                      <span className="text-xs text-zinc-400 font-sans">
+                        {partnershipAdText.length} / 1500
+                      </span>
+                    </div>
+                    <Textarea
+                      value={partnershipAdText}
+                      onChange={(e) => {
+                        const val = e.target.value.slice(0, 1500);
+                        setPartnershipAdText(val);
+                        syncUpdates({ partnershipAdText: val } as any);
+                      }}
+                      placeholder="Paste your server ad here (description, invite, perks). Partnerships only broadcast once your ad is pasted here..."
+                      rows={4}
+                      className="text-[13px] bg-[#141417] border-[rgba(255,255,255,0.07)] font-sans placeholder:text-zinc-600"
+                    />
+                    <div className="flex items-center gap-2 pt-1">
+                      {partnershipBroadcastChannel && partnershipAdText.trim() ? (
+                        <span className="inline-flex items-center gap-1.5 text-xs text-emerald-400 font-sans">
+                          <Check className="size-3.5" />
+                          Partnership active: Channel selected and ad ready.
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 text-xs text-amber-400 font-sans">
+                          <AlertCircle className="size-3.5" />
+                          Paste your ad and select a channel above for partnerships to broadcast.
+                        </span>
+                      )}
+                    </div>
                   </div>
 
                   {/* Partner Categories I Accept */}

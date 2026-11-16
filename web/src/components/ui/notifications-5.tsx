@@ -31,32 +31,7 @@ export default function NotificationsBlock({
   onDismiss,
   className = ""
 }: NotificationsBlockProps) {
-  const [internalToasts, setInternalToasts] = useState<ToastNotification[]>([
-    {
-      id: 1,
-      variant: "success",
-      title: "Changes saved",
-      body: "Your project settings were updated successfully.",
-    },
-    {
-      id: 2,
-      variant: "info",
-      title: "New version available",
-      body: "Refresh to get the latest features and fixes.",
-    },
-    {
-      id: 3,
-      variant: "warning",
-      title: "Usage nearing limit",
-      body: "You've used 85% of your monthly quota.",
-    },
-    {
-      id: 4,
-      variant: "error",
-      title: "Payment failed",
-      body: "We couldn't process your card. Update it to continue.",
-    },
-  ]);
+  const [internalToasts, setInternalToasts] = useState<ToastNotification[]>([]);
 
   const toasts = notifications !== undefined ? notifications : internalToasts;
 

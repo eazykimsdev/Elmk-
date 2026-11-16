@@ -472,6 +472,16 @@ export function DashboardSidebar({
         ],
       },
       {
+        label: 'Premium',
+        items: [
+          {
+            label: 'Premium',
+            href: `/dashboard/${currentGuildId}/premium`,
+            icon: Sparkles,
+          },
+        ],
+      },
+      {
         label: 'System',
         items: [
           {

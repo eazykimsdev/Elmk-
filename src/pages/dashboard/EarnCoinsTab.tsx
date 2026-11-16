@@ -153,27 +153,7 @@ export function EarnCoinsTab({
         verified: match?.verified
       });
     }
-    try {
-      const legacyRaw = localStorage.getItem('erlcus_joined_servers');
-      const legacyMap = legacyRaw ? JSON.parse(legacyRaw) : {};
-      for (const [id, val] of Object.entries(legacyMap)) {
-        if (!userJoins[id] && val) {
-          const match = promotedServers.find(s => String(s.id) === String(id));
-          list.push({
-            serverId: id,
-            serverName: match?.name || `Server (${id})`,
-            iconUrl: match ? getResolvedServerIcon(match) : null,
-            category: match?.category || 'Roleplay Server',
-            joinedAt: Date.now() - 3600000,
-            retentionHours: 0.033,
-            status: 'verified',
-            reward: match?.rewardCoins || 2,
-            claimed: true,
-            verified: match?.verified
-          });
-        }
-      }
-    } catch {}
+    // Clean list of joined communities from actual records
 
     list.sort((a, b) => (b.joinedAt || 0) - (a.joinedAt || 0));
     return list;
@@ -539,8 +519,8 @@ export function EarnCoinsTab({
             {paginatedServers.map((server) => {
               const isOwnServer = currentGuildId && String(server.id) === String(currentGuildId);
               const userJoin = userJoins[server.id];
-              const isVerifying = userJoin && userJoin.status === 'verifying';
-              const isVerified = userJoin && userJoin.status === 'verified';
+              const isVerifying = Boolean(userJoin && userJoin.status === 'verifying');
+              const isVerified = Boolean(userJoin && (userJoin.status === 'verified' || userJoin.status === 'joined') && userJoin.status !== 'left');
               const iconUrl = getResolvedServerIcon(server);
 
               const cardData: DirectoryServerData = {
@@ -570,8 +550,8 @@ export function EarnCoinsTab({
                   server={cardData}
                   rewardCoins={server.rewardCoins || 2}
                   isOwnServer={Boolean(isOwnServer)}
-                  isJoined={Boolean(userJoin || isVerified || isVerifying)}
-                  isVerifying={false}
+                  isJoined={isVerified}
+                  isVerifying={isVerifying}
                   onJoin={handleJoinServer}
                   onClick={() => openServerProfile(server.id, server)}
                 />

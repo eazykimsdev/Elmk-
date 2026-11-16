@@ -690,6 +690,7 @@ export function AdminPortalPage() {
     try {
       const res = await adminFetch('/api/admin/overview');
       if (res.ok) setOverview(await res.json());
+      fetchPromos();
     } catch {} finally {
       setOverviewLoading(false);
     }
@@ -2312,6 +2313,58 @@ export function AdminPortalPage() {
                   </div>
                 )}
               </Card>
+
+              {/* Promotional Codes Management Card in Overview */}
+              <Card className="bg-[#121215] border-white/[0.08] p-5 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-[14px] font-semibold text-white font-sans flex items-center gap-2">
+                      <Ticket className="size-4 text-emerald-400" />
+                      Promotional Codes
+                    </h2>
+                    <p className="text-xs text-zinc-400 font-sans mt-0.5">Manage and delete reward promo codes directly</p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleTabChange('promos')}
+                    className="text-xs text-zinc-300 hover:text-white h-7 px-2 font-sans cursor-pointer"
+                  >
+                    View all promo codes &rarr;
+                  </Button>
+                </div>
+
+                {promos.length === 0 ? (
+                  <div className="py-6 text-center text-xs text-zinc-500 font-sans">No promotional codes found.</div>
+                ) : (
+                  <div className="divide-y divide-white/[0.04]">
+                    {promos.map((p) => (
+                      <div key={p.id} className="py-2.5 flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <code className="text-xs font-mono font-bold text-white px-2 py-0.5 rounded bg-white/[0.04] border border-white/[0.08]">
+                            {p.code}
+                          </code>
+                          <span className="text-xs text-emerald-400 font-medium font-sans">
+                            +{p.credits} cr
+                          </span>
+                          <span className="text-[11px] text-zinc-500 font-sans">
+                            {p.used_count || 0}/{p.max_uses || '∞'} claimed
+                          </span>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeletePromo(p.id)}
+                          className="h-7 px-2.5 text-xs text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 font-sans flex items-center gap-1 cursor-pointer"
+                        >
+                          <Trash2 className="size-3" />
+                          Delete
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </Card>
             </div>
           )}
 
@@ -3314,6 +3367,30 @@ export function AdminPortalPage() {
                   </div>
 
                   <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={async () => {
+                        try {
+                          const res = await adminFetch('/api/admin/test-invite-expired-dm', {
+                            method: 'POST',
+                            body: JSON.stringify({ adminUserId: '523693281541095424' })
+                          });
+                          const data = await res.json();
+                          if (res.ok) {
+                            showFeedback('Components V2 test DM sent to admin 523693281541095424!');
+                          } else {
+                            showFeedback(data.error || 'Failed to dispatch test DM', 'error');
+                          }
+                        } catch {
+                          showFeedback('Network error sending test DM', 'error');
+                        }
+                      }}
+                      className="h-8 text-xs border-white/[0.08] hover:bg-white/5 font-sans cursor-pointer flex items-center gap-1.5 text-zinc-300 hover:text-white"
+                    >
+                      <Send className="size-3 text-emerald-400" />
+                      Test V2 Expired DM
+                    </Button>
                     <Button
                       variant="outline"
                       size="sm"

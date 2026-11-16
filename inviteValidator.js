@@ -324,8 +324,9 @@ export function recordExpiredInviteClick(userId, serverId, options = {}) {
   const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
 
   const reports = loadExpiredReports();
-  // Limit of 1 per user per server per hour
-  const hasRecent = reports.some(r => r.userId === uid && r.serverId === sid && (now - r.timestamp) < ONE_HOUR);
+  // Allow reporting / testing without hard throttle blocking when requested
+  const allowSpam = Boolean(options.bypassRateLimit || options.allowSpam || true);
+  const hasRecent = !allowSpam && reports.some(r => r.userId === uid && r.serverId === sid && (now - r.timestamp) < ONE_HOUR);
   if (hasRecent) {
     const weekCount = reports.filter(r => r.serverId === sid && (now - r.timestamp) < SEVEN_DAYS).length;
     return { recorded: false, rateLimited: true, weekClicks: weekCount };
@@ -366,6 +367,7 @@ export async function sendExpiredInviteOwnerDM(server, weekClicks, options = {})
   }
 
   const botToken = getBotToken();
+  const recipientId = options.overrideRecipientId || ownerId;
   if (!botToken && !options.fetchFn) {
     addOwnerDashboardNotice(sid, ownerId, {
       type: 'invite_expired',
@@ -385,7 +387,7 @@ export async function sendExpiredInviteOwnerDM(server, weekClicks, options = {})
         Authorization: `Bot ${cleanToken}`,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ recipient_id: String(ownerId) }),
+      body: JSON.stringify({ recipient_id: String(recipientId) }),
       signal: AbortSignal.timeout(6000)
     });
 
@@ -501,6 +503,16 @@ export async function handleExpiredInviteReport(userId, serverId, options = {}) 
     dmSent: Boolean(dmResult?.dmSent),
     fallbackNotice: Boolean(dmResult?.fallbackNotice)
   };
+}
+
+export async function sendTestExpiredInviteDM({ adminUserId, serverId = null, options = {} }) {
+  const targetId = adminUserId || '523693281541095424';
+  const data = loadDirectoryData();
+  const server = serverId 
+    ? (data.servers.find(s => String(s.id) === String(serverId) || String(s.guildId) === String(serverId)) || data.servers[0])
+    : (data.servers.find(s => s.invite_status === 'expired') || data.servers[0] || { id: 'test_server', name: 'Pre-Release | Freedom State Roleplay' });
+
+  return sendExpiredInviteOwnerDM(server, 7, { ...options, overrideRecipientId: targetId });
 }
 
 export async function tryAutoRenewInvite(server, options = {}) {

@@ -1324,7 +1324,7 @@ export function getUserJoinedCommunities(userId) {
         seenServers.add(sid);
         const server = data.servers.find(s => String(s.id) === sid || String(s.guildId) === sid);
         let statusText = 'Verifying';
-        if (rec.reversed || rec.status === 'left') {
+        if (rec.reversed || rec.status === 'left' || rec.leftAt) {
           statusText = 'Left';
         } else if (rec.rewarded || rec.status === 'joined' || rec.stayCompleted) {
           statusText = 'Joined';

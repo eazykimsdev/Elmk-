@@ -152,7 +152,7 @@ export function getGuildPartnershipConfig(guildId) {
     partnershipChannelId: mergedChannelId,
     partnershipBroadcastChannel: mergedChannelId || null,
     partnershipChannelName: cfg.partnershipChannelName || '',
-    partnershipAdText: cfg.partnershipAdText || server?.description || '',
+    partnershipAdText: cfg.partnershipAdText || server?.partnershipAdText || server?.description || '',
     allowPartnerMentions: isSetUp
       ? Boolean(cfg.allowPartnerMentions !== undefined ? cfg.allowPartnerMentions : server?.allowPartnerMentions)
       : false,

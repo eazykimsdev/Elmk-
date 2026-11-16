@@ -484,9 +484,15 @@ export async function handleInteraction(interaction, token) {
       }
 
       try {
+        let callerAvatar = null;
+        if (callerUser?.avatar) {
+          callerAvatar = `https://cdn.discordapp.com/avatars/${callerId}/${callerUser.avatar}.png?size=128`;
+        }
         const report = await createBugReport({
           userId: callerId,
-          username: callerUser?.username || callerUser?.global_name || 'Discord User',
+          username: callerUser?.username || 'Discord User',
+          displayName: callerUser?.global_name || callerUser?.username || 'Discord User',
+          avatarUrl: callerAvatar,
           title: bugTitle,
           description: bugWhatHappened,
           stepsToReproduce: bugSteps

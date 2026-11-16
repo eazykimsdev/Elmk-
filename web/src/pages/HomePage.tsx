@@ -348,10 +348,10 @@ export function HomePage() {
                     </div>
                     <span className="text-2xl sm:text-3xl text-zinc-600 font-light select-none">:</span>
                     <div>
-                      <span className="text-[48px] sm:text-[60px] font-bold text-[var(--accent)] tabular-nums tracking-tight font-sans leading-none">
+                      <span className="text-[48px] sm:text-[60px] font-bold text-emerald-400 tabular-nums tracking-tight font-sans leading-none">
                         {String(timeLeft.seconds).padStart(2, '0')}
                       </span>
-                      <span className="text-[11px] sm:text-[12px] text-zinc-400 block uppercase tracking-wider font-medium mt-1.5 font-sans">
+                      <span className="text-[11px] sm:text-[12px] text-emerald-400/80 block uppercase tracking-wider font-medium mt-1.5 font-sans">
                         Seconds
                       </span>
                     </div>

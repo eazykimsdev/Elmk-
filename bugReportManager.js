@@ -178,7 +178,7 @@ export function checkBugReportRateLimit(userId) {
 /**
  * Create a new bug report
  */
-export async function createBugReport({ userId, username, title, description, stepsToReproduce }) {
+export async function createBugReport({ userId, username, displayName, avatarUrl, title, description, stepsToReproduce }) {
   if (!userId) throw new Error('User ID is required.');
   if (isUserBanned(userId)) {
     throw new Error('You are restricted from submitting bug reports.');
@@ -197,6 +197,18 @@ export async function createBugReport({ userId, username, title, description, st
   if (!cleanDesc) throw new Error('What happened description is required.');
   if (!cleanSteps) throw new Error('Steps to reproduce are required.');
 
+  let resolvedAvatar = avatarUrl || null;
+  let resolvedDisplayName = displayName || username || 'Discord User';
+  try {
+    const accPath = path.resolve('data/known_accounts.json');
+    if (!resolvedAvatar && fs.existsSync(accPath)) {
+      const accs = JSON.parse(fs.readFileSync(accPath, 'utf8') || '[]');
+      const match = accs.find(a => String(a.id) === String(userId) || String(a.userId) === String(userId));
+      if (match?.avatar) resolvedAvatar = match.avatar;
+      if (match?.displayName) resolvedDisplayName = match.displayName;
+    }
+  } catch {}
+
   const id = `bug_${Date.now()}_${crypto.randomBytes(3).toString('hex')}`;
   const nowIso = new Date().toISOString();
 
@@ -204,6 +216,8 @@ export async function createBugReport({ userId, username, title, description, st
     id,
     userId: String(userId),
     username: String(username || 'Discord User'),
+    displayName: resolvedDisplayName,
+    avatarUrl: resolvedAvatar,
     title: cleanTitle,
     description: cleanDesc,
     stepsToReproduce: cleanSteps,
