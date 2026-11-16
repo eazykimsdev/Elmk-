@@ -158,7 +158,49 @@ export async function restoreDataDir() {
               console.log(`[DATA SYNC] Merged ${added} ledger transactions from seeds into ledger.json`);
             }
           } catch {}
-        } else if (entry === 'partnerships.json' || entry === 'bug_reports.json' || entry === 'admin_audit_log.json') {
+        } else if (entry === 'admin_audit_log.json') {
+          try {
+            const current = JSON.parse(fs.readFileSync(target, 'utf8') || '[]');
+            const seeds = JSON.parse(fs.readFileSync(seedPath, 'utf8') || '[]');
+            const curLogs = Array.isArray(current) ? current : [];
+            const seedLogs = Array.isArray(seeds) ? seeds : [];
+            const logKeys = new Set(curLogs.map(l => l.id || `${l.timestamp}_${l.action}_${l.target}`));
+            let added = 0;
+            for (const l of seedLogs) {
+              const k = l.id || `${l.timestamp}_${l.action}_${l.target}`;
+              if (!logKeys.has(k)) {
+                curLogs.push(l);
+                logKeys.add(k);
+                added++;
+              }
+            }
+            if (added > 0) {
+              fs.writeFileSync(target, JSON.stringify(curLogs, null, 2), 'utf8');
+              console.log(`[DATA SYNC] Merged ${added} audit logs from seeds into admin_audit_log.json`);
+            }
+          } catch {}
+        } else if (entry === 'bug_reports.json') {
+          try {
+            const current = JSON.parse(fs.readFileSync(target, 'utf8') || '[]');
+            const seeds = JSON.parse(fs.readFileSync(seedPath, 'utf8') || '[]');
+            const curBugs = Array.isArray(current) ? current : [];
+            const seedBugs = Array.isArray(seeds) ? seeds : [];
+            const bugIds = new Set(curBugs.map(b => String(b.id)));
+            let added = 0;
+            for (const b of seedBugs) {
+              const bid = String(b.id);
+              if (bid && !bugIds.has(bid)) {
+                curBugs.push(b);
+                bugIds.add(bid);
+                added++;
+              }
+            }
+            if (added > 0) {
+              fs.writeFileSync(target, JSON.stringify(curBugs, null, 2), 'utf8');
+              console.log(`[DATA SYNC] Merged ${added} bug reports from seeds into bug_reports.json`);
+            }
+          } catch {}
+        } else if (entry === 'partnerships.json') {
           try {
             const curStat = fs.statSync(target);
             const seedStat = fs.statSync(seedPath);

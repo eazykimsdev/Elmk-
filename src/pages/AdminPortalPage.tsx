@@ -350,30 +350,13 @@ export function AdminPortalPage() {
   const [adminRole, setAdminRole] = useState<'Owner' | 'Admin' | 'Moderator'>('Moderator');
   const [currentAdmin, setCurrentAdmin] = useState<any>(null);
 
-  // Authenticated fetch wrapper for admin APIs
-  const getAuthUserId = useCallback(() => {
-    try {
-      const raw = localStorage.getItem('erlcus_user');
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (parsed?.id) return parsed.id;
-      }
-    } catch {}
-    return undefined;
-  }, []);
-
+  // Authenticated fetch wrapper for admin APIs (strictly uses credentials / session cookies)
   const adminFetch = useCallback((input: RequestInfo | URL, init: RequestInit = {}) => {
-    const headers = new Headers(init.headers || {});
-    const uid = getAuthUserId();
-    if (uid && !headers.has('x-user-id')) {
-      headers.set('x-user-id', uid);
-    }
     return fetch(input, {
       ...init,
       credentials: 'include',
-      headers,
     });
-  }, [getAuthUserId]);
+  }, []);
 
   // Active Tab
   const activeTab = useMemo(() => {

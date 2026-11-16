@@ -137,7 +137,6 @@ export function DashboardSidebar({
     if (user?.id) {
       fetch('/api/admin/check', {
         credentials: 'include',
-        headers: { 'x-user-id': user.id }
       })
         .then((res) => (res.ok ? res.json() : null))
         .then((data) => {

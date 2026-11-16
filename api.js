@@ -2910,7 +2910,7 @@ export function createDashboardRouter() {
   // GET /api/servers/:id/recruits/summary
   router.get('/servers/:id/recruits/summary', (req, res) => {
     const { id } = req.params;
-    const userId = req.dashboardSession?.user?.id || req.session?.user?.id || req.headers['x-user-id'] || (req.dashboardSession?.user?.id || req.session?.user?.id);
+    const userId = req.dashboardSession?.user?.id || req.session?.user?.id;
     const userProfile = req.dashboardSession?.user || req.session?.user || { id: userId, username: 'member', name: 'Community Member' };
 
     try {
@@ -2958,7 +2958,7 @@ export function createDashboardRouter() {
         message: 'ConnectingERLC bot must be added to your server before recruiting.'
       });
     }
-    const userId = req.dashboardSession?.user?.id || req.session?.user?.id || req.headers['x-user-id'] || (req.dashboardSession?.user?.id || req.session?.user?.id);
+    const userId = req.dashboardSession?.user?.id || req.session?.user?.id;
     const userProfile = req.dashboardSession?.user || req.session?.user || { id: userId, username: 'member', name: 'Community Member' };
 
     try {
@@ -2988,7 +2988,7 @@ export function createDashboardRouter() {
   // GET /api/servers/:id/recruits/user-stats
   router.get('/servers/:id/recruits/user-stats', (req, res) => {
     const { id } = req.params;
-    const userId = req.dashboardSession?.user?.id || req.session?.user?.id || req.headers['x-user-id'] || (req.dashboardSession?.user?.id || req.session?.user?.id);
+    const userId = req.dashboardSession?.user?.id || req.session?.user?.id;
     const userProfile = req.dashboardSession?.user || req.session?.user || { id: userId, username: 'member', name: 'Community Member' };
 
     try {
@@ -3721,8 +3721,11 @@ export function createDashboardRouter() {
     return (req, res, next) => {
       const sessionId = cookieValue(req, SESSION_COOKIE);
       const session = req.dashboardSession || (sessionId ? getSession(sessionId) : null);
-      const userId = session?.user?.id || req.session?.user?.id || req.headers['x-user-id'];
-      const username = session?.user?.username || req.session?.user?.username;
+      if (!session || !session.user || !session.user.id) {
+        return res.status(404).json({ error: 'Page not found' });
+      }
+      const userId = session.user.id;
+      const username = session.user.username;
       const admin = getAdminRecord(userId, username);
       const userRank = admin ? (roleRank[admin.role] || 0) : 0;
       const requiredRank = roleRank[minRole] !== undefined ? roleRank[minRole] : 1;
@@ -3780,8 +3783,11 @@ export function createDashboardRouter() {
   router.get('/admin/check', (req, res) => {
     const sessionId = cookieValue(req, SESSION_COOKIE);
     const session = req.dashboardSession || (sessionId ? getSession(sessionId) : null);
-    const userId = session?.user?.id || req.session?.user?.id || req.headers['x-user-id'];
-    const username = session?.user?.username || req.session?.user?.username;
+    if (!session || !session.user || !session.user.id) {
+      return res.status(404).json({ error: 'Page not found' });
+    }
+    const userId = session.user.id;
+    const username = session.user.username;
     const admin = getAdminRecord(userId, username);
     if (!admin) {
       return res.status(404).json({ error: 'Page not found' });
@@ -3804,8 +3810,11 @@ export function createDashboardRouter() {
   router.get('/admin/me', (req, res) => {
     const sessionId = cookieValue(req, SESSION_COOKIE);
     const session = req.dashboardSession || (sessionId ? getSession(sessionId) : null);
-    const userId = session?.user?.id || req.session?.user?.id || req.headers['x-user-id'];
-    const username = session?.user?.username || req.session?.user?.username;
+    if (!session || !session.user || !session.user.id) {
+      return res.status(404).json({ error: 'Page not found' });
+    }
+    const userId = session.user.id;
+    const username = session.user.username;
     const admin = getAdminRecord(userId, username);
     if (!admin) {
       return res.status(404).json({ error: 'Page not found' });
@@ -4386,13 +4395,12 @@ export function createDashboardRouter() {
   const handleSelfUnban = (req, res) => {
     const sessionId = cookieValue(req, SESSION_COOKIE);
     const session = req.dashboardSession || (sessionId ? getSession(sessionId) : null);
-    const userId = session?.user?.id || req.session?.user?.id || req.headers['x-user-id'];
-    const username = session?.user?.username || req.session?.user?.username;
-    const clientIp = getClientIp(req);
-
-    if (!userId) {
+    if (!session || !session.user || !session.user.id) {
       return res.status(401).json({ error: 'Authentication required.' });
     }
+    const userId = session.user.id;
+    const username = session.user.username;
+    const clientIp = getClientIp(req);
 
     const admin = getAdminRecord(userId, username);
     if (!admin) {
@@ -4607,14 +4615,16 @@ export function createDashboardRouter() {
   }
 
   router.get('/user/settings', (req, res) => {
-    const userId = req.dashboardSession?.user?.id || req.session?.user?.id || req.headers['x-user-id'] || (req.dashboardSession?.user?.id || req.session?.user?.id);
+    const userId = req.dashboardSession?.user?.id || req.session?.user?.id;
+    if (!userId) return res.status(401).json({ error: 'Authentication required.' });
     const all = loadUserSettings();
     const settings = all[userId] || {};
     res.json({ ok: true, settings });
   });
 
   router.post('/user/settings', (req, res) => {
-    const userId = req.dashboardSession?.user?.id || req.session?.user?.id || req.body?.userId || (req.dashboardSession?.user?.id || req.session?.user?.id);
+    const userId = req.dashboardSession?.user?.id || req.session?.user?.id;
+    if (!userId) return res.status(401).json({ error: 'Authentication required.' });
     const all = loadUserSettings();
     const current = all[userId] || {};
     const patch = { ...(req.body || {}) };
