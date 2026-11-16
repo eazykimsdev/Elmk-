@@ -6051,6 +6051,7 @@ export function createDashboardRouter() {
 
     let roles = [];
     let botHighestPosition = 0;
+    let botCanManageRoles = false;
     let botInGuild = false;
 
     try {
@@ -6092,7 +6093,7 @@ export function createDashboardRouter() {
                 botPerms |= BigInt(r.permissions || 0);
               }
             }
-            const botCanManageRoles = (botPerms & 8n) === 8n || (botPerms & 268435456n) === 268435456n;
+            botCanManageRoles = (botPerms & 8n) === 8n || (botPerms & 268435456n) === 268435456n;
 
             roles = rData
               .filter((r) => r.name !== '@everyone')
