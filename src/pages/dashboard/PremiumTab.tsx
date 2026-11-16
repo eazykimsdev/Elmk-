@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { MessageSquare, Send, CheckCircle2, Crown } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { MessageSquare, Send, CheckCircle2, Crown, ChevronUp, Sparkles, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Card } from '@/components/ui/card';
@@ -14,11 +14,49 @@ interface PremiumTabProps {
   addToast: (variant: 'success' | 'info' | 'warning' | 'error', title: string, body: string) => void;
 }
 
+interface CommunityIdea {
+  id: string;
+  suggestion: string;
+  status: 'accepted' | 'shipped';
+  upvotes: number;
+  hasUpvoted: boolean;
+  createdAt: string;
+  user: {
+    id: string;
+    username: string;
+    displayName: string;
+    avatarUrl: string | null;
+  } | null;
+}
+
 export function PremiumTab({ guild, onNavigateTab, addToast }: PremiumTabProps) {
   const [suggestionText, setSuggestionText] = useState('');
   const [contactOk, setContactOk] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+
+  // Accepted community feature suggestions for the upvote board
+  const [communityIdeas, setCommunityIdeas] = useState<CommunityIdea[]>([]);
+  const [loadingIdeas, setLoadingIdeas] = useState(false);
+  const [upvotingIds, setUpvotingIds] = useState<Record<string, boolean>>({});
+
+  const loadCommunityIdeas = useCallback(async () => {
+    setLoadingIdeas(true);
+    try {
+      const data = await api<{ ok: boolean; suggestions: CommunityIdea[] }>('/suggestions/premium');
+      if (Array.isArray(data?.suggestions)) {
+        setCommunityIdeas(data.suggestions);
+      }
+    } catch {
+      // Clean fallback
+    } finally {
+      setLoadingIdeas(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadCommunityIdeas();
+  }, [loadCommunityIdeas]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,10 +79,51 @@ export function PremiumTab({ guild, onNavigateTab, addToast }: PremiumTabProps) 
       setSubmitted(true);
       setSuggestionText('');
       addToast('success', 'Suggestion Delivered', 'Your idea has been sent directly to the founder. Thank you!');
+      loadCommunityIdeas();
     } catch (err: any) {
       addToast('error', 'Submission Failed', err.message || 'Could not send suggestion.');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleToggleUpvote = async (ideaId: string) => {
+    if (upvotingIds[ideaId]) return;
+    setUpvotingIds((prev) => ({ ...prev, [ideaId]: true }));
+
+    // Optimistic state update
+    setCommunityIdeas((prev) =>
+      prev.map((item) => {
+        if (item.id === ideaId) {
+          const nextHasUpvoted = !item.hasUpvoted;
+          const nextCount = nextHasUpvoted ? item.upvotes + 1 : Math.max(0, item.upvotes - 1);
+          return { ...item, hasUpvoted: nextHasUpvoted, upvotes: nextCount };
+        }
+        return item;
+      })
+    );
+
+    try {
+      const res = await api<{ ok: boolean; upvotes: number; hasUpvoted: boolean }>(
+        `/suggestions/premium/${ideaId}/upvote`,
+        { method: 'POST' }
+      );
+      if (res?.ok) {
+        setCommunityIdeas((prev) =>
+          prev.map((item) => {
+            if (item.id === ideaId) {
+              return { ...item, hasUpvoted: res.hasUpvoted, upvotes: res.upvotes };
+            }
+            return item;
+          })
+        );
+      }
+    } catch (err: any) {
+      // Revert optimistic update
+      loadCommunityIdeas();
+      addToast('error', 'Upvote Failed', err.message || 'Please log in to upvote.');
+    } finally {
+      setUpvotingIds((prev) => ({ ...prev, [ideaId]: false }));
     }
   };
 
@@ -84,6 +163,102 @@ export function PremiumTab({ guild, onNavigateTab, addToast }: PremiumTabProps) 
         </Card>
       </div>
 
+      {/* ── ACCEPTED COMMUNITY FEATURE REQUESTS (UPVOTE BOARD) ── */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Sparkles className="size-4 text-emerald-400" />
+            <h2 className="text-sm font-semibold text-white font-sans uppercase tracking-wider">
+              Community Ideas & Roadmap
+            </h2>
+          </div>
+          <span className="text-xs text-zinc-400 font-sans">
+            {communityIdeas.length} accepted {communityIdeas.length === 1 ? 'idea' : 'ideas'}
+          </span>
+        </div>
+
+        {communityIdeas.length === 0 ? (
+          <Card className="bg-[#121215] border-white/[0.08] p-8 text-center space-y-2">
+            <p className="text-xs text-zinc-400 font-sans">
+              No accepted community ideas yet. Submit a suggestion below — once accepted, it appears here for community upvoting!
+            </p>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 gap-3">
+            {communityIdeas.map((idea) => {
+              const userInitial = (idea.user?.displayName || idea.user?.username || 'U')[0].toUpperCase();
+              const isShipped = idea.status === 'shipped';
+
+              return (
+                <div
+                  key={idea.id}
+                  className="rounded-xl border border-white/[0.08] bg-[#121215] p-4 flex items-start justify-between gap-4 transition-colors hover:border-white/[0.14]"
+                >
+                  <div className="flex items-start gap-3 min-w-0 flex-1">
+                    {idea.user?.avatarUrl ? (
+                      <img
+                        src={idea.user.avatarUrl}
+                        alt=""
+                        className="size-9 rounded-full object-cover shrink-0 border border-white/10"
+                      />
+                    ) : (
+                      <div className="size-9 rounded-full bg-zinc-800 text-zinc-300 font-semibold text-xs flex items-center justify-center shrink-0 border border-white/10">
+                        {userInitial}
+                      </div>
+                    )}
+
+                    <div className="space-y-1.5 min-w-0 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-xs font-semibold text-white font-sans">
+                          {idea.user?.displayName || idea.user?.username || 'Community Member'}
+                        </span>
+                        {idea.user?.username && (
+                          <span className="text-[11px] text-zinc-500 font-sans">
+                            @{idea.user.username}
+                          </span>
+                        )}
+                        {isShipped ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold uppercase bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                            <Check className="size-3" />
+                            Shipped
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold uppercase bg-blue-500/15 text-blue-400 border border-blue-500/30">
+                            Planned
+                          </span>
+                        )}
+                      </div>
+
+                      <p className="text-xs text-zinc-300 font-sans leading-relaxed break-words">
+                        {idea.suggestion}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Upvote Button Pill */}
+                  <button
+                    type="button"
+                    onClick={() => handleToggleUpvote(idea.id)}
+                    disabled={upvotingIds[idea.id]}
+                    className={`flex flex-col items-center justify-center min-w-[52px] h-14 rounded-lg border transition-all cursor-pointer px-2 shrink-0 ${
+                      idea.hasUpvoted
+                        ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40 shadow-sm'
+                        : 'bg-[#18181C] text-zinc-400 border-white/[0.08] hover:text-white hover:bg-white/[0.06]'
+                    }`}
+                    title={idea.hasUpvoted ? 'Remove upvote' : 'Upvote this idea'}
+                  >
+                    <ChevronUp className={`size-4 ${idea.hasUpvoted ? 'text-emerald-400' : 'text-zinc-400'}`} />
+                    <span className="text-xs font-bold font-mono">
+                      {idea.upvotes}
+                    </span>
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
       {/* ── SHAPE THE FUTURE OF PREMIUM: SUGGESTION BOX ── */}
       <Card className="bg-[#121215] border-white/[0.08] p-6 space-y-6">
         <div className="space-y-1">
@@ -106,7 +281,7 @@ export function PremiumTab({ guild, onNavigateTab, addToast }: PremiumTabProps) 
             <div className="space-y-1">
               <h3 className="text-sm font-semibold text-white font-sans">Thank you for your suggestion!</h3>
               <p className="text-xs text-zinc-400 font-sans max-w-md mx-auto">
-                Your feedback has been logged and sent to the platform leadership team. We review every community proposal.
+                Your feedback has been logged and sent to the platform leadership team. Once accepted, it will appear in the Community Ideas upvote board above.
               </p>
             </div>
             <Button

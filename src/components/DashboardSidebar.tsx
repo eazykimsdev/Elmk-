@@ -748,7 +748,7 @@ export function DashboardSidebar({
                 key={group.label || `group-${groupIndex}`}
                 className={cn(
                   'space-y-1',
-                  isOverviewGroup ? 'mt-0' : 'mt-7'
+                  isOverviewGroup ? 'mt-0' : group.label === 'System' ? 'mt-auto pt-8 pb-1' : 'mt-7'
                 )}
               >
                 {group.label && (

@@ -5489,8 +5489,12 @@ export function createDashboardRouter() {
         user: user ? {
           id: user.id,
           username: user.username,
-          displayName: user.global_name || user.username
+          displayName: user.global_name || user.username,
+          avatar: user.avatar || null
         } : null,
+        status: 'pending',
+        upvotes: 1,
+        upvotedUsers: user ? [user.id] : [],
         createdAt: new Date().toISOString()
       };
 
@@ -5580,6 +5584,164 @@ export function createDashboardRouter() {
       res.json({ ok: true, id: newEntry.id });
     } catch (err) {
       res.status(500).json({ error: 'Failed to record suggestion.' });
+    }
+  });
+
+  // Get accepted & shipped suggestions for the public upvote board
+  router.get('/suggestions/premium', (req, res) => {
+    try {
+      const currentUserId = req.dashboardSession?.user?.id || req.session?.user?.id || null;
+      const suggestionsFile = path.resolve('data/premium_suggestions.json');
+      let allSuggestions = [];
+      if (fs.existsSync(suggestionsFile)) {
+        allSuggestions = JSON.parse(fs.readFileSync(suggestionsFile, 'utf8') || '[]');
+      }
+      // Return accepted and shipped ideas for the upvote board
+      const approved = allSuggestions
+        .filter((s) => s.status === 'accepted' || s.status === 'shipped')
+        .map((s) => {
+          const upvotedUsers = Array.isArray(s.upvotedUsers) ? s.upvotedUsers : [];
+          const count = upvotedUsers.length || s.upvotes || 0;
+          const userAvatar = s.user?.avatar
+            ? `https://cdn.discordapp.com/avatars/${s.user.id}/${s.user.avatar}.png?size=128`
+            : (s.user?.id ? `https://cdn.discordapp.com/embed/avatars/${(Number(BigInt(s.user.id) >> 22n) % 6) || 0}.png` : null);
+          return {
+            id: s.id,
+            suggestion: s.suggestion,
+            status: s.status,
+            upvotes: count,
+            hasUpvoted: currentUserId ? upvotedUsers.includes(currentUserId) : false,
+            createdAt: s.createdAt,
+            user: s.user ? {
+              id: s.user.id,
+              username: s.user.username,
+              displayName: s.user.displayName || s.user.username,
+              avatarUrl: userAvatar
+            } : null
+          };
+        })
+        .sort((a, b) => (b.upvotes || 0) - (a.upvotes || 0));
+
+      res.json({ ok: true, suggestions: approved });
+    } catch (err) {
+      res.status(500).json({ error: 'Failed to fetch suggestions.' });
+    }
+  });
+
+  // Toggle upvote on a community suggestion: POST /api/suggestions/premium/:id/upvote
+  router.post('/suggestions/premium/:id/upvote', (req, res) => {
+    try {
+      const currentUserId = req.dashboardSession?.user?.id || req.session?.user?.id || null;
+      if (!currentUserId) {
+        return res.status(401).json({ error: 'Sign in to upvote suggestions.' });
+      }
+      const { id } = req.params;
+      const suggestionsFile = path.resolve('data/premium_suggestions.json');
+      let allSuggestions = [];
+      if (fs.existsSync(suggestionsFile)) {
+        allSuggestions = JSON.parse(fs.readFileSync(suggestionsFile, 'utf8') || '[]');
+      }
+      const match = allSuggestions.find((s) => s.id === id);
+      if (!match) {
+        return res.status(404).json({ error: 'Suggestion not found.' });
+      }
+
+      match.upvotedUsers = Array.isArray(match.upvotedUsers) ? match.upvotedUsers : [];
+      let hasUpvoted = false;
+      if (match.upvotedUsers.includes(currentUserId)) {
+        match.upvotedUsers = match.upvotedUsers.filter((u) => u !== currentUserId);
+        hasUpvoted = false;
+      } else {
+        match.upvotedUsers.push(currentUserId);
+        hasUpvoted = true;
+      }
+      match.upvotes = match.upvotedUsers.length;
+      fs.writeFileSync(suggestionsFile, JSON.stringify(allSuggestions, null, 2), 'utf8');
+
+      res.json({ ok: true, upvotes: match.upvotes, hasUpvoted });
+    } catch (err) {
+      res.status(500).json({ error: 'Failed to toggle upvote.' });
+    }
+  });
+
+  // Mark suggestion shipped and notify user via Discord DM: POST /api/admin/suggestions/premium/:id/ship
+  router.post('/admin/suggestions/premium/:id/ship', requireAdminRole(), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const suggestionsFile = path.resolve('data/premium_suggestions.json');
+      let allSuggestions = [];
+      if (fs.existsSync(suggestionsFile)) {
+        allSuggestions = JSON.parse(fs.readFileSync(suggestionsFile, 'utf8') || '[]');
+      }
+      const match = allSuggestions.find((s) => s.id === id);
+      if (!match) {
+        return res.status(404).json({ error: 'Suggestion not found.' });
+      }
+      match.status = 'shipped';
+      match.shippedAt = new Date().toISOString();
+      fs.writeFileSync(suggestionsFile, JSON.stringify(allSuggestions, null, 2), 'utf8');
+
+      // If user requested Discord notification, dispatch DM
+      if (match.contactOk && match.user?.id) {
+        const token = process.env.DISCORD_TOKEN || process.env.BOT_TOKEN;
+        if (token) {
+          try {
+            const dmRes = await fetch('https://discord.com/api/v10/users/@me/channels', {
+              method: 'POST',
+              headers: {
+                Authorization: `Bot ${token.replace(/^Bot\s+/i, '')}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({ recipient_id: match.user.id })
+            });
+            if (dmRes.ok) {
+              const ch = await dmRes.json();
+              await fetch(`https://discord.com/api/v10/channels/${ch.id}/messages`, {
+                method: 'POST',
+                headers: {
+                  Authorization: `Bot ${token.replace(/^Bot\s+/i, '')}`,
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                  flags: 32768,
+                  components: [
+                    {
+                      type: 17,
+                      components: [
+                        {
+                          type: 10,
+                          content: `### Feature Shipped! 🎉\n\nYour suggestion has been shipped and is now live on ConnectingERLC:\n\n> ${match.suggestion}\n\nThank you for helping shape the platform!`
+                        },
+                        {
+                          type: 14,
+                          divider: true
+                        },
+                        {
+                          type: 1,
+                          components: [
+                            {
+                              type: 2,
+                              style: 5,
+                              label: 'View on Website',
+                              url: 'https://connectingerlc.xyz/dashboard'
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                })
+              });
+            }
+          } catch (dmErr) {
+            console.warn('[PREMIUM SUGGESTION] Ship notification DM error:', dmErr.message);
+          }
+        }
+      }
+
+      res.json({ ok: true, status: 'shipped' });
+    } catch (err) {
+      res.status(500).json({ error: 'Failed to mark suggestion shipped.' });
     }
   });
 
