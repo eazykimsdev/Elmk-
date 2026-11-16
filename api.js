@@ -1807,7 +1807,7 @@ export function createDashboardRouter() {
         }
       };
 
-      if (req.query.limit === undefined) {
+      if (req.query.limit === undefined && allServers.length > 0) {
         showcaseCache = payload;
         showcaseCacheTime = now;
       }

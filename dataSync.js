@@ -347,10 +347,13 @@ export async function flushDataDir() {
       );
       known.set(rel, h);
     }
-    for (const rel of [...known.keys()]) {
-      if (!present.has(rel)) {
-        await p.query('DELETE FROM app_files WHERE path = $1', [rel]);
-        known.delete(rel);
+    // Safety guard: never delete database records if container disk is unmounted or empty
+    if (present.size >= 10) {
+      for (const rel of [...known.keys()]) {
+        if (!present.has(rel)) {
+          await p.query('DELETE FROM app_files WHERE path = $1', [rel]);
+          known.delete(rel);
+        }
       }
     }
   } catch (err) {

@@ -18,10 +18,7 @@ import { importD1IfRequested } from './importD1.js';
 import { runLegacyKeysMigration } from './scripts/migrate_strip_legacy_keys.mjs';
 
 try {
-  await Promise.race([
-    restoreDataDir(),
-    new Promise((r) => setTimeout(r, 6000))
-  ]);
+  await restoreDataDir();
 } catch (err) {
   console.warn('[BOOTSTRAP] Data restore notice:', err.message);
 }
