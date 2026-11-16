@@ -5481,6 +5481,12 @@ export function createDashboardRouter() {
         }
       } catch {}
 
+      const displayName = user?.global_name || user?.globalName || user?.displayName || user?.display_name || user?.username || 'Discord User';
+      const avatarHash = user?.avatar || user?.avatar_hash || user?.avatarHash || null;
+      const avatarUrl = avatarHash && user?.id
+        ? `https://cdn.discordapp.com/avatars/${user.id}/${avatarHash}.png?size=128`
+        : (user?.id ? `https://cdn.discordapp.com/embed/avatars/${(Number(BigInt(user.id) >> 22n) % 6) || 0}.png` : null);
+
       const newEntry = {
         id: `sug_${Date.now()}_${randomBytes(4).toString('hex')}`,
         suggestion: cleanText,
@@ -5489,8 +5495,9 @@ export function createDashboardRouter() {
         user: user ? {
           id: user.id,
           username: user.username,
-          displayName: user.global_name || user.username,
-          avatar: user.avatar || null
+          displayName: displayName,
+          avatar: avatarHash,
+          avatarUrl: avatarUrl
         } : null,
         status: 'pending',
         upvotes: 1,
@@ -5602,9 +5609,39 @@ export function createDashboardRouter() {
         .map((s) => {
           const upvotedUsers = Array.isArray(s.upvotedUsers) ? s.upvotedUsers : [];
           const count = upvotedUsers.length || s.upvotes || 0;
-          const userAvatar = s.user?.avatar
-            ? `https://cdn.discordapp.com/avatars/${s.user.id}/${s.user.avatar}.png?size=128`
-            : (s.user?.id ? `https://cdn.discordapp.com/embed/avatars/${(Number(BigInt(s.user.id) >> 22n) % 6) || 0}.png` : null);
+          let displayName = s.user?.displayName || s.user?.username || 'Community Member';
+          let username = s.user?.username || null;
+          let userAvatar = s.user?.avatarUrl || null;
+          if (!userAvatar && s.user?.avatar && s.user?.id) {
+            userAvatar = `https://cdn.discordapp.com/avatars/${s.user.id}/${s.user.avatar}.png?size=128`;
+          }
+
+          // If avatar or display name needs resolving, check web_sessions
+          if (s.user?.id) {
+            try {
+              const sessFile = path.resolve('data/web_sessions.json');
+              if (fs.existsSync(sessFile)) {
+                const allSess = JSON.parse(fs.readFileSync(sessFile, 'utf8') || '{}');
+                const match = Object.values(allSess).find((x) => x.user && String(x.user.id) === String(s.user.id));
+                if (match?.user) {
+                  if (match.user.displayName || match.user.globalName) {
+                    displayName = match.user.displayName || match.user.globalName;
+                  }
+                  if (match.user.username) {
+                    username = match.user.username;
+                  }
+                  if (!userAvatar && (match.user.avatar || match.user.avatar_hash)) {
+                    userAvatar = `https://cdn.discordapp.com/avatars/${s.user.id}/${match.user.avatar || match.user.avatar_hash}.png?size=128`;
+                  }
+                }
+              }
+            } catch {}
+          }
+
+          if (!userAvatar && s.user?.id) {
+            userAvatar = `https://cdn.discordapp.com/embed/avatars/${(Number(BigInt(s.user.id) >> 22n) % 6) || 0}.png`;
+          }
+
           return {
             id: s.id,
             suggestion: s.suggestion,
@@ -5614,8 +5651,8 @@ export function createDashboardRouter() {
             createdAt: s.createdAt,
             user: s.user ? {
               id: s.user.id,
-              username: s.user.username,
-              displayName: s.user.displayName || s.user.username,
+              username: username,
+              displayName: displayName,
               avatarUrl: userAvatar
             } : null
           };

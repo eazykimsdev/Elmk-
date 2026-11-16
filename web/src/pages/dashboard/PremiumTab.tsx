@@ -163,102 +163,6 @@ export function PremiumTab({ guild, onNavigateTab, addToast }: PremiumTabProps) 
         </Card>
       </div>
 
-      {/* ── ACCEPTED COMMUNITY FEATURE REQUESTS (UPVOTE BOARD) ── */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Sparkles className="size-4 text-emerald-400" />
-            <h2 className="text-sm font-semibold text-white font-sans uppercase tracking-wider">
-              Community Ideas & Roadmap
-            </h2>
-          </div>
-          <span className="text-xs text-zinc-400 font-sans">
-            {communityIdeas.length} accepted {communityIdeas.length === 1 ? 'idea' : 'ideas'}
-          </span>
-        </div>
-
-        {communityIdeas.length === 0 ? (
-          <Card className="bg-[#121215] border-white/[0.08] p-8 text-center space-y-2">
-            <p className="text-xs text-zinc-400 font-sans">
-              No accepted community ideas yet. Submit a suggestion below — once accepted, it appears here for community upvoting!
-            </p>
-          </Card>
-        ) : (
-          <div className="grid grid-cols-1 gap-3">
-            {communityIdeas.map((idea) => {
-              const userInitial = (idea.user?.displayName || idea.user?.username || 'U')[0].toUpperCase();
-              const isShipped = idea.status === 'shipped';
-
-              return (
-                <div
-                  key={idea.id}
-                  className="rounded-xl border border-white/[0.08] bg-[#121215] p-4 flex items-start justify-between gap-4 transition-colors hover:border-white/[0.14]"
-                >
-                  <div className="flex items-start gap-3 min-w-0 flex-1">
-                    {idea.user?.avatarUrl ? (
-                      <img
-                        src={idea.user.avatarUrl}
-                        alt=""
-                        className="size-9 rounded-full object-cover shrink-0 border border-white/10"
-                      />
-                    ) : (
-                      <div className="size-9 rounded-full bg-zinc-800 text-zinc-300 font-semibold text-xs flex items-center justify-center shrink-0 border border-white/10">
-                        {userInitial}
-                      </div>
-                    )}
-
-                    <div className="space-y-1.5 min-w-0 flex-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-xs font-semibold text-white font-sans">
-                          {idea.user?.displayName || idea.user?.username || 'Community Member'}
-                        </span>
-                        {idea.user?.username && (
-                          <span className="text-[11px] text-zinc-500 font-sans">
-                            @{idea.user.username}
-                          </span>
-                        )}
-                        {isShipped ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold uppercase bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-                            <Check className="size-3" />
-                            Shipped
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold uppercase bg-blue-500/15 text-blue-400 border border-blue-500/30">
-                            Planned
-                          </span>
-                        )}
-                      </div>
-
-                      <p className="text-xs text-zinc-300 font-sans leading-relaxed break-words">
-                        {idea.suggestion}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Upvote Button Pill */}
-                  <button
-                    type="button"
-                    onClick={() => handleToggleUpvote(idea.id)}
-                    disabled={upvotingIds[idea.id]}
-                    className={`flex flex-col items-center justify-center min-w-[52px] h-14 rounded-lg border transition-all cursor-pointer px-2 shrink-0 ${
-                      idea.hasUpvoted
-                        ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40 shadow-sm'
-                        : 'bg-[#18181C] text-zinc-400 border-white/[0.08] hover:text-white hover:bg-white/[0.06]'
-                    }`}
-                    title={idea.hasUpvoted ? 'Remove upvote' : 'Upvote this idea'}
-                  >
-                    <ChevronUp className={`size-4 ${idea.hasUpvoted ? 'text-emerald-400' : 'text-zinc-400'}`} />
-                    <span className="text-xs font-bold font-mono">
-                      {idea.upvotes}
-                    </span>
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
       {/* ── SHAPE THE FUTURE OF PREMIUM: SUGGESTION BOX ── */}
       <Card className="bg-[#121215] border-white/[0.08] p-6 space-y-6">
         <div className="space-y-1">
@@ -281,7 +185,7 @@ export function PremiumTab({ guild, onNavigateTab, addToast }: PremiumTabProps) 
             <div className="space-y-1">
               <h3 className="text-sm font-semibold text-white font-sans">Thank you for your suggestion!</h3>
               <p className="text-xs text-zinc-400 font-sans max-w-md mx-auto">
-                Your feedback has been logged and sent to the platform leadership team. Once accepted, it will appear in the Community Ideas upvote board above.
+                Your feedback has been logged and sent to the platform leadership team. Once accepted, it will appear in the Community Ideas upvote board below.
               </p>
             </div>
             <Button
@@ -340,6 +244,101 @@ export function PremiumTab({ guild, onNavigateTab, addToast }: PremiumTabProps) 
           </form>
         )}
       </Card>
+
+      {/* ── ACCEPTED COMMUNITY FEATURE REQUESTS (UPVOTE BOARD AT THE BOTTOM) ── */}
+      <div className="space-y-3 pt-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Sparkles className="size-4 text-emerald-400" />
+            <h2 className="text-sm font-semibold text-white font-sans uppercase tracking-wider">
+              Community Ideas & Roadmap
+            </h2>
+          </div>
+          <span className="text-xs text-zinc-400 font-sans">
+            {communityIdeas.length} accepted {communityIdeas.length === 1 ? 'idea' : 'ideas'}
+          </span>
+        </div>
+
+        {communityIdeas.length === 0 ? (
+          <Card className="bg-[#121215] border-white/[0.08] p-8 text-center space-y-2">
+            <p className="text-xs text-zinc-400 font-sans">
+              No accepted community ideas yet. Submit a suggestion above — once accepted, it appears here for community upvoting!
+            </p>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 gap-3">
+            {communityIdeas.map((idea) => {
+              const displayName = idea.user?.displayName || idea.user?.username || 'Community Member';
+              const username = idea.user?.username;
+              const hasDistinctUsername = username && username.toLowerCase() !== displayName.toLowerCase();
+              const userInitial = (displayName || username || 'U')[0].toUpperCase();
+              const isShipped = idea.status === 'shipped';
+
+              return (
+                <div
+                  key={idea.id}
+                  className="rounded-xl border border-white/[0.08] bg-[#121215] p-4 flex items-start justify-between gap-4 transition-colors hover:border-white/[0.14]"
+                >
+                  <div className="flex items-start gap-3 min-w-0 flex-1">
+                    {idea.user?.avatarUrl ? (
+                      <img
+                        src={idea.user.avatarUrl}
+                        alt=""
+                        className="size-9 rounded-full object-cover shrink-0 border border-white/10"
+                      />
+                    ) : (
+                      <div className="size-9 rounded-full bg-zinc-800 text-zinc-300 font-semibold text-xs flex items-center justify-center shrink-0 border border-white/10">
+                        {userInitial}
+                      </div>
+                    )}
+
+                    <div className="space-y-1.5 min-w-0 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-xs font-semibold text-white font-sans">
+                          {displayName}
+                        </span>
+                        {hasDistinctUsername && (
+                          <span className="text-[11px] text-zinc-400 font-sans">
+                            @{username}
+                          </span>
+                        )}
+                        {isShipped && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold uppercase bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                            <Check className="size-3" />
+                            Shipped
+                          </span>
+                        )}
+                      </div>
+
+                      <p className="text-xs text-zinc-300 font-sans leading-relaxed break-words">
+                        {idea.suggestion}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Upvote Button Pill */}
+                  <button
+                    type="button"
+                    onClick={() => handleToggleUpvote(idea.id)}
+                    disabled={upvotingIds[idea.id]}
+                    className={`flex flex-col items-center justify-center min-w-[52px] h-14 rounded-lg border transition-all cursor-pointer px-2 shrink-0 ${
+                      idea.hasUpvoted
+                        ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40 shadow-sm'
+                        : 'bg-[#18181C] text-zinc-400 border-white/[0.08] hover:text-white hover:bg-white/[0.06]'
+                    }`}
+                    title={idea.hasUpvoted ? 'Remove upvote' : 'Upvote this idea'}
+                  >
+                    <ChevronUp className={`size-4 ${idea.hasUpvoted ? 'text-emerald-400' : 'text-zinc-400'}`} />
+                    <span className="text-xs font-bold font-mono">
+                      {idea.upvotes}
+                    </span>
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
