@@ -65,7 +65,7 @@ export async function apiFetch(input: string | URL, init: RequestInit = {}): Pro
 
   const rawUrl = typeof input === 'string' ? input : input.toString();
   let normalizedUrl = rawUrl;
-  if (!rawUrl.startsWith('http') && !rawUrl.startsWith('/api') && !rawUrl.startsWith('/auth')) {
+  if (!rawUrl.startsWith('http') && !rawUrl.startsWith('/api')) {
     normalizedUrl = `/api${rawUrl.startsWith('/') ? '' : '/'}${rawUrl}`;
   }
 

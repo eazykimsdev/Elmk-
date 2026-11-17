@@ -193,6 +193,13 @@ app.use('/workspace', (req, res, next) => {
   req.url = '/workspace' + (req.url === '/' ? '' : req.url);
   dashboardRouter(req, res, next);
 });
+app.use('/auth', (req, res, next) => {
+  if (req.path === '/me' || req.path === '/refresh' || req.path === '/logout') {
+    req.url = '/auth' + (req.url === '/' ? '' : req.url);
+    return dashboardRouter(req, res, next);
+  }
+  next();
+});
 app.use('/auth/discord', createDiscordCallbackRouter());
 
 // Discovery invite redirect: connectingerlc.xyz/discovery/:serverId/invite
