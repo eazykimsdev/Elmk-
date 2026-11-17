@@ -11,6 +11,7 @@ import {
   UserPlus,
   ChevronLeft,
   ChevronRight,
+  CalendarCheck,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -305,7 +306,7 @@ export function OverviewTab({
       if (!res.ok) throw new Error(data.error || 'Failed to claim daily reward.');
       setCheckinClaimedToday(true);
       setCheckinStreak(data.userAchievements?.streak || checkinStreak + 1);
-      fetchBalanceAndActivity();
+      window.dispatchEvent(new Event('balance_updated'));
       if (addToast) {
         addToast('success', 'Daily Reward Claimed', `Earned +10 credits! Current streak: ${data.userAchievements?.streak || checkinStreak + 1} days.`);
       }

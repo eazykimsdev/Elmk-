@@ -317,8 +317,7 @@ export function buildGiveawayRedemptionV2Payload({ serverName, code, amount, new
     flags: 32768, // MessageFlags.IsComponentsV2
     components: [
       {
-        type: 17, // Container
-        accent_color: getThemeAccent(),
+        type: 17, // Container (No accent_color = no color on the side)
         components: [
           {
             type: 10, // TextDisplay

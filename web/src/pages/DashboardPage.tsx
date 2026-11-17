@@ -1195,7 +1195,7 @@ export function DashboardPage() {
                 currentGuildId={currentGuildId}
                 serverName={selectedGuild?.name || 'Server'}
                 onNavigateTab={(t) => navigate(`/dashboard/${currentGuildId}/${t}`)}
-                addToast={addToast}
+                addToast={(t: any) => addToast(t.type || 'info', t.title, t.description || '')}
               />
             </TabErrorBoundary>
           )}
@@ -1205,8 +1205,8 @@ export function DashboardPage() {
               <FormsTab
                 currentGuildId={currentGuildId}
                 serverName={selectedGuild?.name || 'Server'}
-                customUrl={workspace?.customUrl || null}
-                addToast={addToast}
+                customUrl={(workspace as any)?.customUrl || null}
+                addToast={(t: any) => addToast(t.type || 'info', t.title, t.description || '')}
               />
             </TabErrorBoundary>
           )}

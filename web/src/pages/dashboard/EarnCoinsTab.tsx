@@ -53,7 +53,7 @@ export interface UserJoinRecord {
   serverName: string;
   joinedAt: number;
   retentionHours: number;
-  status: 'verifying' | 'verified' | 'reversed';
+  status: 'verifying' | 'verified' | 'reversed' | 'joined' | 'left';
   reward: number;
   claimed?: boolean;
 }
@@ -520,7 +520,7 @@ export function EarnCoinsTab({
               const isOwnServer = currentGuildId && String(server.id) === String(currentGuildId);
               const userJoin = userJoins[server.id];
               const isVerifying = Boolean(userJoin && userJoin.status === 'verifying');
-              const isVerified = Boolean(userJoin && (userJoin.status === 'verified' || userJoin.status === 'joined') && userJoin.status !== 'left');
+              const isVerified = Boolean(userJoin && (userJoin.status === 'verified' || userJoin.status === 'joined'));
               const iconUrl = getResolvedServerIcon(server);
 
               const cardData: DirectoryServerData = {

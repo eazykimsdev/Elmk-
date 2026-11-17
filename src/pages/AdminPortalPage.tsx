@@ -48,6 +48,7 @@ import {
   Layers,
   Settings2,
   Ticket,
+  Send,
   Bug,
   Handshake,
   Gift,
