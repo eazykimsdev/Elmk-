@@ -3,6 +3,7 @@ import path from 'path';
 import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 import { recordAuditAction } from './adminManager.js';
+import { revokeVerification } from './verificationManager.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -346,6 +347,15 @@ export function addBlacklistEntry({ type, value, reason, expiryDays = 30, actor,
     existing.updated_at = new Date().toISOString();
     existing.added_by = actor?.username || 'Admin';
     saveBlacklist(all);
+    if (type === 'discord_id') {
+      try {
+        revokeVerification({
+          serverId: cleanVal,
+          reason: `Server was blacklisted: ${cleanReason}`,
+          revokedBy: actor?.username || 'Admin'
+        });
+      } catch {}
+    }
     return existing;
   }
 
@@ -362,6 +372,17 @@ export function addBlacklistEntry({ type, value, reason, expiryDays = 30, actor,
 
   all.unshift(newEntry);
   saveBlacklist(all);
+
+  // Auto-revoke verified badge if blacklisted entity is a server
+  if (type === 'discord_id') {
+    try {
+      revokeVerification({
+        serverId: cleanVal,
+        reason: `Server was blacklisted: ${cleanReason}`,
+        revokedBy: actor?.username || 'Admin'
+      });
+    } catch {}
+  }
 
   if (type === 'discord_id') {
     try {

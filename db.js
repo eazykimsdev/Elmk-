@@ -303,6 +303,46 @@ export async function initPostgresSchema() {
     );
     CREATE INDEX IF NOT EXISTS idx_giveaway_claims_server ON launch_giveaway_claims (server_id);
     CREATE INDEX IF NOT EXISTS idx_giveaway_claims_user ON launch_giveaway_claims (owner_user_id);
+
+    CREATE TABLE IF NOT EXISTS giveaway_codes (
+      id VARCHAR(64) PRIMARY KEY,
+      code VARCHAR(64) UNIQUE NOT NULL,
+      amount INT NOT NULL,
+      max_uses INT NOT NULL DEFAULT 100,
+      uses_count INT NOT NULL DEFAULT 0,
+      is_active BOOLEAN NOT NULL DEFAULT true,
+      starts_at TIMESTAMPTZ,
+      expires_at TIMESTAMPTZ,
+      created_by VARCHAR(64),
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_giveaway_codes_code ON giveaway_codes (code);
+
+    CREATE TABLE IF NOT EXISTS giveaway_code_redemptions (
+      id VARCHAR(64) PRIMARY KEY,
+      code_id VARCHAR(64) NOT NULL REFERENCES giveaway_codes(id) ON DELETE CASCADE,
+      code VARCHAR(64) NOT NULL,
+      server_id VARCHAR(64) NOT NULL,
+      server_name VARCHAR(256),
+      user_id VARCHAR(64) NOT NULL,
+      username VARCHAR(128),
+      amount INT NOT NULL,
+      redeemed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE(code_id, server_id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_giveaway_redemptions_server ON giveaway_code_redemptions (server_id);
+    CREATE INDEX IF NOT EXISTS idx_giveaway_redemptions_code ON giveaway_code_redemptions (code_id);
+
+    CREATE TABLE IF NOT EXISTS shop_items (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      effect TEXT NOT NULL,
+      duration_ms BIGINT NOT NULL,
+      price INTEGER NOT NULL,
+      is_active BOOLEAN NOT NULL DEFAULT true,
+      description TEXT,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
   `;
 
   try {

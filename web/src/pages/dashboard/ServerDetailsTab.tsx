@@ -1,52 +1,29 @@
 import * as React from 'react';
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
 import {
-  Users,
+  Eye,
+  EyeOff,
+  ArrowUp,
+  ArrowDown,
+  KeyRound,
+  ExternalLink,
+  Save,
   Check,
-  Copy,
-  Share2,
-  Flag,
-  Flame,
-  Star,
-  MoreVertical,
-  ChevronLeft,
-  ChevronRight,
-  CheckCircle2,
-  ShieldCheck,
   AlertCircle,
-  X,
-  Info,
+  Link as LinkIcon,
+  Globe,
+  Tag,
+  Shield,
+  Users,
+  Image as ImageIcon,
+  Sparkles,
+  Trash2,
+  Plus
 } from 'lucide-react';
-import {
-  AreaChart,
-  Area,
-  ResponsiveContainer,
-  Tooltip,
-} from 'recharts';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { ServerIcon } from '@/components/ui/ServerIcon';
-import { UserAvatar } from '@/components/ui/UserAvatar';
-import { MarkdownRenderer } from '@/components/ui/markdown-renderer';
-import { BumpDialog } from '@/components/BumpDialog';
+import { Input } from '@/components/ui/input';
 import { api } from '@/lib/api';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { useAuth } from '@/lib/auth';
 import type { DiscordGuild, WorkspaceBot, WorkspaceCustomizations } from '@/types';
-import { cn } from '@/lib/utils';
 
 interface ServerDetailsTabProps {
   guild: DiscordGuild | null;
@@ -56,1311 +33,852 @@ interface ServerDetailsTabProps {
   addToast: (variant: 'success' | 'info' | 'warning' | 'error', title: string, body: string) => void;
 }
 
-interface ReviewItem {
+interface SectionItem {
   id: string;
-  server_id: string;
-  user_id: string;
-  user_name: string;
-  user_avatar?: string | null;
-  user_avatar_hash?: string | null;
-  rating: number;
-  text: string;
-  created_at: string;
-  updated_at?: string;
+  label: string;
+  description: string;
+  enabled: boolean;
 }
 
-interface ReviewsResponse {
-  reviews: ReviewItem[];
-  total: number;
-  page: number;
-  pageSize: number;
-  totalPages: number;
-  summary: {
-    average: number;
-    total: number;
-    distribution: Record<number, number>;
-  };
-}
+const DEFAULT_SECTIONS: SectionItem[] = [
+  { id: 'erlc', label: 'In-Game ER:LC Status', description: 'Live players, staff on duty, and queue size from the Police Roleplay Community API', enabled: true },
+  { id: 'about', label: 'About Community', description: 'Server description and background story', enabled: true },
+  { id: 'badges', label: 'Badges & Stats', description: 'Leaderboard ranking, verified/premium badges, and activity level', enabled: true },
+  { id: 'reviews', label: 'Community Reviews', description: 'Ratings and feedback from verified community members', enabled: true },
+  { id: 'staff', label: 'Staff Team', description: 'Leadership and administrative roster', enabled: false },
+  { id: 'partners', label: 'Partner Communities', description: 'Affiliated and partner Discord communities', enabled: false }
+];
 
 export function ServerDetailsTab({
   guild,
   workspace,
-  config,
+  config: initialConfig,
   onNavigateTab: _onNavigateTab,
-  addToast,
+  addToast
 }: ServerDetailsTabProps) {
-  const { user } = useAuth();
   const guildId = guild?.id || workspace?.guildId || '';
-  const serverName = guild?.name || config.serverName || 'Community Server';
-  const serverIconUrl =
-    guild?.iconUrl ||
-    (guild?.icon ? `https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.png` : null) ||
-    config.serverIconUrl;
 
-  const bannerUrl = config.bannerUrl || null;
-  const category = config.serverCategory || 'Roleplay server';
-  const memberCount = Number(guild?.memberCount || 17);
-  const joinCode = config.joinCode || '';
-  const description = config.serverDescription || 'This community has not added a description yet.';
-  const rewardCoins = Number(config.rewardCoins || 2);
-  const inviteUrl = config.inviteUrl || (guildId ? `https://discord.gg/connectingerlc` : '');
+  // Form states
+  const [bannerUrl, setBannerUrl] = useState<string>('');
+  const [description, setDescription] = useState<string>('');
+  const [tags, setTags] = useState<string>('');
+  const [discordInvite, setDiscordInvite] = useState<string>('');
+  const [robloxLink, setRobloxLink] = useState<string>('');
+  const [twitterLink, setTwitterLink] = useState<string>('');
+  const [websiteLink, setWebsiteLink] = useState<string>('');
+  
+  // Custom URL (F4)
+  const [customUrl, setCustomUrl] = useState<string>('');
+  const [savedCustomUrl, setSavedCustomUrl] = useState<string>('');
+  const [customUrlCooldown, setCustomUrlCooldown] = useState<string | null>(null);
+  const [claimingCustomUrl, setClaimingCustomUrl] = useState<boolean>(false);
 
-  const [copiedCode, setCopiedCode] = useState(false);
-  const [copiedShare, setCopiedShare] = useState(false);
-  const [showBumpDialog, setShowBumpDialog] = useState(false);
-  const [bumpRemainingSeconds, setBumpRemainingSeconds] = useState<number>(0);
+  // ER:LC Secret Key (F3)
+  const [erlcApiKey, setErlcApiKey] = useState<string>('');
+  const [maskedKey, setMaskedKey] = useState<string>('');
+  const [erlcConnected, setErlcConnected] = useState<boolean>(false);
+  const [erlcTesting, setErlcTesting] = useState<boolean>(false);
+  const [erlcError, setErlcError] = useState<string | null>(null);
 
-  useEffect(() => {
-    let mounted = true;
-    async function loadBumpStatus() {
-      try {
-        const res = await fetch(`/api/servers/${guildId}/bump`);
-        if (res.ok) {
-          const data = await res.json();
-          if (mounted) {
-            setBumpRemainingSeconds(data.cooldownSeconds || 0);
-          }
-        }
-      } catch {}
-    }
-    loadBumpStatus();
-    return () => { mounted = false; };
-  }, [guildId]);
+  // Sections Order & Visibility (F3)
+  const [sections, setSections] = useState<SectionItem[]>(DEFAULT_SECTIONS);
 
-  useEffect(() => {
-    if (bumpRemainingSeconds <= 0) return;
-    const interval = setInterval(() => {
-      setBumpRemainingSeconds((prev) => {
-        if (prev <= 1) {
-          clearInterval(interval);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [bumpRemainingSeconds]);
+  // Staff & Partner lists
+  const [showStaffList, setShowStaffList] = useState<boolean>(false);
+  const [staffList, setStaffList] = useState<Array<{ role: string; username: string }>>([]);
+  const [newStaffRole, setNewStaffRole] = useState<string>('');
+  const [newStaffName, setNewStaffName] = useState<string>('');
 
-  const bumpTimeFormatted = React.useMemo(() => {
-    if (bumpRemainingSeconds <= 0) return 'Ready';
-    const hours = Math.floor(bumpRemainingSeconds / 3600);
-    const minutes = Math.floor((bumpRemainingSeconds % 3600) / 60);
-    const seconds = bumpRemainingSeconds % 60;
-    if (hours > 0) return `${hours}h ${minutes}m`;
-    if (minutes > 0) return `${minutes}m ${seconds}s`;
-    return `${seconds}s`;
-  }, [bumpRemainingSeconds]);
+  const [showPartnerList, setShowPartnerList] = useState<boolean>(false);
+  const [partnerList, setPartnerList] = useState<Array<{ name: string; link: string }>>([]);
+  const [newPartnerName, setNewPartnerName] = useState<string>('');
+  const [newPartnerLink, setNewPartnerLink] = useState<string>('');
 
-  // Real Owner Telemetry & Server Profile
-  const [serverProfile, setServerProfile] = useState<{
-    owner?: { id: string; name: string; avatar: string | null };
-    stats?: { memberCount: number; bumps: number; verifiedJoins: number; rewardCoins: number };
-    userState?: { isOwner: boolean; canManage: boolean };
-    server?: any;
-  } | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [saving, setSaving] = useState<boolean>(false);
+  const [hasChanges, setHasChanges] = useState<boolean>(false);
 
-  useEffect(() => {
-    let mounted = true;
-    fetch(`/api/servers/${guildId}`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => {
-        if (mounted && data) {
-          setServerProfile(data);
-        }
-      })
-      .catch(() => {});
-    return () => {
-      mounted = false;
-    };
-  }, [guildId]);
-
-  const isOwnerOrTeam = Boolean(
-    (guild as any)?.owner ||
-    (guild as any)?.isOwner ||
-    (guild as any)?.ownerId === user?.id ||
-    serverProfile?.userState?.isOwner ||
-    serverProfile?.userState?.canManage ||
-    (workspace as any)?.isOwner
-  );
-
-  const resolvedOwnerId =
-    serverProfile?.owner?.id ||
-    (guild as any)?.ownerId ||
-    ((guild as any)?.owner ? user?.id : '') ||
-    serverProfile?.server?.ownerId ||
-    serverProfile?.server?.owner_discord_id ||
-    user?.id ||
-    '';
-
-  const resolvedOwnerName =
-    serverProfile?.owner?.name ||
-    ((guild as any)?.owner || (guild as any)?.ownerId === user?.id
-      ? user?.globalName || (user as any)?.displayName || user?.username
-      : null) ||
-    serverProfile?.server?.owner_display_name ||
-    serverProfile?.server?.ownerUsername ||
-    'Community Owner';
-
-  const resolvedOwnerAvatar =
-    serverProfile?.owner?.avatar ||
-    ((guild as any)?.owner || (guild as any)?.ownerId === user?.id
-      ? user?.avatar
-      : null) ||
-    serverProfile?.server?.owner_avatar_hash ||
-    serverProfile?.server?.ownerAvatar ||
-    null;
-
-  // Server Treasury Balance & Credit Range
-  const [serverBalance, setServerBalance] = useState<number>(0);
-  const [creditRange, setCreditRange] = useState<'7d' | '30d'>('30d');
-  const [creditTrend, setCreditTrend] = useState<Array<{ day: string; balance: number }>>([]);
-
-  useEffect(() => {
-    let mounted = true;
-    async function loadCreditTrend() {
-      try {
-        const res = await fetch(`/api/credits/history?guildId=${guildId}&range=${creditRange}`);
-        if (res.ok) {
-          const data = await res.json();
-          if (mounted) {
-            const daysCount = creditRange === '7d' ? 7 : 30;
-            const currentBal = typeof data.summary?.balance === 'number' ? data.summary.balance : serverBalance;
-            if (Array.isArray(data.items) && data.items.length > 0) {
-              const points: Array<{ day: string; balance: number }> = [];
-              for (let i = daysCount - 1; i >= 0; i--) {
-                const d = new Date();
-                d.setDate(d.getDate() - i);
-                const label = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-                points.push({ day: label, balance: currentBal });
-              }
-              setCreditTrend(points);
-            } else if (currentBal > 0) {
-              const points: Array<{ day: string; balance: number }> = [];
-              for (let i = daysCount - 1; i >= 0; i--) {
-                const d = new Date();
-                d.setDate(d.getDate() - i);
-                const label = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-                points.push({ day: label, balance: currentBal });
-              }
-              setCreditTrend(points);
-            } else {
-              setCreditTrend([]);
-            }
-          }
-        }
-      } catch {
-        if (mounted) setCreditTrend([]);
-      }
-    }
-    loadCreditTrend();
-    return () => {
-      mounted = false;
-    };
-  }, [guildId, creditRange, serverBalance]);
-
-  // ER:LC telemetry (only real data from API)
-  const [erlcData, setErlcData] = useState<{
-    connected: boolean;
-    currentPlayers: number;
-    maxPlayers: number;
-    joinCode: string;
-  }>({
-    connected: false,
-    currentPlayers: 0,
-    maxPlayers: 0,
-    joinCode: joinCode || '',
-  });
-
-  // Verified joins telemetry
-  const [verifiedJoins, setVerifiedJoins] = useState<number>(0);
-
-  // Reviews state (Section 6)
-  const [reviewsData, setReviewsData] = useState<ReviewsResponse>({
-    reviews: [],
-    total: 0,
-    page: 1,
-    pageSize: 5,
-    totalPages: 1,
-    summary: {
-      average: 0,
-      total: 0,
-      distribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
-    },
-  });
-  const [reviewsPage, setReviewsPage] = useState(1);
-  const [reviewsSort, setReviewsSort] = useState<'newest' | 'highest' | 'lowest'>('newest');
-  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
-  const [newRating, setNewRating] = useState(5);
-  const [newReviewText, setNewReviewText] = useState('');
-  const [showWriteReview, setShowWriteReview] = useState(false);
-
-  // Verification state (PART A Item 5)
-  const [verificationData, setVerificationData] = useState<{
-    verified: boolean;
-    status: 'approved' | 'pending' | 'rejected' | 'not_applied';
-    application: any | null;
-  }>({
-    verified: Boolean((config as any)?.verified),
-    status: (config as any)?.verified ? 'approved' : 'not_applied',
-    application: null,
-  });
-  const [showApplyModal, setShowApplyModal] = useState(false);
-  const [applyWhy, setApplyWhy] = useState('');
-  const [applyOfferings, setApplyOfferings] = useState('');
-  const [applyLinks, setApplyLinks] = useState('');
-  const [submittingApply, setSubmittingApply] = useState(false);
-  const [botNick, setBotNick] = useState('');
-  const [savingBotNick, setSavingBotNick] = useState(false);
-
-  const handleApplyVerification = async () => {
-    if (applyWhy.trim().length < 10) {
-      addToast?.('warning', 'More details required', 'Please describe why your community qualifies (at least 10 characters).');
-      return;
-    }
-    if (applyOfferings.trim().length < 10) {
-      addToast?.('warning', 'More details required', 'Please describe what your community offers to players (at least 10 characters).');
-      return;
-    }
-    setSubmittingApply(true);
+  // Fetch full server details from backend
+  const loadServerData = async () => {
+    if (!guildId) return;
     try {
-      const res = await fetch(`/api/workspace/${guildId}/verification/apply`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          serverName,
-          why: applyWhy.trim(),
-          offerings: applyOfferings.trim(),
-          links: applyLinks.trim(),
-        }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        addToast?.('success', 'Application submitted', 'Your verification application is now under review by staff.');
-        setShowApplyModal(false);
-        setVerificationData({
-          verified: false,
-          status: 'pending',
-          application: data.application,
-        });
-      } else {
-        addToast?.('error', 'Submission failed', data.error || 'Could not submit application.');
-      }
-    } catch {
-      addToast?.('error', 'Error', 'Failed to submit verification application.');
-    } finally {
-      setSubmittingApply(false);
-    }
-  };
-
-  const handleRevokeVerification = async () => {
-    if (!window.confirm('Remove verification badge from this server? You can reapply later.')) return;
-    try {
-      const res = await fetch(`/api/workspace/${guildId}/verification/revoke`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-      });
-      if (res.ok) {
-        addToast?.('info', 'Verification removed', 'The blue verified badge has been removed.');
-        setVerificationData({
-          verified: false,
-          status: 'not_applied',
-          application: null,
-        });
-      }
-    } catch {}
-  };
-
-  const handleSaveBotNick = async () => {
-    if (!botNick.trim()) return;
-    setSavingBotNick(true);
-    try {
-      const res = await fetch(`/api/workspace/${guildId}/bot-nickname`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nickname: botNick.trim() }),
-      });
-      const d = await res.json();
-      if (res.ok) {
-        addToast?.('success', 'Bot nickname updated', 'ConnectingERLC bot nickname updated in your server.');
-      } else {
-        addToast?.('error', 'Failed to update nickname', d.error || 'Discord rejected nickname update.');
-      }
-    } catch {
-      addToast?.('error', 'Error', 'Failed to update bot nickname.');
-    } finally {
-      setSavingBotNick(false);
-    }
-  };
-
-  // Load telemetry, reviews, balance
-  const loadReviews = async () => {
-    try {
-      const res = await fetch(`/api/servers/${guildId}/reviews?page=${reviewsPage}&pageSize=5&sort=${reviewsSort}`);
+      setLoading(true);
+      const res = await fetch(`/api/servers/${guildId}`);
       if (res.ok) {
         const data = await res.json();
-        setReviewsData({
-          reviews: Array.isArray(data?.reviews) ? data.reviews : [],
-          total: Number(data?.total || 0),
-          page: Number(data?.page || 1),
-          pageSize: Number(data?.pageSize || 5),
-          totalPages: Number(data?.totalPages || 1),
-          summary: {
-            average: Number(data?.summary?.average || 0),
-            total: Number(data?.summary?.total || data?.total || 0),
-            distribution: data?.summary?.distribution || { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
-          },
-        });
-      }
-    } catch {}
-  };
+        const s = data.server || data;
+        setBannerUrl(s.bannerUrl || '');
+        setDescription(s.description || '');
+        setTags(Array.isArray(s.tags) ? s.tags.join(', ') : (s.tags || ''));
+        setDiscordInvite(s.inviteUrl || '');
+        
+        const social = s.socialLinks || {};
+        setRobloxLink(social.roblox || '');
+        setTwitterLink(social.twitter || '');
+        setWebsiteLink(social.website || '');
 
-  useEffect(() => {
-    loadReviews();
-  }, [guildId, reviewsPage, reviewsSort]);
-
-  useEffect(() => {
-    let mounted = true;
-    async function loadTelemetry() {
-      // Load Treasury Balance
-      try {
-        const bRes = await fetch(`/api/credits?guildId=${guildId}`);
-        if (bRes.ok) {
-          const bData = await bRes.json();
-          if (mounted && typeof bData.balance === 'number') {
-            setServerBalance(bData.balance);
+        setCustomUrl(s.customUrl || '');
+        setSavedCustomUrl(s.customUrl || '');
+        if (s.customUrlChangedAt) {
+          const diffMs = Date.now() - new Date(s.customUrlChangedAt).getTime();
+          const cooldownMs = 30 * 86400 * 1000;
+          if (diffMs < cooldownMs) {
+            const daysLeft = Math.ceil((cooldownMs - diffMs) / (86400 * 1000));
+            setCustomUrlCooldown(`${daysLeft} days remaining`);
+          } else {
+            setCustomUrlCooldown(null);
           }
         }
-      } catch {}
 
-      // Load ER:LC status
-      try {
-        const erlcRes = await fetch(`/api/servers/${guildId}/erlc/status`);
-        if (erlcRes.ok) {
-          const d = await erlcRes.json();
-          if (mounted && d.connected) {
-            setErlcData({
-              connected: true,
-              currentPlayers: Number(d.currentPlayers || 0),
-              maxPlayers: Number(d.maxPlayers || 32),
-              joinCode: d.joinCode || joinCode,
-            });
+        setShowStaffList(Boolean(s.showStaffList));
+        setStaffList(Array.isArray(s.staffList) ? s.staffList : []);
+        setShowPartnerList(Boolean(s.showPartnerList));
+        setPartnerList(Array.isArray(s.partnerList) ? s.partnerList : []);
+
+        // Sections order and visibility
+        if (Array.isArray(s.pageSections) && s.sectionVisibility) {
+          const loaded: SectionItem[] = s.pageSections.map((secId: string) => {
+            const def = DEFAULT_SECTIONS.find(d => d.id === secId) || {
+              id: secId,
+              label: secId.toUpperCase(),
+              description: '',
+              enabled: true
+            };
+            return {
+              ...def,
+              enabled: s.sectionVisibility[secId] !== undefined ? Boolean(s.sectionVisibility[secId]) : def.enabled
+            };
+          });
+          for (const def of DEFAULT_SECTIONS) {
+            if (!loaded.some(item => item.id === def.id)) {
+              loaded.push({ ...def, enabled: s.sectionVisibility[def.id] ?? def.enabled });
+            }
           }
+          setSections(loaded);
         }
-      } catch {}
 
-      // Load verification status
-      try {
-        const vRes = await fetch(`/api/workspace/${guildId}/verification`);
-        if (vRes.ok) {
-          const vData = await vRes.json();
-          if (mounted && vData) {
-            setVerificationData({
-              verified: Boolean(vData.verified),
-              status: vData.status || (vData.verified ? 'approved' : 'not_applied'),
-              application: vData.application || null,
-            });
-          }
+        // ER:LC status
+        if (s.erlc && s.erlc.connected) {
+          setErlcConnected(true);
+          setMaskedKey(s.erlc.maskedKey || '••••••••••••••••');
+        } else {
+          setErlcConnected(false);
+          setMaskedKey('');
         }
-      } catch {}
-
-      // Load Joins Summary
-      try {
-        const repRes = await fetch(`/api/servers/${guildId}/recruits/summary`);
-        if (repRes.ok) {
-          const r = await repRes.json();
-          const s = r.summary || r;
-          if (mounted && s && typeof s.verifiedRecruits === 'number') {
-            setVerifiedJoins(s.verifiedRecruits);
-          }
-        }
-      } catch {}
-    }
-
-    loadTelemetry();
-    return () => {
-      mounted = false;
-    };
-  }, [guildId, joinCode]);
-
-  const handleCopyCode = () => {
-    const code = erlcData.joinCode || joinCode;
-    if (!code) return;
-    navigator.clipboard?.writeText(code);
-    setCopiedCode(true);
-    setTimeout(() => setCopiedCode(false), 2000);
-    addToast('success', 'Code copied', `Join code ${code} copied.`);
-  };
-
-  const handleShare = () => {
-    const url = `${window.location.origin}/servers/${guildId}`;
-    navigator.clipboard?.writeText(url);
-    setCopiedShare(true);
-    setTimeout(() => setCopiedShare(false), 2000);
-    addToast('success', 'Link copied', 'Public server link copied.');
-  };
-
-  const handleJoinServer = async () => {
-    const targetServerId = serverProfile?.server?.id || guildId;
-    const rawInvite =
-      serverProfile?.server?.inviteUrl ||
-      serverProfile?.server?.bot_invite_url ||
-      serverProfile?.server?.discordInvite ||
-      config.inviteUrl ||
-      inviteUrl;
-
-    try {
-      const res = await api<any>(`/servers/${targetServerId}/join`, {
-        method: 'POST',
-        body: JSON.stringify({ recipientServerId: guild?.id || undefined }),
-      });
-      const targetUrl = res?.inviteUrl || rawInvite;
-      if (targetUrl) {
-        window.open(targetUrl, '_blank', 'noopener,noreferrer');
       }
-      if (res?.verifiable === false) {
-        addToast('warning', 'Unverifiable Server', "Joins can't be verified because the bot is not present in this server.");
-      } else {
-        addToast('success', 'Invite Opened', `Joining ${serverName} via Discord. Credits are awarded to the server after the bot verifies your minimum stay.`);
-      }
-    } catch (err: any) {
-      if (rawInvite) {
-        window.open(rawInvite, '_blank', 'noopener,noreferrer');
-      }
-      addToast('error', 'Join notice', err?.message || 'Could not start join verification.');
-    }
-  };
-
-  const handleSubmitReview = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newReviewText.trim()) {
-      addToast('warning', 'Review required', 'Please write a short review before submitting.');
-      return;
-    }
-
-    setIsSubmittingReview(true);
-    try {
-      await api<any>(`/servers/${guildId}/reviews`, {
-        method: 'POST',
-        body: JSON.stringify({
-          rating: newRating,
-          text: newReviewText.trim(),
-        }),
-      });
-
-      addToast('success', 'Review posted', 'Your feedback has been published.');
-      setNewReviewText('');
-      setShowWriteReview(false);
-      loadReviews();
-    } catch (err: any) {
-      addToast('error', 'Submission failed', err.message || err.payload?.error || 'Failed to submit review.');
+    } catch (err) {
+      console.warn('Failed to load server details:', err);
     } finally {
-      setIsSubmittingReview(false);
+      setLoading(false);
+      setHasChanges(false);
     }
   };
 
-  const handleReportReview = async (reviewId: string) => {
+  useEffect(() => {
+    loadServerData();
+  }, [guildId]);
+
+  // Section reordering
+  const moveSection = (index: number, direction: 'up' | 'down') => {
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= sections.length) return;
+    const updated = [...sections];
+    const [moved] = updated.splice(index, 1);
+    updated.splice(targetIndex, 0, moved);
+    setSections(updated);
+    setHasChanges(true);
+  };
+
+  const toggleSection = (id: string) => {
+    setSections(prev =>
+      prev.map(s => (s.id === id ? { ...s, enabled: !s.enabled } : s))
+    );
+    setHasChanges(true);
+  };
+
+  // ER:LC Connection Handlers
+  const handleConnectErlc = async () => {
+    if (!erlcApiKey.trim() || !guildId) return;
+    setErlcTesting(true);
+    setErlcError(null);
     try {
-      const res = await fetch(`/api/reviews/${reviewId}/report`, {
+      const res = await fetch(`/api/servers/${guildId}/erlc/connect`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reason: 'Reported by user for review.' }),
+        body: JSON.stringify({ apiKey: erlcApiKey.trim() })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to connect ER:LC key.');
+      }
+      setErlcConnected(true);
+      setMaskedKey(data.maskedKey || '••••••••••••••••' + erlcApiKey.trim().slice(-4));
+      setErlcApiKey('');
+      addToast('success', 'ER:LC Connected', 'Successfully authenticated ER:LC server key.');
+      setHasChanges(false);
+    } catch (err: any) {
+      setErlcError(err.message || 'ER:LC connection test failed.');
+      addToast('error', 'Connection Failed', err.message || 'ER:LC connection test failed.');
+    } finally {
+      setErlcTesting(false);
+    }
+  };
+
+  const handleDisconnectErlc = async () => {
+    if (!guildId) return;
+    try {
+      const res = await fetch(`/api/servers/${guildId}/erlc/disconnect`, {
+        method: 'POST'
       });
       if (res.ok) {
-        addToast('success', 'Report received', 'Thank you. Our moderation team has been notified.');
+        setErlcConnected(false);
+        setMaskedKey('');
+        setErlcApiKey('');
+        addToast('info', 'ER:LC Disconnected', 'Removed ER:LC key from server.');
       }
     } catch {}
   };
 
-  const formatRelativeTime = (isoString: string) => {
+  // Custom URL Claim Handler (F4)
+  const handleClaimCustomUrl = async () => {
+    const candidate = customUrl.trim().toLowerCase();
+    if (!candidate || !guildId) return;
+    setClaimingCustomUrl(true);
     try {
-      const date = new Date(isoString);
-      const diffMs = Date.now() - date.getTime();
-      const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-      if (diffHours < 1) return 'Just now';
-      if (diffHours < 24) return `${diffHours}h ago`;
-      const diffDays = Math.floor(diffHours / 24);
-      if (diffDays === 1) return 'Yesterday';
-      return `${diffDays}d ago`;
-    } catch {
-      return 'Recently';
+      const res = await fetch(`/api/workspace/${guildId}/custom-url`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ customUrl: candidate })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to claim custom URL.');
+      }
+      setSavedCustomUrl(candidate);
+      addToast('success', 'Custom URL Claimed', `Your server is now live at connectingerlc.xyz/${candidate}`);
+      loadServerData();
+    } catch (err: any) {
+      addToast('error', 'Claim Failed', err.message || 'Could not claim custom URL.');
+    } finally {
+      setClaimingCustomUrl(false);
     }
   };
 
+  // Staff and Partner helpers
+  const handleAddStaff = () => {
+    if (!newStaffName.trim()) return;
+    setStaffList(prev => [...prev, { role: newStaffRole.trim() || 'Staff', username: newStaffName.trim() }]);
+    setNewStaffName('');
+    setNewStaffRole('');
+    setHasChanges(true);
+  };
+
+  const handleRemoveStaff = (idx: number) => {
+    setStaffList(prev => prev.filter((_, i) => i !== idx));
+    setHasChanges(true);
+  };
+
+  const handleAddPartner = () => {
+    if (!newPartnerName.trim()) return;
+    setPartnerList(prev => [...prev, { name: newPartnerName.trim(), link: newPartnerLink.trim() }]);
+    setNewPartnerName('');
+    setNewPartnerLink('');
+    setHasChanges(true);
+  };
+
+  const handleRemovePartner = (idx: number) => {
+    setPartnerList(prev => prev.filter((_, i) => i !== idx));
+    setHasChanges(true);
+  };
+
+  // Save All Changes (Single Save Bar)
+  const handleSaveChanges = async () => {
+    if (!guildId) return;
+    setSaving(true);
+    try {
+      const pageSections = sections.map(s => s.id);
+      const sectionVisibility = sections.reduce((acc, s) => {
+        acc[s.id] = s.enabled;
+        return acc;
+      }, {} as Record<string, boolean>);
+
+      const payload = {
+        bannerUrl: bannerUrl.trim(),
+        description: description.trim(),
+        tags: tags.split(',').map(t => t.trim().replace(/^#/, '')).filter(Boolean),
+        inviteUrl: discordInvite.trim(),
+        socialLinks: {
+          discord: discordInvite.trim(),
+          roblox: robloxLink.trim(),
+          twitter: twitterLink.trim(),
+          website: websiteLink.trim()
+        },
+        pageSections,
+        sectionVisibility,
+        showStaffList,
+        staffList,
+        showPartnerList,
+        partnerList
+      };
+
+      const res = await api<any>(`/servers/${guildId}/listing`, {
+        method: 'PUT',
+        body: JSON.stringify(payload)
+      });
+
+      if (res) {
+        addToast('success', 'Settings Saved', 'Your public server page has been updated.');
+        setHasChanges(false);
+      }
+    } catch (err: any) {
+      addToast('error', 'Save Failed', err.message || 'Could not save page settings.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="p-12 text-center text-xs text-zinc-500 font-sans">
+        Loading server page editor…
+      </div>
+    );
+  }
+
+  const previewSlug = savedCustomUrl || guildId;
+  const publicPageUrl = `${window.location.origin}/${previewSlug}`;
+
   return (
-    <div className="w-full max-w-[1100px] mx-auto space-y-6 pb-16 font-sans">
-      {/* ── 1. HERO CARD: BANNER (Fixed height h-48 sm:h-56, centered, overflow-hidden, rounded-t-2xl) ── */}
-      <div className="rounded-2xl border border-white/10 bg-[#0E0E11] overflow-hidden">
-        {/* Banner Area (Fixed h-48 sm:h-56, w-full, object-cover, centered) */}
-        <div className="relative w-full h-48 sm:h-56 bg-[#141417] overflow-hidden rounded-t-2xl">
-          {bannerUrl ? (
-            <img
-              src={bannerUrl}
-              alt={`${serverName} cover`}
-              className="w-full h-full object-cover object-center block"
-            />
-          ) : (
-            <div className="w-full h-full bg-gradient-to-br from-[#18181B] via-[#141417] to-[#0E0E11]" />
-          )}
-          <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[#0E0E11] to-transparent pointer-events-none" />
+    <div className="space-y-8 max-w-4xl mx-auto pb-24 font-sans text-zinc-200">
+      {/* Header with Live Preview Button */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-5 border-b border-white/[0.08]">
+        <div>
+          <h1 className="text-xl font-semibold text-zinc-100 flex items-center gap-2">
+            <Globe className="size-5 text-zinc-400" />
+            Server Page Editor
+          </h1>
+          <p className="text-xs text-zinc-400 mt-1">
+            Customize your public presence, reorder sections, and connect your ER:LC telemetry.
+          </p>
         </div>
 
-        {/* Identity & Actions Row */}
-        <div className="px-6 sm:px-8 pb-6 pt-0">
-          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 -mt-10 relative z-10">
-            {/* Overlapping Icon (72px) + Server Titles */}
-            <div className="flex items-end gap-4 min-w-0">
-              <ServerIcon
-                guildId={guildId}
-                iconUrl={serverIconUrl}
-                name={serverName}
-                size={72}
-                className="size-[72px] rounded-2xl border-4 border-[#0E0E11] shadow-2xl bg-[#141417] shrink-0 object-cover"
+        <div className="flex items-center gap-3">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => window.open(publicPageUrl, '_blank')}
+            className="text-xs border-white/[0.08] hover:bg-white/[0.04] flex items-center gap-1.5"
+          >
+            <span>View Public Page</span>
+            <ExternalLink className="size-3.5 text-zinc-400" />
+          </Button>
+        </div>
+      </div>
+
+      {/* Row 1: Custom URL (F4) */}
+      <div className="py-5 border-b border-white/[0.06] grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
+        <div>
+          <h2 className="text-sm font-medium text-zinc-100 flex items-center gap-2">
+            <LinkIcon className="size-4 text-zinc-400" />
+            Custom Short URL
+          </h2>
+          <p className="text-xs text-zinc-400 mt-1 leading-relaxed">
+            Claim a vanity link for your server (e.g. connectingerlc.xyz/yourname). Old server ID links automatically redirect here.
+          </p>
+          {customUrlCooldown && (
+            <div className="text-[11px] text-amber-400 mt-2 flex items-center gap-1">
+              <AlertCircle className="size-3" />
+              <span>Change cooldown: {customUrlCooldown}</span>
+            </div>
+          )}
+        </div>
+
+        <div className="md:col-span-2 space-y-3">
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <span className="absolute left-3 top-2.5 text-xs text-zinc-500 select-none">
+                /
+              </span>
+              <Input
+                value={customUrl}
+                onChange={(e) => setCustomUrl(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
+                placeholder="community-name"
+                className="pl-6 text-xs h-9 bg-zinc-900/60 border-white/[0.08] text-zinc-200"
               />
+            </div>
+            <Button
+              onClick={handleClaimCustomUrl}
+              disabled={claimingCustomUrl || !customUrl.trim() || customUrl === savedCustomUrl}
+              size="sm"
+              className="text-xs h-9 px-4 bg-[var(--accent)] text-white hover:opacity-90"
+            >
+              {claimingCustomUrl ? 'Claiming…' : (savedCustomUrl ? 'Update URL' : 'Claim URL')}
+            </Button>
+          </div>
+          {savedCustomUrl && (
+            <p className="text-[11px] text-zinc-400 font-mono">
+              Live link: <span className="text-zinc-200 font-sans">{publicPageUrl}</span>
+            </p>
+          )}
+        </div>
+      </div>
 
-              <div className="space-y-1 min-w-0 pb-1">
-                <div className="flex items-center gap-2.5 flex-wrap">
-                  <h1 className="text-[24px] sm:text-[28px] font-semibold text-white tracking-tight truncate leading-tight font-sans flex items-center gap-2">
-                    <span>{serverName}</span>
-                    {verificationData.verified && (
-                      <span title="Verified server" className="inline-flex items-center text-[#38BDF8]">
-                        <CheckCircle2 className="size-5 fill-[#38BDF8] text-[#0E0E11]" />
-                      </span>
-                    )}
-                  </h1>
+      {/* Row 2: Banner Image */}
+      <div className="py-5 border-b border-white/[0.06] grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
+        <div>
+          <h2 className="text-sm font-medium text-zinc-100 flex items-center gap-2">
+            <ImageIcon className="size-4 text-zinc-400" />
+            Cover Banner
+          </h2>
+          <p className="text-xs text-zinc-400 mt-1 leading-relaxed">
+            High-resolution banner displayed at the top of your public page. Recommended ratio: 16:9 or 3:1.
+          </p>
+        </div>
 
-                  <Badge variant="outline" className="text-[11px] px-2.5 py-0.5 bg-[#141417] text-zinc-300 border-white/10 font-medium shrink-0">
-                    {category}
-                  </Badge>
+        <div className="md:col-span-2 space-y-3">
+          <Input
+            value={bannerUrl}
+            onChange={(e) => {
+              setBannerUrl(e.target.value);
+              setHasChanges(true);
+            }}
+            placeholder="https://i.imgur.com/example.png or Discord CDN URL"
+            className="text-xs h-9 bg-zinc-900/60 border-white/[0.08] text-zinc-200"
+          />
+          {bannerUrl && (
+            <div className="h-32 w-full rounded-lg overflow-hidden border border-white/[0.08] bg-zinc-950 relative">
+              <img
+                src={bannerUrl}
+                alt="Banner preview"
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  (e.target as HTMLElement).style.display = 'none';
+                }}
+              />
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Row 3: ER:LC Server Key Connection (F3) */}
+      <div className="py-5 border-b border-white/[0.06] grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
+        <div>
+          <h2 className="text-sm font-medium text-zinc-100 flex items-center gap-2">
+            <KeyRound className="size-4 text-zinc-400" />
+            ER:LC Server Key
+          </h2>
+          <p className="text-xs text-zinc-400 mt-1 leading-relaxed">
+            Live in-game telemetry (players, staff, queue) connects via the Police Roleplay Community API. Keys are stored encrypted with AES-256-GCM.
+          </p>
+        </div>
+
+        <div className="md:col-span-2 space-y-3">
+          {erlcConnected ? (
+            <div className="p-3.5 rounded-xl bg-zinc-900/60 border border-white/[0.08] flex items-center justify-between">
+              <div>
+                <div className="text-xs font-medium text-zinc-200 flex items-center gap-1.5">
+                  <Check className="size-3.5 text-emerald-400" />
+                  Connected to ER:LC
                 </div>
-
-                {/* Subtitle Line: Member count, Server ID, ER:LC */}
-                <div className="flex items-center gap-3 flex-wrap text-xs text-zinc-400">
-                  <span className="inline-flex items-center gap-1.5 text-zinc-300 font-medium">
-                    <Users className="size-3.5 text-zinc-500" />
-                    <span className="tabular-nums">{memberCount.toLocaleString()}</span>
-                    <span className="text-zinc-400 font-normal">members</span>
-                  </span>
-
-                  <span className="text-zinc-500 font-mono text-[11px]">
-                    ID: {guildId}
-                  </span>
-
-                  {erlcData.joinCode && (
-                    <button
-                      type="button"
-                      onClick={handleCopyCode}
-                      className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-[#141417] border border-white/10 text-xs font-mono text-zinc-300 hover:text-white hover:border-white/20 transition-colors cursor-pointer"
-                    >
-                      <span className="text-zinc-500 font-sans">Join:</span>
-                      <span>{erlcData.joinCode}</span>
-                      {copiedCode ? <Check className="size-3 text-[var(--accent)]" /> : <Copy className="size-3 text-zinc-500" />}
-                    </button>
-                  )}
-
-                  {erlcData.connected && erlcData.maxPlayers > 0 && (
-                    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-[var(--accent-soft)] border border-[var(--accent-border)] text-xs text-[var(--accent)] font-medium">
-                      <span className="size-1.5 rounded-full bg-[var(--accent)] animate-pulse" />
-                      <span>Live • {erlcData.currentPlayers}/{erlcData.maxPlayers} in game</span>
-                    </span>
-                  )}
+                <div className="text-[11px] text-zinc-400 font-mono mt-1">
+                  Key: {maskedKey}
                 </div>
               </div>
-            </div>
-
-            {/* Action Buttons Right: Join Server (secondary), Bump (secondary), Share */}
-            <div className="flex items-center gap-2.5 shrink-0 self-start sm:self-auto">
               <Button
                 variant="outline"
                 size="sm"
-                onClick={handleJoinServer}
-                className="bg-[#141417] hover:bg-[#19191D] text-zinc-200 border-white/10 text-xs h-9 px-4 rounded-xl cursor-pointer gap-2"
+                onClick={handleDisconnectErlc}
+                className="text-xs h-8 text-red-400 border-red-500/20 hover:bg-red-500/10"
               >
-                <span>Join server</span>
-                <span className="px-1.5 py-0.2 rounded-md bg-[var(--accent-soft)] text-[var(--accent)] text-[10px] font-bold">
-                  +{rewardCoins} cr
-                </span>
+                Disconnect
               </Button>
-
-              <button
-                type="button"
-                onClick={() => setShowBumpDialog(true)}
-                className={cn(
-                  "h-9 px-3 rounded-[10px] border border-[rgba(255,255,255,0.08)] bg-[#141417] hover:bg-[#19191D] text-[#F4F4F5] text-[13px] font-medium inline-flex items-center gap-2 transition-colors cursor-pointer outline-none focus:outline-none",
-                  bumpRemainingSeconds > 0 && "text-[#A1A1AA] hover:text-[#F4F4F5]"
-                )}
-                title={bumpRemainingSeconds <= 0 ? "Ready to bump to #1" : `Bump available in ${bumpTimeFormatted}`}
-              >
-                <Flame className="size-4 text-amber-400 shrink-0" />
-                <span>Bump</span>
-                {bumpRemainingSeconds <= 0 ? (
-                  <span className="text-[11px] font-medium text-[var(--accent)] bg-[var(--accent-soft)] px-1.5 py-0.5 rounded">
-                    Ready
-                  </span>
-                ) : (
-                  <span className="text-[11px] font-medium text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded tabular-nums font-mono">
-                    {bumpTimeFormatted}
-                  </span>
-                )}
-              </button>
-
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleShare}
-                className="text-zinc-400 hover:text-white hover:bg-white/[0.04] text-xs h-9 px-3 rounded-xl cursor-pointer gap-1.5"
-              >
-                {copiedShare ? <Check className="size-3.5 text-[var(--accent)]" /> : <Share2 className="size-3.5" />}
-                <span>{copiedShare ? 'Copied' : 'Share'}</span>
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ── 2. MAIN LAYOUT: TWO COLUMNS (About & Feedback Left, Numbers & Reps Right) ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* ── LEFT COLUMN (7 cols): About & Community Feedback ── */}
-        <div className="lg:col-span-7 space-y-6">
-          {/* ── SERVER VERIFICATION & EXTRAS (Item 5) ── */}
-          <div className="rounded-2xl border border-white/[0.08] bg-[#0E0E11] p-6 space-y-4 font-sans">
-            <div className="flex items-start justify-between gap-3">
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <h2 className="text-base font-semibold text-white font-sans flex items-center gap-1.5">
-                    <span>Server verification</span>
-                    {verificationData.verified && (
-                      <span className="text-[#38BDF8] inline-flex items-center" title="Verified">
-                        <CheckCircle2 className="size-4 fill-[#38BDF8] text-[#0E0E11]" />
-                      </span>
-                    )}
-                  </h2>
-                  {verificationData.verified ? (
-                    <span className="text-[11px] font-semibold text-[#38BDF8] bg-[#38BDF8]/10 border border-[#38BDF8]/20 px-2 py-0.5 rounded-full">
-                      Verified
-                    </span>
-                  ) : verificationData.status === 'pending' ? (
-                    <span className="text-[11px] font-medium text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full">
-                      Pending review
-                    </span>
-                  ) : verificationData.status === 'rejected' ? (
-                    <span className="text-[11px] font-medium text-rose-400 bg-rose-500/10 border border-rose-500/20 px-2 py-0.5 rounded-full">
-                      Application rejected
-                    </span>
-                  ) : (
-                    <span className="text-[11px] font-medium text-zinc-400 bg-white/5 border border-white/10 px-2 py-0.5 rounded-full">
-                      Not verified
-                    </span>
-                  )}
-                </div>
-                <p className="text-xs text-zinc-400 leading-relaxed">
-                  {verificationData.verified
-                    ? 'Your community has been granted the verified blue checkmark and has unlocked custom bot personalisation.'
-                    : verificationData.status === 'pending'
-                    ? 'Your application is currently under review by ConnectingERLC reviewers. You will be notified once processed.'
-                    : verificationData.status === 'rejected'
-                    ? `Application was not approved: ${verificationData.application?.reason || 'Does not meet criteria'}. You may reapply with updated details.`
-                    : 'Apply for the blue verified badge to stand out across the public directory, earn community trust, and unlock custom bot styling.'}
-                </p>
-              </div>
-
-              {!verificationData.verified && verificationData.status !== 'pending' && (
-                <Button
-                  size="sm"
-                  onClick={() => setShowApplyModal(true)}
-                  className="h-8 px-3 text-xs bg-[var(--accent)] hover:opacity-90 text-[var(--accent-foreground)] font-semibold rounded-xl shrink-0"
-                >
-                  Apply for badge
-                </Button>
-              )}
-
-              {verificationData.verified && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleRevokeVerification}
-                  className="h-8 px-3 text-xs text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 rounded-xl shrink-0"
-                >
-                  Remove badge
-                </Button>
-              )}
-            </div>
-
-            {/* Unlocked Extras: Custom Bot Personalisation */}
-            {verificationData.verified && (
-              <div className="pt-3 border-t border-white/[0.06] space-y-3">
-                <div className="space-y-0.5">
-                  <h3 className="text-xs font-semibold text-white uppercase tracking-wider">
-                    Custom bot personalisation
-                  </h3>
-                  <p className="text-[11px] text-zinc-400">
-                    Verified servers can customize how ConnectingERLC appears inside their server.
-                  </p>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-xs font-medium text-zinc-300 block">
-                    Server bot nickname
-                  </label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      placeholder="e.g. ERLC Assistant"
-                      maxLength={32}
-                      value={botNick}
-                      onChange={(e) => setBotNick(e.target.value)}
-                      className="h-9 px-3 text-xs bg-[#141417] border border-white/10 text-white rounded-xl flex-1 focus:outline-none focus:border-white/20"
-                    />
-                    <Button
-                      size="sm"
-                      onClick={handleSaveBotNick}
-                      disabled={savingBotNick || !botNick.trim()}
-                      className="h-9 px-4 text-xs font-semibold bg-[var(--accent)] text-[var(--accent-foreground)] rounded-xl shrink-0"
-                    >
-                      {savingBotNick ? 'Saving…' : 'Save nickname'}
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Real Discord Limits Callout */}
-                <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.06] text-[11px] text-zinc-400 space-y-1">
-                  <div className="font-semibold text-zinc-300 flex items-center gap-1.5">
-                    <Info className="size-3.5 text-zinc-500" />
-                    <span>Discord API limitations for bots</span>
-                  </div>
-                  <ul className="list-disc pl-4 space-y-0.5 text-zinc-400">
-                    <li><strong className="text-zinc-300">Nickname:</strong> Fully supported per server via Discord API (max 32 characters).</li>
-                    <li><strong className="text-zinc-300">Per-server avatar:</strong> Requires Discord Server Boost Level 2. Discord API returns an error for standard servers.</li>
-                    <li><strong className="text-zinc-300">Per-server banner:</strong> Not supported by Discord API for bot users. Banners are global only via the Discord Developer Portal.</li>
-                  </ul>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* About Section */}
-          <div className="rounded-2xl border border-white/[0.06] bg-[#0E0E11] p-6 space-y-3">
-            <h2 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider font-sans">About</h2>
-            <div className="text-xs sm:text-sm text-zinc-300 leading-relaxed font-sans prose prose-invert max-w-none">
-              <MarkdownRenderer content={description} />
-            </div>
-          </div>
-
-          {/* ── COMMUNITY FEEDBACK (Section 6) ── */}
-          <div className="rounded-2xl border border-white/[0.06] bg-[#0E0E11] p-6 space-y-5">
-            {/* Header: Title with count & Write Review trigger */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-white/[0.06]">
-              <div>
-                <h2 className="text-base font-bold text-white font-sans">
-                  Community feedback ({reviewsData.total})
-                </h2>
-                <p className="text-xs text-zinc-400 font-sans">
-                  Verified member ratings and player experiences.
-                </p>
-              </div>
-
-              <div className="flex items-center gap-2">
-                {/* Sort Select: Newest, Highest, Lowest */}
-                <Select value={reviewsSort} onValueChange={(v: any) => setReviewsSort(v)}>
-                  <SelectTrigger className="w-[110px] h-8 bg-[#141417] border-white/10 text-xs font-sans">
-                    <SelectValue placeholder="Sort" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="newest">Newest</SelectItem>
-                    <SelectItem value="highest">Highest</SelectItem>
-                    <SelectItem value="lowest">Lowest</SelectItem>
-                  </SelectContent>
-                </Select>
-
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowWriteReview((prev) => !prev)}
-                  className="bg-[#141417] hover:bg-[#19191D] text-zinc-200 border-white/10 text-xs h-8 px-3 rounded-lg cursor-pointer"
-                >
-                  {showWriteReview ? 'Cancel' : 'Write a review'}
-                </Button>
-              </div>
-            </div>
-
-            {/* Rating Overview & Distribution Bars */}
-            <div className="grid grid-cols-1 sm:grid-cols-12 gap-5 items-center bg-[#141417]/50 rounded-xl p-4 border border-white/[0.04]">
-              {/* Big Rating Block */}
-              <div className="sm:col-span-4 flex flex-col items-center justify-center text-center space-y-1">
-                <span className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight tabular-nums">
-                  {(reviewsData?.summary?.average || 0) > 0 ? (reviewsData.summary.average).toFixed(1) : '—'}
-                </span>
-                <div className="flex items-center gap-1 text-amber-400">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <Star
-                      key={star}
-                      className={cn(
-                        'size-3.5',
-                        star <= Math.round(reviewsData?.summary?.average || 0)
-                          ? 'fill-amber-400 text-amber-400'
-                          : 'fill-transparent text-zinc-600'
-                      )}
-                    />
-                  ))}
-                </div>
-                <span className="text-[11px] text-zinc-400 font-sans">
-                  {reviewsData?.total || 0} {(reviewsData?.total || 0) === 1 ? 'review' : 'reviews'}
-                </span>
-              </div>
-
-              {/* 5 Distribution Bars */}
-              <div className="sm:col-span-8 space-y-1.5">
-                {[5, 4, 3, 2, 1].map((stars) => {
-                  const count = reviewsData?.summary?.distribution?.[stars] || 0;
-                  const total = reviewsData?.total || 0;
-                  const pct = total > 0 ? Math.round((count / total) * 100) : 0;
-                  return (
-                    <div key={stars} className="flex items-center gap-2.5 text-xs text-zinc-400">
-                      <span className="w-12 text-right shrink-0 text-[11px] font-medium">{stars} stars</span>
-                      <div className="flex-1 h-2 rounded-full bg-[#19191D] overflow-hidden border border-white/[0.04]">
-                        <div
-                          className="h-full bg-[var(--accent)] rounded-full transition-all duration-300"
-                          style={{ width: `${pct}%` }}
-                        />
-                      </div>
-                      <span className="w-8 text-right text-[11px] tabular-nums text-zinc-500">{count}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Write a review form (when toggled) */}
-            {showWriteReview && (
-              <form onSubmit={handleSubmitReview} className="rounded-xl border border-[var(--accent-border)] bg-[var(--accent-soft)] p-4 space-y-3 animate-in fade-in duration-150">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-white">Your rating</span>
-                  <div className="flex items-center gap-1.5">
-                    {[1, 2, 3, 4, 5].map((star) => (
-                      <button
-                        key={star}
-                        type="button"
-                        onClick={() => setNewRating(star)}
-                        className="p-1 hover:scale-110 transition-transform cursor-pointer"
-                      >
-                        <Star
-                          className={cn(
-                            'size-5',
-                            star <= newRating ? 'fill-amber-400 text-amber-400' : 'text-zinc-600'
-                          )}
-                        />
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <textarea
-                  value={newReviewText}
-                  onChange={(e) => setNewReviewText(e.target.value)}
-                  placeholder="Share your experience with this server (roles, community atmosphere, patrols)..."
-                  rows={3}
-                  className="w-full rounded-lg bg-[#0E0E11] border border-white/10 p-3 text-xs text-white placeholder-zinc-500 focus:outline-hidden focus:border-[var(--accent)] font-sans"
-                />
-
-                <div className="flex justify-end gap-2">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setShowWriteReview(false)}
-                    className="text-xs text-zinc-400 hover:text-white h-8 px-3 rounded-lg cursor-pointer"
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    type="submit"
-                    disabled={isSubmittingReview}
-                    size="sm"
-                    className="bg-[var(--accent)] text-[var(--accent-foreground)] font-semibold text-xs h-8 px-4 rounded-lg cursor-pointer"
-                  >
-                    {isSubmittingReview ? 'Posting…' : 'Post review'}
-                  </Button>
-                </div>
-              </form>
-            )}
-
-            {/* Reviews List */}
-            {reviewsData.reviews.length === 0 ? (
-              <div className="rounded-xl border border-white/[0.04] bg-[#141417]/30 p-8 text-center space-y-2">
-                <p className="text-xs font-medium text-white">No reviews yet</p>
-                <p className="text-xs text-zinc-400 max-w-sm mx-auto">
-                  Verified joiners can leave honest feedback after completing the verification period.
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-3.5">
-                {reviewsData.reviews.map((rev) => (
-                  <div key={rev.id} className="rounded-xl border border-white/[0.06] bg-[#141417] p-4 space-y-2.5">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-center gap-3">
-                        <UserAvatar
-                          userId={rev.user_id}
-                          avatarHash={rev.user_avatar_hash || (rev as any).avatar_hash}
-                          avatarUrl={rev.user_avatar || (rev as any).avatar_url}
-                          name={(rev as any).display_name || rev.user_name || (rev as any).author_name}
-                          size={36}
-                          className="size-9 rounded-full object-cover shrink-0"
-                        />
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs font-semibold text-white font-sans">
-                              {(rev as any).display_name || rev.user_name || (rev as any).author_name}
-                            </span>
-                            <span className="text-[11px] text-zinc-500">{formatRelativeTime(rev.created_at)}</span>
-                          </div>
-                          <div className="flex items-center gap-0.5 text-amber-400 mt-0.5">
-                            {[1, 2, 3, 4, 5].map((star) => (
-                              <Star
-                                key={star}
-                                className={cn(
-                                  'size-3',
-                                  star <= rev.rating ? 'fill-amber-400 text-amber-400' : 'fill-transparent text-zinc-700'
-                                )}
-                              />
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Three-dots Report menu */}
-                      <DropdownMenu>
-                        <DropdownMenuTrigger
-                          aria-label="Review options"
-                          className="size-7 rounded-lg hover:bg-white/[0.06] text-zinc-500 hover:text-zinc-300 flex items-center justify-center transition-colors cursor-pointer"
-                        >
-                          <MoreVertical className="size-3.5" />
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-32 bg-[#141417] border-white/10 text-xs">
-                          <DropdownMenuItem
-                            onClick={() => handleReportReview(rev.id)}
-                            className="text-zinc-300 hover:text-white cursor-pointer"
-                          >
-                            <Flag className="size-3.5 mr-2 text-zinc-500" />
-                            Report
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-
-                    <div className="text-xs text-zinc-300 leading-relaxed font-sans prose prose-invert max-w-none pt-0.5">
-                      <MarkdownRenderer content={rev.text} />
-                    </div>
-                  </div>
-                ))}
-
-                {/* Reviews Pagination */}
-                {reviewsData.totalPages > 1 && (
-                  <div className="flex items-center justify-between pt-2">
-                    <span className="text-xs text-zinc-400">
-                      Page {reviewsData.page} of {reviewsData.totalPages}
-                    </span>
-                    <div className="flex items-center gap-1.5">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={reviewsData.page <= 1}
-                        onClick={() => setReviewsPage((p) => Math.max(1, p - 1))}
-                        className="size-8 p-0 bg-[#141417] border-white/10 text-zinc-300"
-                      >
-                        <ChevronLeft className="size-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={reviewsData.page >= reviewsData.totalPages}
-                        onClick={() => setReviewsPage((p) => Math.min(reviewsData.totalPages, p + 1))}
-                        className="size-8 p-0 bg-[#141417] border-white/10 text-zinc-300"
-                      >
-                        <ChevronRight className="size-4" />
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* ── RIGHT COLUMN (5 cols): Your numbers (Owner/Team) or Community (Visitor) ── */}
-        <div className="lg:col-span-5 space-y-5">
-          {isOwnerOrTeam ? (
-            /* ── YOUR NUMBERS CARD (Owner and Permitted Team) ── */
-            <div className="rounded-2xl border border-white/[0.06] bg-[#0E0E11] p-5 space-y-4">
-              <div className="flex items-center justify-between pb-3 border-b border-white/[0.06]">
-                <span className="text-sm font-semibold text-white">Your numbers</span>
-                <span className="text-xs text-[var(--accent)] font-medium">Owner overview</span>
-              </div>
-
-              {/* 1. "Owned by" row at the very top */}
-              <div className="flex items-center gap-3 pb-3 border-b border-white/[0.06]">
-                <UserAvatar
-                  userId={resolvedOwnerId}
-                  avatarHash={resolvedOwnerAvatar}
-                  avatarUrl={resolvedOwnerAvatar}
-                  name={resolvedOwnerName}
-                  size={40}
-                  className="size-10 rounded-full object-cover bg-[#141417] border border-white/10 shrink-0"
-                />
-                <div className="min-w-0">
-                  <span className="text-sm font-semibold text-white truncate block font-sans">
-                    {resolvedOwnerName}
-                  </span>
-                  <span className="text-xs text-zinc-400 block font-sans">
-                    Owner
-                  </span>
-                </div>
-              </div>
-
-              {/* 2. Joins Tile FIRST */}
-              <div className="rounded-xl border border-white/[0.04] bg-[#141417] p-3.5 space-y-1">
-                <span className="text-xs text-zinc-400 block font-sans">Joins</span>
-                <div className="flex items-baseline gap-1.5">
-                  <span className="text-xl font-bold text-white tabular-nums">
-                    {verifiedJoins}
-                  </span>
-                  <span className="text-xs text-zinc-400 font-medium">verified</span>
-                </div>
-              </div>
-
-              {/* 3. Credits Tile SECOND with inside Mini Area Chart (~90px tall) and 7d | 30d toggle */}
-              <div className="rounded-xl border border-white/[0.04] bg-[#141417] p-4 space-y-2.5">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <span className="text-xs text-zinc-400 block font-sans">Credits</span>
-                    <div className="flex items-baseline gap-1.5 pt-0.5">
-                      <span className="text-2xl font-bold text-white tabular-nums">
-                        {serverBalance}
-                      </span>
-                      <span className="text-xs text-[var(--accent)] font-medium">credits</span>
-                    </div>
-                  </div>
-
-                  {/* 7d | 30d Toggle */}
-                  <div className="inline-flex rounded-lg border border-white/10 bg-[#0E0E11] p-0.5 text-xs">
-                    <button
-                      type="button"
-                      onClick={() => setCreditRange('7d')}
-                      className={`px-2.5 py-0.5 rounded-md font-medium transition-colors ${
-                        creditRange === '7d'
-                          ? 'bg-white/10 text-white'
-                          : 'text-zinc-400 hover:text-zinc-200'
-                      }`}
-                    >
-                      7d
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setCreditRange('30d')}
-                      className={`px-2.5 py-0.5 rounded-md font-medium transition-colors ${
-                        creditRange === '30d'
-                          ? 'bg-white/10 text-white'
-                          : 'text-zinc-400 hover:text-zinc-200'
-                      }`}
-                    >
-                      30d
-                    </button>
-                  </div>
-                </div>
-
-                {/* Mini Area Chart inside the tile (~90px tall) or empty dashed baseline */}
-                {creditTrend.length > 0 && creditTrend.some((p) => p.balance > 0) ? (
-                  <div className="h-[90px] w-full pt-1">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={creditTrend} margin={{ top: 4, right: 0, left: 0, bottom: 0 }}>
-                        <defs>
-                          <linearGradient id="serverCreditsGrad" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="var(--accent)" stopOpacity={0.25} />
-                            <stop offset="100%" stopColor="var(--accent)" stopOpacity={0.0} />
-                          </linearGradient>
-                        </defs>
-                        <Tooltip
-                          content={({ active, payload }: any) => {
-                            if (active && payload && payload.length) {
-                              return (
-                                <div className="rounded-lg border border-white/10 bg-[#141417] px-2.5 py-1 text-[11px] text-white shadow-md">
-                                  <span className="text-zinc-400 mr-1.5">{payload[0].payload.day}:</span>
-                                  <span className="font-semibold text-[var(--accent)]">{payload[0].value} credits</span>
-                                </div>
-                              );
-                            }
-                            return null;
-                          }}
-                        />
-                        <Area
-                          type="monotone"
-                          dataKey="balance"
-                          stroke="var(--accent)"
-                          strokeWidth={1.5}
-                          fill="url(#serverCreditsGrad)"
-                        />
-                      </AreaChart>
-                    </ResponsiveContainer>
-                  </div>
-                ) : (
-                  <div className="h-[90px] w-full flex flex-col items-center justify-center relative">
-                    <svg className="w-full h-8" preserveAspectRatio="none">
-                      <line
-                        x1="0"
-                        y1="16"
-                        x2="100%"
-                        y2="16"
-                        stroke="rgba(255,255,255,0.12)"
-                        strokeDasharray="4 4"
-                        strokeWidth="1"
-                      />
-                    </svg>
-                    <span className="text-xs text-zinc-500 font-sans -mt-1">
-                      No credit activity yet.
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              {/* 4. One muted line with real counts & proper plurals */}
-              <p className="text-xs text-zinc-500 font-sans pt-1">
-                {Number(serverProfile?.stats?.verifiedJoins ?? verifiedJoins ?? 0)} {Number(serverProfile?.stats?.verifiedJoins ?? verifiedJoins ?? 0) === 1 ? 'join' : 'joins'} and {Number(serverProfile?.stats?.bumps ?? serverProfile?.server?.bumps ?? 2)} {Number(serverProfile?.stats?.bumps ?? serverProfile?.server?.bumps ?? 2) === 1 ? 'bump' : 'bumps'} in the last 30 days.
-              </p>
             </div>
           ) : (
-            /* ── COMMUNITY CARD (Visitors - no credits) ── */
-            <div className="rounded-2xl border border-white/[0.06] bg-[#0E0E11] p-5 space-y-4">
-              <div className="pb-3 border-b border-white/[0.06]">
-                <span className="text-sm font-semibold text-white">Community</span>
-              </div>
-
-              {/* Owned by row */}
-              <div className="flex items-center gap-3 pb-3 border-b border-white/[0.06]">
-                <UserAvatar
-                  userId={resolvedOwnerId}
-                  avatarHash={resolvedOwnerAvatar}
-                  avatarUrl={resolvedOwnerAvatar}
-                  name={resolvedOwnerName}
-                  size={40}
-                  className="size-10 rounded-full object-cover bg-[#141417] border border-white/10 shrink-0"
+            <div className="space-y-2">
+              <div className="flex gap-2">
+                <Input
+                  type="password"
+                  value={erlcApiKey}
+                  onChange={(e) => setErlcApiKey(e.target.value)}
+                  placeholder="Paste your PRC Server Key here"
+                  className="text-xs h-9 bg-zinc-900/60 border-white/[0.08] text-zinc-200 flex-1"
                 />
-                <div className="min-w-0">
-                  <span className="text-sm font-semibold text-white truncate block font-sans">
-                    {resolvedOwnerName}
-                  </span>
-                  <span className="text-xs text-zinc-400 block font-sans">
-                    Owner
-                  </span>
-                </div>
+                <Button
+                  onClick={handleConnectErlc}
+                  disabled={erlcTesting || !erlcApiKey.trim()}
+                  size="sm"
+                  className="text-xs h-9 px-4 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-white/[0.08]"
+                >
+                  {erlcTesting ? 'Testing…' : 'Connect Key'}
+                </Button>
               </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="rounded-xl border border-white/[0.04] bg-[#141417] p-3.5 space-y-1">
-                  <span className="text-xs text-zinc-400 block font-sans">Members</span>
-                  <span className="text-xl sm:text-2xl font-bold text-white tabular-nums">
-                    {memberCount}
-                  </span>
+              {erlcError && (
+                <div className="text-[11px] text-red-400 flex items-center gap-1">
+                  <AlertCircle className="size-3" />
+                  <span>{erlcError}</span>
                 </div>
-                <div className="rounded-xl border border-white/[0.04] bg-[#141417] p-3.5 space-y-1">
-                  <span className="text-xs text-zinc-400 block font-sans">Verified joins</span>
-                  <span className="text-xl sm:text-2xl font-bold text-white tabular-nums">
-                    {verifiedJoins}
-                  </span>
-                </div>
-              </div>
-
-              <div className="text-xs text-zinc-500 font-sans pt-1">
-                Listed since{' '}
-                {serverProfile?.server?.createdAt
-                  ? new Date(serverProfile.server.createdAt).toLocaleDateString('en-US', {
-                      month: 'short',
-                      day: 'numeric',
-                      year: 'numeric',
-                    })
-                  : 'October 2026'}
-              </div>
+              )}
+              <p className="text-[11px] text-zinc-500">
+                Generate your Server-Key in ER:LC server settings under API permissions.
+              </p>
             </div>
           )}
         </div>
       </div>
 
-      {/* Bump Dialog */}
-      <BumpDialog
-        open={showBumpDialog}
-        onOpenChange={setShowBumpDialog}
-        guildId={guildId}
-        serverName={serverName}
-        onSuccess={() => {
-          addToast('success', 'Server bumped', 'Your server has been moved to the top of the directory.');
-        }}
-      />
+      {/* Row 4: Page Sections Order & Visibility (F3) */}
+      <div className="py-5 border-b border-white/[0.06] grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
+        <div>
+          <h2 className="text-sm font-medium text-zinc-100 flex items-center gap-2">
+            <Sparkles className="size-4 text-zinc-400" />
+            Sections & Order
+          </h2>
+          <p className="text-xs text-zinc-400 mt-1 leading-relaxed">
+            Toggle visibility and arrange the order of sections on your public page.
+          </p>
+        </div>
 
-      {/* ── VERIFICATION APPLICATION MODAL (Item 5) ── */}
-      {showApplyModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-xs p-4">
-          <div className="w-full max-w-lg rounded-2xl border border-white/10 bg-[#0E0E11] p-6 shadow-2xl space-y-4 font-sans">
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <h3 className="text-lg font-semibold text-white">Apply for server verification</h3>
-                <p className="text-xs text-zinc-400">Submit your community details for reviewer and admin verification.</p>
+        <div className="md:col-span-2 space-y-2.5">
+          {sections.map((section, idx) => (
+            <div
+              key={section.id}
+              className={`p-3 rounded-xl border transition-colors flex items-center justify-between ${
+                section.enabled
+                  ? 'bg-zinc-900/60 border-white/[0.08]'
+                  : 'bg-zinc-950/40 border-white/[0.04] opacity-60'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => toggleSection(section.id)}
+                  className={`size-7 rounded-lg flex items-center justify-center transition-colors ${
+                    section.enabled
+                      ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                      : 'bg-zinc-800 text-zinc-500 border border-white/[0.04]'
+                  }`}
+                  aria-label={section.enabled ? `Hide ${section.label}` : `Show ${section.label}`}
+                >
+                  {section.enabled ? <Eye className="size-3.5" /> : <EyeOff className="size-3.5" />}
+                </button>
+                <div>
+                  <div className="text-xs font-medium text-zinc-200">{section.label}</div>
+                  <div className="text-[11px] text-zinc-500 line-clamp-1">{section.description}</div>
+                </div>
               </div>
-              <button onClick={() => setShowApplyModal(false)} className="text-zinc-500 hover:text-white p-1">
-                <X className="size-4" />
-              </button>
+
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  disabled={idx === 0}
+                  onClick={() => moveSection(idx, 'up')}
+                  className="size-7 rounded flex items-center justify-center text-zinc-400 hover:text-zinc-200 disabled:opacity-20 disabled:cursor-not-allowed hover:bg-white/[0.04]"
+                  aria-label="Move section up"
+                >
+                  <ArrowUp className="size-3.5" />
+                </button>
+                <button
+                  type="button"
+                  disabled={idx === sections.length - 1}
+                  onClick={() => moveSection(idx, 'down')}
+                  className="size-7 rounded flex items-center justify-center text-zinc-400 hover:text-zinc-200 disabled:opacity-20 disabled:cursor-not-allowed hover:bg-white/[0.04]"
+                  aria-label="Move section down"
+                >
+                  <ArrowDown className="size-3.5" />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Row 5: About Markdown Text */}
+      <div className="py-5 border-b border-white/[0.06] grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
+        <div>
+          <h2 className="text-sm font-medium text-zinc-100 flex items-center gap-2">
+            About Text
+          </h2>
+          <p className="text-xs text-zinc-400 mt-1 leading-relaxed">
+            Tell prospective members what makes your community unique. Markdown formatting is supported.
+          </p>
+        </div>
+
+        <div className="md:col-span-2 space-y-2">
+          <textarea
+            value={description}
+            onChange={(e) => {
+              setDescription(e.target.value);
+              setHasChanges(true);
+            }}
+            rows={5}
+            placeholder="Write a clear, engaging overview of your server…"
+            className="w-full text-xs p-3 bg-zinc-900/60 border border-white/[0.08] rounded-xl text-zinc-200 focus:outline-none focus:border-white/[0.2] resize-y"
+          />
+        </div>
+      </div>
+
+      {/* Row 6: Tags & Community Links */}
+      <div className="py-5 border-b border-white/[0.06] grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
+        <div>
+          <h2 className="text-sm font-medium text-zinc-100 flex items-center gap-2">
+            <Tag className="size-4 text-zinc-400" />
+            Tags & Links
+          </h2>
+          <p className="text-xs text-zinc-400 mt-1 leading-relaxed">
+            Discoverability tags and official community destinations.
+          </p>
+        </div>
+
+        <div className="md:col-span-2 space-y-3">
+          <div>
+            <label className="text-[11px] text-zinc-400 mb-1 block">Tags (comma separated)</label>
+            <Input
+              value={tags}
+              onChange={(e) => {
+                setTags(e.target.value);
+                setHasChanges(true);
+              }}
+              placeholder="erlc, roleplay, police, fire, dispatch"
+              className="text-xs h-9 bg-zinc-900/60 border-white/[0.08] text-zinc-200"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+            <div>
+              <label className="text-[11px] text-zinc-400 mb-1 block">Discord Invite URL</label>
+              <Input
+                value={discordInvite}
+                onChange={(e) => {
+                  setDiscordInvite(e.target.value);
+                  setHasChanges(true);
+                }}
+                placeholder="https://discord.gg/yourcode"
+                className="text-xs h-9 bg-zinc-900/60 border-white/[0.08] text-zinc-200"
+              />
             </div>
 
-            <div className="space-y-3.5 text-xs">
-              <div className="space-y-1">
-                <label className="text-zinc-300 font-medium block">Why does your community qualify for verification? *</label>
-                <textarea
-                  rows={3}
-                  value={applyWhy}
-                  onChange={(e) => setApplyWhy(e.target.value)}
-                  placeholder="Describe your server history, active player base, and leadership team..."
-                  maxLength={1000}
-                  className="w-full p-2.5 rounded-xl bg-[#141417] border border-white/10 text-white focus:outline-none focus:border-white/20 resize-none"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-zinc-300 font-medium block">What unique value or roleplay experience do you offer? *</label>
-                <textarea
-                  rows={3}
-                  value={applyOfferings}
-                  onChange={(e) => setApplyOfferings(e.target.value)}
-                  placeholder="Liveries, structured sessions, custom CAD/MDT, active departments..."
-                  maxLength={1000}
-                  className="w-full p-2.5 rounded-xl bg-[#141417] border border-white/10 text-white focus:outline-none focus:border-white/20 resize-none"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-zinc-300 font-medium block">Official links or social media</label>
-                <input
-                  type="text"
-                  value={applyLinks}
-                  onChange={(e) => setApplyLinks(e.target.value)}
-                  placeholder="Website, YouTube, TikTok, or documentation links..."
-                  maxLength={500}
-                  className="w-full h-9 px-3 rounded-xl bg-[#141417] border border-white/10 text-white focus:outline-none focus:border-white/20"
-                />
-              </div>
+            <div>
+              <label className="text-[11px] text-zinc-400 mb-1 block">Roblox Group URL</label>
+              <Input
+                value={robloxLink}
+                onChange={(e) => {
+                  setRobloxLink(e.target.value);
+                  setHasChanges(true);
+                }}
+                placeholder="https://www.roblox.com/groups/..."
+                className="text-xs h-9 bg-zinc-900/60 border-white/[0.08] text-zinc-200"
+              />
             </div>
 
-            <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-white/[0.06]">
-              <Button variant="ghost" size="sm" onClick={() => setShowApplyModal(false)}>
-                Cancel
-              </Button>
-              <Button
-                size="sm"
-                onClick={handleApplyVerification}
-                disabled={submittingApply || applyWhy.trim().length < 10 || applyOfferings.trim().length < 10}
-                className="bg-[var(--accent)] text-[var(--accent-foreground)] font-semibold"
-              >
-                {submittingApply ? 'Submitting…' : 'Submit application'}
-              </Button>
+            <div>
+              <label className="text-[11px] text-zinc-400 mb-1 block">Twitter / X URL</label>
+              <Input
+                value={twitterLink}
+                onChange={(e) => {
+                  setTwitterLink(e.target.value);
+                  setHasChanges(true);
+                }}
+                placeholder="https://x.com/community"
+                className="text-xs h-9 bg-zinc-900/60 border-white/[0.08] text-zinc-200"
+              />
+            </div>
+
+            <div>
+              <label className="text-[11px] text-zinc-400 mb-1 block">Official Website</label>
+              <Input
+                value={websiteLink}
+                onChange={(e) => {
+                  setWebsiteLink(e.target.value);
+                  setHasChanges(true);
+                }}
+                placeholder="https://yourserver.com"
+                className="text-xs h-9 bg-zinc-900/60 border-white/[0.08] text-zinc-200"
+              />
             </div>
           </div>
         </div>
-      )}
+      </div>
+
+      {/* Row 7: Staff List */}
+      <div className="py-5 border-b border-white/[0.06] grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
+        <div>
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-medium text-zinc-100 flex items-center gap-2">
+              <Shield className="size-4 text-zinc-400" />
+              Staff Team
+            </h2>
+            <input
+              type="checkbox"
+              checked={showStaffList}
+              onChange={(e) => {
+                setShowStaffList(e.target.checked);
+                setHasChanges(true);
+              }}
+              className="size-4 rounded border-white/[0.2] bg-zinc-900 text-[var(--accent)]"
+            />
+          </div>
+          <p className="text-xs text-zinc-400 mt-1 leading-relaxed">
+            Turn on to showcase leadership and moderators on your public page.
+          </p>
+        </div>
+
+        <div className="md:col-span-2 space-y-3">
+          {showStaffList ? (
+            <div className="space-y-3">
+              <div className="space-y-2">
+                {staffList.map((member, idx) => (
+                  <div key={idx} className="p-2.5 rounded-lg bg-zinc-900/60 border border-white/[0.06] flex items-center justify-between text-xs">
+                    <div>
+                      <span className="font-medium text-zinc-200">{member.username}</span>
+                      <span className="text-zinc-500 ml-2">({member.role})</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveStaff(idx)}
+                      className="text-zinc-500 hover:text-red-400"
+                    >
+                      <Trash2 className="size-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex gap-2">
+                <Input
+                  value={newStaffName}
+                  onChange={(e) => setNewStaffName(e.target.value)}
+                  placeholder="Discord Username"
+                  className="text-xs h-8 bg-zinc-900/60 border-white/[0.08] text-zinc-200 flex-1"
+                />
+                <Input
+                  value={newStaffRole}
+                  onChange={(e) => setNewStaffRole(e.target.value)}
+                  placeholder="Role (e.g. Administrator)"
+                  className="text-xs h-8 bg-zinc-900/60 border-white/[0.08] text-zinc-200 flex-1"
+                />
+                <Button
+                  onClick={handleAddStaff}
+                  size="sm"
+                  className="text-xs h-8 px-3 bg-zinc-800 text-zinc-200 hover:bg-zinc-700"
+                >
+                  <Plus className="size-3.5 mr-1" />
+                  Add
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <p className="text-xs text-zinc-500 italic">Staff list is currently turned off.</p>
+          )}
+        </div>
+      </div>
+
+      {/* Row 8: Partner Communities */}
+      <div className="py-5 border-b border-white/[0.06] grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
+        <div>
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-medium text-zinc-100 flex items-center gap-2">
+              <Users className="size-4 text-zinc-400" />
+              Partners List
+            </h2>
+            <input
+              type="checkbox"
+              checked={showPartnerList}
+              onChange={(e) => {
+                setShowPartnerList(e.target.checked);
+                setHasChanges(true);
+              }}
+              className="size-4 rounded border-white/[0.2] bg-zinc-900 text-[var(--accent)]"
+            />
+          </div>
+          <p className="text-xs text-zinc-400 mt-1 leading-relaxed">
+            Turn on to showcase cross-promoted and partner communities.
+          </p>
+        </div>
+
+        <div className="md:col-span-2 space-y-3">
+          {showPartnerList ? (
+            <div className="space-y-3">
+              <div className="space-y-2">
+                {partnerList.map((partner, idx) => (
+                  <div key={idx} className="p-2.5 rounded-lg bg-zinc-900/60 border border-white/[0.06] flex items-center justify-between text-xs">
+                    <div>
+                      <span className="font-medium text-zinc-200">{partner.name}</span>
+                      {partner.link && <span className="text-zinc-500 ml-2 font-mono text-[11px]">{partner.link}</span>}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleRemovePartner(idx)}
+                      className="text-zinc-500 hover:text-red-400"
+                    >
+                      <Trash2 className="size-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex gap-2">
+                <Input
+                  value={newPartnerName}
+                  onChange={(e) => setNewPartnerName(e.target.value)}
+                  placeholder="Partner Community Name"
+                  className="text-xs h-8 bg-zinc-900/60 border-white/[0.08] text-zinc-200 flex-1"
+                />
+                <Input
+                  value={newPartnerLink}
+                  onChange={(e) => setNewPartnerLink(e.target.value)}
+                  placeholder="Discord Link (optional)"
+                  className="text-xs h-8 bg-zinc-900/60 border-white/[0.08] text-zinc-200 flex-1"
+                />
+                <Button
+                  onClick={handleAddPartner}
+                  size="sm"
+                  className="text-xs h-8 px-3 bg-zinc-800 text-zinc-200 hover:bg-zinc-700"
+                >
+                  <Plus className="size-3.5 mr-1" />
+                  Add
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <p className="text-xs text-zinc-500 italic">Partner list is currently turned off.</p>
+          )}
+        </div>
+      </div>
+
+      {/* Sticky Bottom Save Bar */}
+      <div className="fixed bottom-0 left-0 right-0 z-40 bg-[#0E0E11]/95 backdrop-blur border-t border-white/[0.08] p-4 flex items-center justify-between max-w-4xl mx-auto rounded-t-xl">
+        <div className="text-xs text-zinc-400">
+          {hasChanges ? (
+            <span className="text-amber-400 flex items-center gap-1.5">
+              <AlertCircle className="size-3.5" />
+              You have unsaved changes
+            </span>
+          ) : (
+            <span className="text-zinc-500">All changes up to date</span>
+          )}
+        </div>
+
+        <div className="flex items-center gap-3">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => loadServerData()}
+            disabled={saving || !hasChanges}
+            className="text-xs border-white/[0.08] hover:bg-white/[0.04]"
+          >
+            Reset
+          </Button>
+          <Button
+            onClick={handleSaveChanges}
+            disabled={saving}
+            size="sm"
+            className="text-xs px-5 bg-[var(--accent)] text-white hover:opacity-90 flex items-center gap-1.5"
+          >
+            <Save className="size-3.5" />
+            <span>{saving ? 'Saving…' : 'Save Changes'}</span>
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }

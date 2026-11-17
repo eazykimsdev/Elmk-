@@ -321,6 +321,20 @@ export function appendServerActivity(serverId, event) {
 }
 
 /**
+ * Count how many bump reward transactions were recorded for a server in the past 24 hours (or since given timestamp)
+ */
+export function countDailyBumpRewards(serverId, sinceMs = Date.now() - 86400000) {
+  if (!serverId) return 0;
+  const sid = String(serverId);
+  const data = loadLedgerData();
+  return data.transactions.filter(
+    (tx) => (String(tx.guildId) === sid || String(tx.serverId) === sid) &&
+            tx.reason === 'bump_reward' &&
+            Number(tx.timestamp || 0) >= sinceMs
+  ).length;
+}
+
+/**
  * Count real recorded bump events across all servers (used as a floor for the public Total Bumps stat).
  */
 export function countStoredBumpEvents() {

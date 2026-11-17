@@ -409,8 +409,7 @@ export async function sendExpiredInviteOwnerDM(server, weekClicks, options = {})
       flags: 32768, // MessageFlags.IsComponentsV2
       components: [
         {
-          type: 17, // Container
-          accent_color: 12856117, // Crimson / Red accent (#C42B35)
+          type: 17, // Container (No accent_color = no color on the side)
           components: [
             {
               type: 10, // Text display

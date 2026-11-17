@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate, useBlocker } from 'react-router-dom';
-import { Save, AlertTriangle, Pencil, X, Loader2 } from 'lucide-react';
+import { Save, AlertTriangle, Pencil, X, Loader2, Gift } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AsyncButton } from '@/components/ui/async-button';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
@@ -43,6 +43,8 @@ import { DiscordConnectionTab } from './dashboard/DiscordConnectionTab';
 import { SettingsTab } from './dashboard/SettingsTab';
 import { PartnershipsTab } from './dashboard/PartnershipsTab';
 import { RecruitsTab } from './dashboard/RecruitsTab';
+import { ShopTab } from './dashboard/ShopTab';
+import { FormsTab } from './dashboard/FormsTab';
 import { NotFoundPage } from './NotFoundPage';
 import { AdminPortalPage } from './AdminPortalPage';
 import { ServerProfileModal } from '@/components/ServerProfileModal';
@@ -61,7 +63,11 @@ const VALID_DASHBOARD_TABS = new Set([
   'joins',
   'my-joins',
   'partnerships',
+  'forms',
+  'applications',
   'premium',
+  'shop',
+  'server-shop',
   'recruits',
   'history',
   'transfer',
@@ -85,6 +91,7 @@ const TAB_ALIASES: Record<string, string> = {
   'my-joins': 'joins',
   'daily-check-in': 'checkin',
   'check-in': 'checkin',
+  'server-shop': 'shop',
   'bot': 'discord',
   'discord-connection': 'discord',
   'gateway': 'discord',
@@ -199,7 +206,7 @@ export function DashboardPage() {
 
   useEffect(() => {
     const serverName = selectedGuild?.name || 'Server';
-    document.title = `${serverName} · ConnectingERLC`;
+    document.title = `${serverName} — ConnectingERLC`;
   }, [selectedGuild]);
 
   // Shared ServerProfileModal state synced with ?server=slug
@@ -223,6 +230,30 @@ export function DashboardPage() {
       window.removeEventListener('erlcus_open_server_modal', handleUrlChange);
     };
   }, []);
+
+  const [giveawayClaim, setGiveawayClaim] = useState<any>(null);
+
+  useEffect(() => {
+    if (auth.user?.id) {
+      fetch(`/api/giveaway/my-claim?guildId=${currentGuildId || ''}`)
+        .then((r) => (r.ok ? r.json() : null))
+        .then((data) => {
+          if (data?.claim) setGiveawayClaim(data.claim);
+        })
+        .catch(() => {});
+    }
+  }, [auth.user?.id, currentGuildId]);
+
+  const handleDismissGiveaway = async (claimId: string) => {
+    try {
+      await fetch('/api/giveaway/dismiss-notification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ claimId })
+      });
+      setGiveawayClaim((prev: any) => (prev ? { ...prev, show_on_dashboard: false } : null));
+    } catch {}
+  };
 
   useEffect(() => {
     async function initGuilds() {
@@ -787,7 +818,7 @@ export function DashboardPage() {
       onWorkspaceChange={handleSelectGuild}
       user={userProfile}
       notifications={notificationsList}
-      now={new Date()}
+      now={REFERENCE_DATE}
       onSignOut={handleSignOut}
     >
       {/* Dynamic PageHeader */}
@@ -1009,6 +1040,33 @@ export function DashboardPage() {
 
         {/* Active Content Module */}
         <main className="space-y-6 min-w-0">
+          {/* Launch Giveaway Closed-DMs / Winner Notification Banner */}
+          {giveawayClaim && giveawayClaim.show_on_dashboard && (
+            <div className="p-4 rounded-xl bg-[var(--accent)]/10 border border-[var(--accent)]/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xs">
+              <div className="flex items-center gap-3.5">
+                <div className="size-10 rounded-xl bg-[var(--accent)]/20 border border-[var(--accent)]/40 flex items-center justify-center shrink-0">
+                  <Gift className="size-5 text-[var(--accent)]" />
+                </div>
+                <div>
+                  <div className="text-sm font-bold text-white">
+                    Launch Giveaway Winner — Spot #{giveawayClaim.spot_number} of 20!
+                  </div>
+                  <div className="text-xs text-zinc-300">
+                    Your community was awarded <strong className="text-[var(--accent)]">{giveawayClaim.credits_awarded} credits</strong> in the launch giveaway. (DMs were unavailable, so we're notifying you here!)
+                  </div>
+                </div>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleDismissGiveaway(giveawayClaim.id)}
+                className="text-xs border-white/10 hover:bg-white/5 cursor-pointer shrink-0"
+              >
+                Got it
+              </Button>
+            </div>
+          )}
+
           {activeTabKey === 'overview' && (
             <OverviewTab
               guild={selectedGuild}
@@ -1126,6 +1184,28 @@ export function DashboardPage() {
                 workspace={workspace}
                 config={config}
                 onNavigateTab={(t) => navigate(`/dashboard/${currentGuildId}/${t}`)}
+                addToast={addToast}
+              />
+            </TabErrorBoundary>
+          )}
+
+          {activeTabKey === 'shop' && (
+            <TabErrorBoundary tabTitle="Server shop">
+              <ShopTab
+                currentGuildId={currentGuildId}
+                serverName={selectedGuild?.name || 'Server'}
+                onNavigateTab={(t) => navigate(`/dashboard/${currentGuildId}/${t}`)}
+                addToast={addToast}
+              />
+            </TabErrorBoundary>
+          )}
+
+          {(activeTabKey === 'forms' || activeTabKey === 'applications') && (
+            <TabErrorBoundary tabTitle="Applications & Forms">
+              <FormsTab
+                currentGuildId={currentGuildId}
+                serverName={selectedGuild?.name || 'Server'}
+                customUrl={workspace?.customUrl || null}
                 addToast={addToast}
               />
             </TabErrorBoundary>

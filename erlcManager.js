@@ -172,10 +172,45 @@ export async function queryPrcApi(plainKey) {
   }
 
   const data = await res.json();
+
+  let queueSize = 0;
+  let staffInGame = 0;
+
+  try {
+    const qRes = await fetch(`${PRC_API_BASE}/server/queue`, {
+      method: 'GET',
+      headers: { 'Server-Key': trimmedKey, Accept: 'application/json' },
+      signal: AbortSignal.timeout(4000)
+    });
+    if (qRes.ok) {
+      const qData = await qRes.json();
+      queueSize = Array.isArray(qData) ? qData.length : (Array.isArray(qData?.Queue) ? qData.Queue.length : (Number(qData?.Queue) || 0));
+    }
+  } catch {}
+
+  try {
+    const pRes = await fetch(`${PRC_API_BASE}/server/players`, {
+      method: 'GET',
+      headers: { 'Server-Key': trimmedKey, Accept: 'application/json' },
+      signal: AbortSignal.timeout(4000)
+    });
+    if (pRes.ok) {
+      const pData = await pRes.json();
+      const pList = Array.isArray(pData) ? pData : (Array.isArray(pData?.Players) ? pData.Players : []);
+      staffInGame = pList.filter((p) => {
+        const perm = String(p.Permission || '').toLowerCase();
+        const team = String(p.Team || '').toLowerCase();
+        return perm.includes('mod') || perm.includes('admin') || perm.includes('owner') || team.includes('staff');
+      }).length;
+    }
+  } catch {}
+
   return {
     name: data.Name || 'Private Server',
     currentPlayers: Number.isFinite(data.CurrentPlayers) ? data.CurrentPlayers : 0,
     maxPlayers: Number.isFinite(data.MaxPlayers) ? data.MaxPlayers : 50,
+    staffInGame,
+    queueSize,
     joinCode: data.JoinKey || data.JoinCode || '',
     accVerified: Boolean(data.AccVerified),
   };
@@ -206,6 +241,8 @@ export async function connectErlcServer(serverId, rawKey, userId) {
     name: prcData.name,
     currentPlayers: prcData.currentPlayers,
     maxPlayers: prcData.maxPlayers,
+    staffInGame: prcData.staffInGame || 0,
+    queueSize: prcData.queueSize || 0,
     joinCode: prcData.joinCode,
     connectedAt: now,
     connectedBy: userId || 'unknown',
@@ -223,6 +260,8 @@ export async function connectErlcServer(serverId, rawKey, userId) {
       name: prcData.name,
       currentPlayers: prcData.currentPlayers,
       maxPlayers: prcData.maxPlayers,
+      staffInGame: prcData.staffInGame || 0,
+      queueSize: prcData.queueSize || 0,
       joinCode: prcData.joinCode,
       lastCheckedAt: now,
       maskedKey: masked,
@@ -284,6 +323,8 @@ export async function getErlcStatus(serverId, forceRefresh = false) {
       name: prcData.name,
       currentPlayers: prcData.currentPlayers,
       maxPlayers: prcData.maxPlayers,
+      staffInGame: prcData.staffInGame || 0,
+      queueSize: prcData.queueSize || 0,
       joinCode: prcData.joinCode || record.joinCode,
       lastCheckedAt: checkedIso,
       maskedKey: record.maskedKey,

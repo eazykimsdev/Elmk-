@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { randomBytes } from 'node:crypto';
-import { getUserLedgerSummary, getServerLedgerSummary, recordLedgerTransaction, appendServerActivity, REWARD_DEBT_FLOOR } from './ledgerManager.js';
+import { getUserLedgerSummary, getServerLedgerSummary, recordLedgerTransaction, appendServerActivity, REWARD_DEBT_FLOOR, countDailyBumpRewards } from './ledgerManager.js';
 import { cleanSqlReplace } from './markdownSanitizer.js';
 import { findActiveJoinIntent, markJoinIntentConverted } from './inviteValidator.js';
 import { getAdminSettings } from './premiumManager.js';
@@ -676,6 +676,7 @@ export function upsertPromotedServer(serverData, owner) {
       ? (serverData.autoRenewChannelId || null)
       : (existing?.autoRenewChannelId || null),
     joinCode: serverData.joinCode !== undefined && serverData.joinCode !== null ? safeString(serverData.joinCode) : (existing?.joinCode || null),
+    customUrl: serverData.customUrl !== undefined && serverData.customUrl !== null ? safeString(serverData.customUrl).toLowerCase() : (existing?.customUrl || null),
     listedInDirectory: serverData.listedInDirectory !== undefined ? Boolean(serverData.listedInDirectory) : (existing?.listedInDirectory !== undefined ? Boolean(existing.listedInDirectory) : true),
     bannerUrl: safeString(serverData.bannerUrl || serverData.serverBannerUrl || existing?.bannerUrl || ''),
     memberCount: Number(serverData.memberCount || existing?.memberCount || 0),
@@ -738,8 +739,10 @@ export function getBumpStatus(guildId) {
   const targetId = String(guildId);
   const server = data.servers.find(s => s.id === targetId);
 
-  const COOLDOWN_MS = BUMP_COOLDOWN_HOURS * 60 * 60 * 1000;
   const now = Date.now();
+  const isDoubleBumps = Boolean(server?.boosts?.double_bumps?.activeUntil && Number(server.boosts.double_bumps.activeUntil) > now);
+  const effectiveCooldownHours = isDoubleBumps ? BUMP_COOLDOWN_HOURS / 2 : BUMP_COOLDOWN_HOURS;
+  const COOLDOWN_MS = effectiveCooldownHours * 60 * 60 * 1000;
   const lastBump = Math.max(
     Number(data.bumpCooldowns[targetId] || 0),
     Number(server?.lastBumpedAt || 0)
@@ -757,10 +760,11 @@ export function getBumpStatus(guildId) {
       cooldownSeconds: remainingSeconds,
       nextBumpAt: expectedNextBumpAt,
       lastBumpedAt: lastBump,
-      cooldownHours: BUMP_COOLDOWN_HOURS,
+      cooldownHours: effectiveCooldownHours,
       costCredits: BUMP_COST_CREDITS,
       rank,
       totalServers: sorted.length,
+      hasDoubleBumps: isDoubleBumps,
     };
   }
 
@@ -769,10 +773,11 @@ export function getBumpStatus(guildId) {
     cooldownSeconds: 0,
     nextBumpAt: null,
     lastBumpedAt: lastBump || null,
-    cooldownHours: BUMP_COOLDOWN_HOURS,
+    cooldownHours: effectiveCooldownHours,
     costCredits: BUMP_COST_CREDITS,
     rank,
     totalServers: sorted.length,
+    hasDoubleBumps: isDoubleBumps,
   };
 }
 
@@ -852,8 +857,10 @@ export function bumpPromotedServer(guildId, userId, options = {}) {
     data.servers.push(server);
   }
 
-  const COOLDOWN_MS = BUMP_COOLDOWN_HOURS * 60 * 60 * 1000;
   const now = Date.now();
+  const isDoubleBumps = Boolean(server?.boosts?.double_bumps?.activeUntil && Number(server.boosts.double_bumps.activeUntil) > now);
+  const effectiveCooldownHours = isDoubleBumps ? BUMP_COOLDOWN_HOURS / 2 : BUMP_COOLDOWN_HOURS;
+  const COOLDOWN_MS = effectiveCooldownHours * 60 * 60 * 1000;
   const lastBump = Math.max(
     Number(data.bumpCooldowns[targetId] || 0),
     Number(server.lastBumpedAt || 0)
@@ -917,30 +924,37 @@ export function bumpPromotedServer(guildId, userId, options = {}) {
     }
   }
 
-  // Award bump credits to bumping server (Point B2)
+  // Award bump credits to bumping server (Point B2 & D3)
   const adminSettings = getAdminSettings();
   const bumpCredits = typeof adminSettings.bump_reward_credits === 'number' ? adminSettings.bump_reward_credits : 2;
-  const interactionId = options.interactionId || `bump_${targetId}_${now}`;
-  const idempotencyKey = `bump_credit_${interactionId}`;
+  const dailyCap = typeof adminSettings.daily_bump_cap_per_server === 'number' ? adminSettings.daily_bump_cap_per_server : 24;
+  const bumpsToday = countDailyBumpRewards(targetId);
 
-  try {
-    recordLedgerTransaction({
-      userId: effectiveUserId || server.ownerId,
-      type: 'earned',
-      amount: bumpCredits,
-      reason: 'bump_reward',
-      description: `Bump reward (+${bumpCredits} cr) for bumping ${server.name || 'server'}`,
-      guildId: targetId,
-      serverId: targetId,
-      status: 'posted',
-      idempotencyKey
-    });
-    server.credits = Number(server.credits || 0) + bumpCredits;
-    server.balance = Number(server.balance || 0) + bumpCredits;
-  } catch (txErr) {
-    if (txErr.code !== 'DUPLICATE_LEDGER_ENTRY') {
-      console.warn('[BUMP REWARD] Error recording bump credit:', txErr.message);
+  if (!options.skipCredits && bumpsToday < dailyCap) {
+    const interactionId = options.interactionId || `bump_${targetId}_${now}`;
+    const idempotencyKey = `bump_credit_${interactionId}`;
+
+    try {
+      recordLedgerTransaction({
+        userId: effectiveUserId || server.ownerId,
+        type: 'earned',
+        amount: bumpCredits,
+        reason: 'bump_reward',
+        description: `Bump reward (+${bumpCredits} cr) for bumping ${server.name || 'server'}`,
+        guildId: targetId,
+        serverId: targetId,
+        status: 'posted',
+        idempotencyKey
+      });
+      server.credits = Number(server.credits || 0) + bumpCredits;
+      server.balance = Number(server.balance || 0) + bumpCredits;
+    } catch (txErr) {
+      if (txErr.code !== 'DUPLICATE_LEDGER_ENTRY') {
+        console.warn('[BUMP REWARD] Error recording bump credit:', txErr.message);
+      }
     }
+  } else {
+    console.log(`[BUMP REWARD] Server ${targetId} reached daily bump reward cap (${dailyCap}). Bump elevated server without additional credits.`);
   }
 
   // Elevate bumped server(s) to top of directory
@@ -1249,6 +1263,9 @@ export function updatePromotedServerDetails(guildId, patch = {}) {
       server.ownerAvatar = `https://cdn.discordapp.com/avatars/${server.ownerId}/${patch.owner_avatar_hash}.${patch.owner_avatar_hash.startsWith('a_') ? 'gif' : 'png'}?size=64`;
     }
   }
+  if (patch.customUrl !== undefined) server.customUrl = patch.customUrl ? String(patch.customUrl).trim().toLowerCase() : null;
+  if (patch.customUrlChangedAt !== undefined) server.customUrlChangedAt = patch.customUrlChangedAt;
+  if (patch.erlc !== undefined) server.erlc = patch.erlc;
   if (patch.bot_in_guild !== undefined) server.bot_in_guild = Boolean(patch.bot_in_guild);
   server.updatedAt = Date.now();
 

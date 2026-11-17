@@ -65,7 +65,7 @@ function DashboardShell({
         data-slot="dashboard-shell"
         defaultOpen={defaultOpen}
         contained={contained}
-        className={cn(className)}
+        className={cn("h-full min-h-0 flex-1", className)}
         style={
           sidebarWidth
             ? ({ "--sidebar-width": sidebarWidth, ...style } as React.CSSProperties)

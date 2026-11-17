@@ -2,11 +2,15 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadDirectoryData, saveDirectoryData } from './directoryManager.js';
+import { recordAuditAction } from './adminManager.js';
+import { sendComponentV2Dm } from './discordNotificationManager.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const DATA_DIR = process.env.DATA_DIR || path.join(process.cwd(), 'data');
 const VERIFICATIONS_FILE = path.join(DATA_DIR, 'verification_applications.json');
+
+export const VERIFICATION_DURATION_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
 function ensureVerificationsFile() {
   if (!fs.existsSync(DATA_DIR)) {
@@ -48,9 +52,27 @@ export function getVerificationStatus(serverId) {
   apps.sort((a, b) => b.submittedAt - a.submittedAt);
   const latestApp = apps[0] || null;
 
+  const now = Date.now();
+  let isVerified = Boolean(server?.verified);
+  const verifiedUntil = Number(server?.verifiedUntil || 0);
+
+  // Check if 30-day verification has expired
+  if (isVerified && verifiedUntil > 0 && now >= verifiedUntil) {
+    isVerified = false;
+    server.verified = false;
+    server.verifiedUntil = 0;
+    saveDirectoryData(dirData);
+  }
+
+  const remainingSeconds = isVerified && verifiedUntil > now ? Math.ceil((verifiedUntil - now) / 1000) : 0;
+  const remainingDays = Math.ceil(remainingSeconds / 86400);
+
   return {
-    verified: Boolean(server?.verified),
-    status: server?.verified ? 'approved' : (latestApp ? latestApp.status : 'not_applied'),
+    verified: isVerified,
+    verifiedUntil: verifiedUntil || null,
+    remainingSeconds,
+    remainingDays,
+    status: isVerified ? 'approved' : (latestApp ? latestApp.status : 'not_applied'),
     application: latestApp,
     history: apps
   };
@@ -132,6 +154,10 @@ export function reviewVerificationApplication({
   app.processedBy = adminUser?.username || 'Staff';
   app.processedByRole = adminUser?.role || 'Reviewer';
 
+  // 30 days duration on approval
+  const verifiedUntil = action === 'approve' ? now + VERIFICATION_DURATION_MS : 0;
+  app.verifiedUntil = verifiedUntil;
+
   // Update directory server verified badge
   const dirData = loadDirectoryData();
   let server = dirData.servers.find(s => String(s.id) === String(app.serverId) || String(s.guildId) === String(app.serverId));
@@ -139,28 +165,41 @@ export function reviewVerificationApplication({
     server = {
       id: String(app.serverId),
       name: app.serverName || 'Server',
-      verified: action === 'approve'
+      verified: action === 'approve',
+      verifiedUntil,
+      verification_7d_reminder_sent: false
     };
     dirData.servers.push(server);
   } else {
     server.verified = action === 'approve';
+    server.verifiedUntil = verifiedUntil;
+    server.verification_7d_reminder_sent = false;
   }
   saveDirectoryData(dirData);
-
   saveVerificationApplications(apps);
+
+  recordAuditAction({
+    action: action === 'approve' ? 'APPROVE_VERIFICATION' : 'REJECT_VERIFICATION',
+    actor: adminUser?.username || 'Staff',
+    actorRole: adminUser?.role || 'Reviewer',
+    target: String(app.serverId),
+    reason: `${action === 'approve' ? 'Approved' : 'Rejected'} verification: ${app.reason}`
+  });
+
   return app;
 }
 
 export function revokeVerification({
   serverId,
-  reason,
-  revokedBy
+  reason = 'Revoked by administration',
+  revokedBy = 'System'
 }) {
   const sid = String(serverId);
   const dirData = loadDirectoryData();
   const server = dirData.servers.find(s => String(s.id) === sid || String(s.guildId) === sid);
   if (server) {
     server.verified = false;
+    server.verifiedUntil = 0;
     saveDirectoryData(dirData);
   }
 
@@ -168,11 +207,118 @@ export function revokeVerification({
   const app = apps.find(a => String(a.serverId) === sid && a.status === 'approved');
   if (app) {
     app.status = 'revoked';
-    app.reason = reason || 'Revoked';
+    app.reason = reason;
     app.processedAt = Date.now();
-    app.processedBy = revokedBy || 'System';
+    app.processedBy = revokedBy;
     saveVerificationApplications(apps);
   }
 
+  recordAuditAction({
+    action: 'REVOKE_VERIFICATION',
+    actor: revokedBy,
+    actorRole: 'System/Admin',
+    target: sid,
+    reason: `Revoked verified badge: ${reason}`
+  });
+
   return { success: true, serverId: sid, verified: false };
+}
+
+/**
+ * Check verification 7-day reminders and 30-day expiries:
+ * - Sends 1 V2 DM 7 days before it ends
+ * - Sends 1 V2 DM when it ends
+ * - When it ends the check mark and verified features go away but nothing else changes
+ */
+export async function checkVerificationExpiries() {
+  const dirData = loadDirectoryData();
+  const now = Date.now();
+  const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+
+  let remindersSent = 0;
+  let expirationsHandled = 0;
+
+  for (const server of dirData.servers) {
+    if (!server.verified || !server.verifiedUntil) continue;
+    const timeLeft = Number(server.verifiedUntil) - now;
+
+    // 1. Expired
+    if (timeLeft <= 0) {
+      server.verified = false;
+      server.verifiedUntil = 0;
+      expirationsHandled++;
+
+      if (server.ownerId) {
+        const container = {
+          type: 17, // V2 Container
+          components: [
+            {
+              type: 10,
+              content: `### Verification Expired: ${server.name}\nYour community's 30-day verification period for **${server.name}** has concluded.\nThe verified blue checkmark has been removed. You can re-apply anytime from your server dashboard.`
+            },
+            {
+              type: 14,
+              divider: true,
+              spacing: 1
+            },
+            {
+              type: 1,
+              components: [
+                {
+                  type: 2,
+                  style: 5,
+                  label: 'Re-Apply for Verification',
+                  url: `https://connectingerlc.xyz/dashboard/${server.id}/promote`
+                }
+              ]
+            }
+          ]
+        };
+        await sendComponentV2Dm(server.ownerId, container).catch(() => {});
+      }
+      continue;
+    }
+
+    // 2. 7-day reminder
+    if (timeLeft <= SEVEN_DAYS_MS && !server.verification_7d_reminder_sent) {
+      server.verification_7d_reminder_sent = true;
+      remindersSent++;
+
+      if (server.ownerId) {
+        const daysLeft = Math.ceil(timeLeft / 86400000);
+        const container = {
+          type: 17, // V2 Container
+          components: [
+            {
+              type: 10,
+              content: `### Verification Renewal Notice: ${server.name}\nYour community's verified status for **${server.name}** will expire in **${daysLeft} days**.\nSubmit a renewal application to keep your verified blue checkmark active without interruption.`
+            },
+            {
+              type: 14,
+              divider: true,
+              spacing: 1
+            },
+            {
+              type: 1,
+              components: [
+                {
+                  type: 2,
+                  style: 5,
+                  label: 'Renew Verification',
+                  url: `https://connectingerlc.xyz/dashboard/${server.id}/promote`
+                }
+              ]
+            }
+          ]
+        };
+        await sendComponentV2Dm(server.ownerId, container).catch(() => {});
+      }
+    }
+  }
+
+  if (remindersSent > 0 || expirationsHandled > 0) {
+    saveDirectoryData(dirData);
+  }
+
+  return { remindersSent, expirationsHandled };
 }

@@ -20,6 +20,8 @@ const DEFAULT_SETTINGS = {
   premium_ad_channel_id: process.env.PREMIUM_AD_CHANNEL_ID || '',
   premium_ad_cooldown_hours: 6,
   bump_reward_credits: 2,
+  daily_bump_cap_per_server: 24,
+  bug_report_reward_credits: 50,
   join_reward_credits: 2,
   join_minimum_stay_seconds: 120,
   join_retention_window_hours: 72,
@@ -260,8 +262,7 @@ export async function checkPremiumReminders(options = {}) {
             flags: 32768, // Components V2
             components: [
               {
-                type: 17,
-                accent_color: 12856117,
+                type: 17, // Container (No accent_color = no color on the side)
                 components: [
                   {
                     type: 10,

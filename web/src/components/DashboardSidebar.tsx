@@ -34,6 +34,8 @@ import {
   UserPlus,
   Palette,
   Shield,
+  ShoppingBag,
+  FileText,
 } from 'lucide-react';
 
 import {
@@ -391,14 +393,14 @@ export function DashboardSidebar({
         label: 'Growth',
         items: [
           {
-            label: 'Server page',
-            href: `/dashboard/${currentGuildId}/details`,
-            icon: Eye,
-          },
-          {
             label: 'Promote server',
             href: `/dashboard/${currentGuildId}/promote`,
             icon: Megaphone,
+          },
+          {
+            label: 'Server shop',
+            href: `/dashboard/${currentGuildId}/shop`,
+            icon: ShoppingBag,
           },
           {
             label: 'Earn credits',
@@ -406,9 +408,9 @@ export function DashboardSidebar({
             icon: Coins,
           },
           {
-            label: 'Daily check-in',
-            href: `/dashboard/${currentGuildId}/rewards`,
-            icon: CalendarCheck,
+            label: 'Server page',
+            href: `/dashboard/${currentGuildId}/details`,
+            icon: Eye,
           },
           {
             label: 'Leaderboard',
@@ -468,6 +470,11 @@ export function DashboardSidebar({
                   {pendingRequestsCount}
                 </span>
               ) : null,
+          },
+          {
+            label: 'Applications',
+            href: `/dashboard/${currentGuildId}/forms`,
+            icon: FileText,
           },
         ],
       },

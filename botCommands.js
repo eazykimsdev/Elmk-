@@ -145,8 +145,7 @@ export function buildBumpV2Message({ heading, textLines, guildId, callerId, serv
     flags: 32768 | 64, // MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral
     components: [
       {
-        type: 17, // Container
-        accent_color: BRAND_ORANGE,
+        type: 17, // Container (No accent_color = no color on the side)
         components: [
           buildV2HeaderComponent(contentText, meta.iconUrl),
           {
@@ -193,8 +192,7 @@ export function buildYourCommandPayload() {
       flags: 32768, // MessageFlags.IsComponentsV2
       components: [
         {
-          type: 17, // Container
-          accent_color: 16347158, // Brand Orange
+          type: 17, // Container (No accent_color = no color on the side)
           components: [
             {
               type: 10, // TextDisplay
@@ -327,8 +325,7 @@ export async function handleInteraction(interaction, token) {
             flags: 32768,
             components: [
               {
-                type: 17,
-                accent_color: BRAND_ORANGE,
+                type: 17, // Container (No accent_color = no color on the side)
                 components: [
                   {
                     type: 10,
@@ -534,8 +531,7 @@ export async function handleInteraction(interaction, token) {
           flags: 32768 | 64, // Components V2 + Ephemeral
           components: [
             {
-              type: 17, // Container
-              accent_color: BRAND_ORANGE,
+              type: 17, // Container (No accent_color = no color on the side)
               components: [
                 {
                   type: 10,
@@ -1010,8 +1006,7 @@ export async function handleInteraction(interaction, token) {
         flags: 32768 | 64, // Components V2 + Ephemeral
         components: [
           {
-            type: 17, // Container
-            accent_color: BRAND_ORANGE,
+            type: 17, // Container (No accent_color = no color on the side)
             components: [
               {
                 type: 10, // TextDisplay
@@ -1053,8 +1048,7 @@ export async function handleInteraction(interaction, token) {
         flags: 32768 | 64, // Components V2 + Ephemeral
         components: [
           {
-            type: 17, // Container
-            accent_color: BRAND_ORANGE,
+            type: 17, // Container (No accent_color = no color on the side)
             components: [
               {
                 type: 10, // TextDisplay
@@ -1112,8 +1106,7 @@ export async function handleInteraction(interaction, token) {
       flags: 32768 | 64, // Components V2 + Ephemeral
       components: [
         {
-          type: 17, // Container
-          accent_color: BRAND_ORANGE,
+          type: 17, // Container (No accent_color = no color on the side)
           components: [
             {
               type: 10, // TextDisplay
@@ -1159,8 +1152,7 @@ export async function handleInteraction(interaction, token) {
           flags: 32768 | 64, // Components V2 + Ephemeral
           components: [
             {
-              type: 17,
-              accent_color: BRAND_ORANGE,
+              type: 17, // Container (No accent_color = no color on the side)
               components: [
                 {
                   type: 10,
@@ -1213,8 +1205,7 @@ export async function handleInteraction(interaction, token) {
       flags: 32768, // MessageFlags.IsComponentsV2 (Public in-channel panel)
       components: [
         {
-          type: 17, // Container
-          accent_color: BRAND_ORANGE,
+          type: 17, // Container (No accent_color = no color on the side)
           components: [
             {
               type: 10, // TextDisplay

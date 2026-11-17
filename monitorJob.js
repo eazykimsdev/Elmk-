@@ -284,8 +284,7 @@ export function buildDiscordV2Panel({
 
   if (isRecovery) {
     const recoveryContainer = {
-      type: 17, // Container
-      accent_color: 0x71717A, // Neutral grey (no green)
+      type: 17, // Container (No accent_color = no color on the side)
       components: [
         {
           type: 10, // TextDisplay
@@ -373,11 +372,8 @@ export function buildDiscordV2Panel({
     });
   }
 
-  const accentColor = status === 'Down' ? 0xEF4444 : 0xEAB308; // Red for Down, Yellow for Degraded (no green)
-
   const alertContainer = {
-    type: 17, // Container
-    accent_color: accentColor,
+    type: 17, // Container (No accent_color = no color on the side)
     components: [
       {
         type: 10, // TextDisplay

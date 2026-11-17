@@ -20,7 +20,8 @@ import {
   MessageSquare,
   Server,
   X,
-  Volume2
+  Volume2,
+  Sparkles
 } from 'lucide-react';
 
 import { useTheme } from '@/components/library/theme-provider';
@@ -33,6 +34,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import {
   Select,
   SelectContent,
@@ -528,10 +530,11 @@ export function SettingsTab({
     };
   }, [guildId]);
 
-  // Promo code redemption state
+  // Giveaway code redemption state
   const [promoInputCode, setPromoInputCode] = useState('');
   const [promoTargetServerId, setPromoTargetServerId] = useState('');
   const [redeemingPromo, setRedeemingPromo] = useState(false);
+  const [redemptionSuccessDialog, setRedemptionSuccessDialog] = useState<{ open: boolean; amount: number; newBalance: number; serverName: string; code: string } | null>(null);
   const [userServers, setUserServers] = useState<Array<{ id: string; name: string; iconUrl?: string | null }>>([]);
 
   useEffect(() => {
@@ -577,14 +580,21 @@ export function SettingsTab({
       });
       const data = await res.json().catch(() => ({}));
       if (res.ok && data.success) {
-        const amt = Number(data.credits || 25);
-        const sName = data.serverName || (targetSid ? (serverName || 'your server') : 'your personal wallet');
-        addToast('success', 'Redeemed', `Redeemed. ${amt} credits were added to ${sName}.`);
+        const amt = Number(data.amount || data.credits || 100);
+        const newBal = Number(data.newBalance || 0);
+        const sName = data.serverName || (targetSid ? (serverName || 'your server') : 'your community treasury');
+        setRedemptionSuccessDialog({
+          open: true,
+          amount: amt,
+          newBalance: newBal,
+          serverName: sName,
+          code: data.code || promoInputCode.trim()
+        });
         setPromoInputCode('');
         window.dispatchEvent(new CustomEvent('credits_awarded', { detail: { amount: amt } }));
         window.dispatchEvent(new Event('balance_updated'));
       } else {
-        addToast('error', 'Redemption failed', data.error || 'Invalid or expired promotional code.');
+        addToast('error', 'Redemption failed', data.error || 'Invalid or expired giveaway code.');
       }
     } catch {
       addToast('error', 'Network error', 'Could not redeem code. Try again in a moment.');
@@ -803,17 +813,52 @@ export function SettingsTab({
               </div>
 
               <div className="flex items-center justify-between pt-1">
-                <span className="text-[11px] text-zinc-500">Rate limited to 5 attempts per hour.</span>
+                <span className="text-[11px] text-zinc-500">One redemption per community server.</span>
                 <Button
                   type="button"
                   disabled={!promoInputCode.trim() || redeemingPromo}
                   onClick={handleRedeemPromo}
-                  className="bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-zinc-950 text-xs font-semibold h-8.5 px-4 rounded-xl cursor-pointer disabled:opacity-40"
+                  className="bg-[var(--accent)] hover:opacity-90 text-[var(--accent-foreground)] text-xs font-semibold h-8.5 px-4 rounded-xl cursor-pointer disabled:opacity-40"
                 >
                   {redeemingPromo ? 'Redeeming...' : 'Redeem code'}
                 </Button>
               </div>
             </div>
+
+            {/* Giveaway Code Redemption Success Dialog */}
+            <Dialog open={redemptionSuccessDialog !== null} onOpenChange={(open) => !open && setRedemptionSuccessDialog(null)}>
+              <DialogContent className="max-w-[420px] bg-[#0E0E11] border border-white/[0.1] rounded-2xl p-6 text-center space-y-4">
+                <div className="size-12 rounded-full bg-[var(--accent)]/15 border border-[var(--accent)]/30 mx-auto flex items-center justify-center">
+                  <Sparkles className="size-6 text-[var(--accent)]" />
+                </div>
+                <div className="space-y-1">
+                  <DialogTitle className="text-lg font-bold text-white font-sans">
+                    Giveaway Code Redeemed!
+                  </DialogTitle>
+                  <DialogDescription className="text-xs text-zinc-400 font-sans">
+                    Your community treasury balance has been updated.
+                  </DialogDescription>
+                </div>
+                <div className="p-4 rounded-xl bg-[#141417] border border-white/[0.08] space-y-2 text-center">
+                  <div className="text-2xl font-extrabold text-[var(--accent)] font-mono">
+                    +{redemptionSuccessDialog?.amount} Credits
+                  </div>
+                  <div className="text-xs text-zinc-400 font-sans">
+                    Deposited to <span className="text-white font-semibold">{redemptionSuccessDialog?.serverName}</span>
+                  </div>
+                  <div className="pt-2 border-t border-white/[0.06] flex items-center justify-between text-xs font-sans">
+                    <span className="text-zinc-500">New Balance</span>
+                    <span className="text-white font-semibold font-mono">{redemptionSuccessDialog?.newBalance} credits</span>
+                  </div>
+                </div>
+                <Button
+                  onClick={() => setRedemptionSuccessDialog(null)}
+                  className="w-full bg-[var(--accent)] hover:opacity-90 text-[var(--accent-foreground)] font-semibold text-xs h-9 cursor-pointer"
+                >
+                  Done
+                </Button>
+              </DialogContent>
+            </Dialog>
 
             {/* DANGER ZONE (Visible ONLY on General and Appearance tabs, Owner only) */}
             <DangerZone

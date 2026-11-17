@@ -179,7 +179,7 @@ function AppShell({
         data-density={density}
         dir={dir}
         className={cn(
-          "flex min-h-svh w-full flex-col bg-[var(--top-banner-bg,var(--background))] text-[var(--foreground)] [&_[data-slot=sidebar-inset]]:min-w-0 [&_[data-slot=sidebar-inset]]:bg-[var(--background)] pt-[var(--top-banner-height,0px)] transition-[padding,background-color] duration-150",
+          "flex h-dvh max-h-dvh w-full flex-col overflow-hidden bg-[var(--top-banner-bg,var(--background))] text-[var(--foreground)] [&_[data-slot=sidebar-inset]]:min-w-0 [&_[data-slot=sidebar-inset]]:bg-[var(--background)] pt-[var(--top-banner-height,0px)] transition-[padding,background-color] duration-150",
           className
         )}
         {...props}

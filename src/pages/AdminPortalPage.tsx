@@ -52,7 +52,8 @@ import {
   Handshake,
   Gift,
   Sparkles,
-  Copy
+  Copy,
+  ShoppingBag
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -90,7 +91,7 @@ interface AdminUser {
   userId: string;
   username: string;
   displayName: string;
-  role: 'Owner' | 'Admin' | 'Moderator';
+  role: 'Owner' | 'Admin' | 'Moderator' | 'Directive Board' | 'Reviewer';
   avatar?: string | null;
   avatarUrl?: string | null;
   addedAt: string;
@@ -266,7 +267,8 @@ const SIDEBAR_GROUPS = [
     group: 'Economy',
     items: [
       { id: 'credits', label: 'Credits', icon: Coins },
-      { id: 'promos', label: 'Promo codes', icon: Ticket },
+      { id: 'shop', label: 'Server shop', icon: ShoppingBag },
+      { id: 'promos', label: 'Giveaway codes', icon: Ticket },
       { id: 'giveaway', label: 'Launch giveaway', icon: Gift }
     ]
   },
@@ -351,7 +353,7 @@ export function AdminPortalPage() {
   // ── AUTH & ROLE CHECK ──
   const [authLoading, setAuthLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [adminRole, setAdminRole] = useState<'Owner' | 'Admin' | 'Moderator'>('Moderator');
+  const [adminRole, setAdminRole] = useState<'Owner' | 'Admin' | 'Moderator' | 'Directive Board' | 'Reviewer'>('Moderator');
   const [currentAdmin, setCurrentAdmin] = useState<any>(null);
 
   // Authenticated fetch wrapper for admin APIs (strictly uses credentials / session cookies)
@@ -606,11 +608,36 @@ export function AdminPortalPage() {
   const [addAdminModalOpen, setAddAdminModalOpen] = useState(false);
   const [newAdminId, setNewAdminId] = useState('');
   const [newAdminUsername, setNewAdminUsername] = useState('');
-  const [newAdminRole, setNewAdminRole] = useState<'Admin' | 'Moderator'>('Moderator');
+  const [newAdminRole, setNewAdminRole] = useState<'Owner' | 'Admin' | 'Moderator' | 'Directive Board' | 'Reviewer'>('Moderator');
   const [newAdminReason, setNewAdminReason] = useState('Promoted to staff roster');
   const [removeAdminModalOpen, setRemoveAdminModalOpen] = useState(false);
   const [removeAdminTarget, setRemoveAdminTarget] = useState<AdminUser | null>(null);
   const [removeAdminReason, setRemoveAdminReason] = useState('Staff role revoked');
+
+  // Directive Board State (Phase E3)
+  const [directiveAllowance, setDirectiveAllowance] = useState<{
+    weeklyCap: number;
+    usedThisWeek: number;
+    remainingThisWeek: number;
+    weekStartIso?: string;
+  } | null>(null);
+  const [directiveModalOpen, setDirectiveModalOpen] = useState(false);
+  const [directiveTargetServer, setDirectiveTargetServer] = useState('');
+  const [directiveAmount, setDirectiveAmount] = useState<number>(50);
+  const [directiveReason, setDirectiveReason] = useState('');
+  const [directiveGifting, setDirectiveGifting] = useState(false);
+
+  // Server Shop Admin State (Phase E1)
+  const [shopItemsList, setShopItemsList] = useState<any[]>([]);
+  const [shopItemsLoading, setShopItemsLoading] = useState(false);
+  const [editShopItemModalOpen, setEditShopItemModalOpen] = useState(false);
+  const [editingShopItem, setEditingShopItem] = useState<any>(null);
+  const [grantBoostModalOpen, setGrantBoostModalOpen] = useState(false);
+  const [grantBoostServerId, setGrantBoostServerId] = useState('');
+  const [grantBoostEffect, setGrantBoostEffect] = useState('double_bumps');
+  const [grantBoostDays, setGrantBoostDays] = useState(1);
+  const [grantBoostReason, setGrantBoostReason] = useState('Administrative perk');
+  const [grantingBoost, setGrantingBoost] = useState(false);
 
   // ── AUTH CHECK ──
   useEffect(() => {
@@ -659,7 +686,11 @@ export function AdminPortalPage() {
     else if (activeTab === 'servers') fetchServers();
     else if (activeTab === 'hidden_servers') fetchHiddenServers();
     else if (activeTab === 'premium_servers') fetchPremiumServers();
-    else if (activeTab === 'credits') fetchLedger();
+    else if (activeTab === 'credits') {
+      fetchLedger();
+      fetchDirectiveBoardAllowance();
+    }
+    else if (activeTab === 'shop') fetchShopItems();
     else if (activeTab === 'reports') fetchReports();
     else if (activeTab === 'bugs') fetchBugs();
     else if (activeTab === 'flags') {
@@ -843,6 +874,118 @@ export function AdminPortalPage() {
       }
     } catch {} finally {
       setLedgerLoading(false);
+    }
+  };
+
+  const fetchDirectiveBoardAllowance = async () => {
+    try {
+      const res = await adminFetch('/api/admin/directive-board/allowance');
+      if (res.ok) {
+        const data = await res.json();
+        setDirectiveAllowance(data);
+      }
+    } catch {}
+  };
+
+  const handleDirectiveGift = async () => {
+    if (!directiveTargetServer || !directiveAmount || !directiveReason) {
+      setFeedback({ type: 'error', message: 'Please provide target server ID, gift amount, and reason.' });
+      return;
+    }
+    setDirectiveGifting(true);
+    try {
+      const res = await adminFetch('/api/admin/directive-board/gift', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          serverId: directiveTargetServer.trim(),
+          amount: directiveAmount,
+          reason: directiveReason.trim()
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Directive gift failed.');
+
+      setFeedback({
+        type: 'success',
+        message: `Successfully gifted ${directiveAmount} credits to ${data.serverName || directiveTargetServer}! (${data.remainingWeeklyLimit} cr left this week)`
+      });
+      setDirectiveModalOpen(false);
+      setDirectiveTargetServer('');
+      setDirectiveReason('');
+      fetchDirectiveBoardAllowance();
+      fetchLedger();
+    } catch (err: any) {
+      setFeedback({ type: 'error', message: err.message || 'Directive gift failed.' });
+    } finally {
+      setDirectiveGifting(false);
+    }
+  };
+
+  const fetchShopItems = async () => {
+    setShopItemsLoading(true);
+    try {
+      const res = await adminFetch('/api/admin/shop/items');
+      if (res.ok) {
+        const data = await res.json();
+        setShopItemsList(data.items || []);
+      }
+    } catch {} finally {
+      setShopItemsLoading(false);
+    }
+  };
+
+  const handleSaveShopItem = async () => {
+    if (!editingShopItem) return;
+    try {
+      const res = await adminFetch(`/api/admin/shop/items/${editingShopItem.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: editingShopItem.name,
+          price: editingShopItem.price,
+          durationMs: editingShopItem.durationMs,
+          isActive: editingShopItem.isActive,
+          description: editingShopItem.description
+        })
+      });
+      if (!res.ok) throw new Error('Could not update shop item.');
+      setFeedback({ type: 'success', message: `Saved changes to ${editingShopItem.name}` });
+      setEditShopItemModalOpen(false);
+      fetchShopItems();
+    } catch (err: any) {
+      setFeedback({ type: 'error', message: err.message || 'Failed to update shop item.' });
+    }
+  };
+
+  const handleGrantBoost = async () => {
+    if (!grantBoostServerId || !grantBoostReason) {
+      setFeedback({ type: 'error', message: 'Server ID and reason are required.' });
+      return;
+    }
+    setGrantingBoost(true);
+    try {
+      const res = await adminFetch('/api/admin/shop/boosts/grant', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          serverId: grantBoostServerId.trim(),
+          effect: grantBoostEffect,
+          durationDays: grantBoostDays,
+          reason: grantBoostReason.trim()
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to grant boost.');
+
+      setFeedback({ type: 'success', message: `Successfully granted ${grantBoostEffect} to server ${grantBoostServerId} for ${grantBoostDays} days!` });
+      setGrantBoostModalOpen(false);
+      setGrantBoostServerId('');
+      setGrantBoostReason('');
+    } catch (err: any) {
+      setFeedback({ type: 'error', message: err.message || 'Failed to grant boost.' });
+    } finally {
+      setGrantingBoost(false);
     }
   };
 
@@ -4320,6 +4463,15 @@ export function AdminPortalPage() {
                   >
                     <Download className="size-3.5 mr-1.5" /> Export CSV
                   </Button>
+                  {(adminRole === 'Directive Board' || adminRole === 'Admin' || adminRole === 'Owner') && (
+                    <Button
+                      size="sm"
+                      onClick={() => setDirectiveModalOpen(true)}
+                      className="h-8 text-xs bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 border border-indigo-500/30 font-medium"
+                    >
+                      <Gift className="size-3.5 mr-1.5" /> Directive Gift
+                    </Button>
+                  )}
                   <Button
                     size="sm"
                     onClick={() => {
@@ -4332,6 +4484,31 @@ export function AdminPortalPage() {
                   </Button>
                 </div>
               </div>
+
+              {directiveAllowance && (adminRole === 'Directive Board' || adminRole === 'Admin' || adminRole === 'Owner') && (
+                <div className="p-4 rounded-xl bg-indigo-950/20 border border-indigo-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-indigo-500/10 text-indigo-400">
+                      <Gift className="size-5" />
+                    </div>
+                    <div>
+                      <div className="text-xs font-semibold text-zinc-200">
+                        Directive Board Weekly Allowance
+                      </div>
+                      <div className="text-xs text-zinc-400 mt-0.5">
+                        <span className="text-indigo-400 font-medium">{directiveAllowance.remainingThisWeek}</span> of {directiveAllowance.weeklyCap} credits available this week (resets Mondays 00:00 UTC).
+                      </div>
+                    </div>
+                  </div>
+                  <Button
+                    size="sm"
+                    onClick={() => setDirectiveModalOpen(true)}
+                    className="text-xs bg-indigo-600 hover:bg-indigo-500 text-white shrink-0"
+                  >
+                    Gift to Server
+                  </Button>
+                </div>
+              )}
 
               <div className="rounded-2xl border border-white/[0.08] bg-[#121215] overflow-hidden">
                 <div className="overflow-x-auto">
@@ -4389,6 +4566,314 @@ export function AdminPortalPage() {
                   </table>
                 </div>
               </div>
+
+              {/* Directive Board Gift Modal */}
+              <Dialog open={directiveModalOpen} onOpenChange={setDirectiveModalOpen}>
+                <DialogContent className="max-w-md bg-zinc-950 border-white/[0.1]">
+                  <DialogHeader>
+                    <DialogTitle className="text-base font-semibold text-zinc-100 flex items-center gap-2">
+                      <Gift className="size-4 text-indigo-400" />
+                      Directive Board Credit Gift
+                    </DialogTitle>
+                    <DialogDescription className="text-xs text-zinc-400">
+                      Gift community growth credits directly to a server. Maximum 500 credits per week. Cannot gift to servers you own or manage.
+                    </DialogDescription>
+                  </DialogHeader>
+
+                  <div className="space-y-3 py-2 text-xs">
+                    {directiveAllowance && (
+                      <div className="p-3 rounded-lg bg-indigo-950/30 border border-indigo-500/20 text-indigo-300 flex justify-between items-center">
+                        <span>Weekly Remaining:</span>
+                        <span className="font-semibold text-white">{directiveAllowance.remainingThisWeek} credits</span>
+                      </div>
+                    )}
+
+                    <div className="space-y-1">
+                      <label className="text-zinc-300 font-medium">Target Server ID</label>
+                      <Input
+                        placeholder="e.g. 1347902300324368414"
+                        value={directiveTargetServer}
+                        onChange={(e) => setDirectiveTargetServer(e.target.value)}
+                        className="bg-[#0E0E11] border-white/[0.08] text-xs"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-zinc-300 font-medium">Gift Amount (credits)</label>
+                      <Input
+                        type="number"
+                        min="1"
+                        max={directiveAllowance?.remainingThisWeek || 500}
+                        value={directiveAmount}
+                        onChange={(e) => setDirectiveAmount(parseInt(e.target.value, 10) || 0)}
+                        className="bg-[#0E0E11] border-white/[0.08] text-xs"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-zinc-300 font-medium">Required Reason</label>
+                      <Input
+                        placeholder="e.g. Exceptional event sponsorship and growth reward"
+                        value={directiveReason}
+                        onChange={(e) => setDirectiveReason(e.target.value)}
+                        className="bg-[#0E0E11] border-white/[0.08] text-xs"
+                      />
+                    </div>
+                  </div>
+
+                  <DialogFooter className="gap-2 sm:gap-0">
+                    <Button variant="outline" onClick={() => setDirectiveModalOpen(false)} className="text-xs border-white/[0.08]" disabled={directiveGifting}>
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={handleDirectiveGift}
+                      disabled={directiveGifting || !directiveTargetServer.trim() || directiveAmount <= 0 || !directiveReason.trim()}
+                      className="text-xs bg-indigo-600 hover:bg-indigo-500 text-white font-medium"
+                    >
+                      {directiveGifting ? 'Gifting...' : 'Confirm Gift'}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </div>
+          )}
+
+          {/* ═══════════════════════════════════════════════════════════
+              SERVER SHOP MANAGEMENT TAB (Phase E1)
+             ═══════════════════════════════════════════════════════════ */}
+          {activeTab === 'shop' && (
+            <div className="space-y-4 animate-in fade-in-50 duration-200">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white flex items-center gap-2">
+                    <ShoppingBag className="size-5 text-[var(--accent)]" />
+                    Server Shop & Boosts
+                  </h1>
+                  <p className="text-xs sm:text-sm text-zinc-400 mt-0.5">
+                    Configure shop boost catalog, prices, and grant or revoke boosts to communities with administrative logging.
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    onClick={() => setGrantBoostModalOpen(true)}
+                    className="h-8 text-xs bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-zinc-950 font-semibold"
+                  >
+                    <Sparkles className="size-3.5 mr-1.5" /> Grant Boost
+                  </Button>
+                </div>
+              </div>
+
+              {/* Shop Items Table */}
+              <div className="rounded-2xl border border-white/[0.08] bg-[#121215] overflow-hidden">
+                <div className="p-4 border-b border-white/[0.08] flex items-center justify-between">
+                  <span className="text-xs font-semibold text-zinc-200">Catalog Items</span>
+                  <span className="text-[11px] text-zinc-500">Live in database & admin settings</span>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-[#0E0E11] text-[11px] font-semibold text-zinc-400 uppercase tracking-wider border-b border-white/[0.08]">
+                      <tr>
+                        <th className="py-3 px-4">Item Name</th>
+                        <th className="py-3 px-4">Effect</th>
+                        <th className="py-3 px-4">Duration</th>
+                        <th className="py-3 px-4">Price</th>
+                        <th className="py-3 px-4">Status</th>
+                        <th className="py-3 px-4 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-white/[0.04]">
+                      {shopItemsLoading ? (
+                        <tr><td colSpan={6} className="py-8 text-center text-zinc-500">Loading catalog...</td></tr>
+                      ) : shopItemsList.length === 0 ? (
+                        <tr><td colSpan={6} className="py-8 text-center text-zinc-500">No shop items defined.</td></tr>
+                      ) : (
+                        shopItemsList.map((item) => (
+                          <tr key={item.id} className="hover:bg-white/[0.02]">
+                            <td className="py-3 px-4 font-medium text-zinc-200">
+                              <div>{item.name}</div>
+                              <div className="text-[11px] text-zinc-500 mt-0.5">{item.description}</div>
+                            </td>
+                            <td className="py-3 px-4 font-mono text-[11px] text-zinc-400">{item.effect}</td>
+                            <td className="py-3 px-4 text-zinc-300">
+                              {Math.round(item.durationMs / 86400000)} days
+                            </td>
+                            <td className="py-3 px-4">
+                              <span className="font-semibold text-amber-400">{item.price}</span> cr
+                            </td>
+                            <td className="py-3 px-4">
+                              {item.isActive ? (
+                                <Badge variant="outline" className="text-[10px] bg-emerald-500/10 text-emerald-400 border-emerald-500/20">Active</Badge>
+                              ) : (
+                                <Badge variant="outline" className="text-[10px] bg-zinc-800 text-zinc-400 border-white/[0.08]">Disabled</Badge>
+                              )}
+                            </td>
+                            <td className="py-3 px-4 text-right">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  setEditingShopItem({ ...item });
+                                  setEditShopItemModalOpen(true);
+                                }}
+                                className="h-7 text-xs border-white/[0.08]"
+                              >
+                                Edit Item
+                              </Button>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Edit Shop Item Modal */}
+              <Dialog open={editShopItemModalOpen} onOpenChange={setEditShopItemModalOpen}>
+                <DialogContent className="max-w-md bg-zinc-950 border-white/[0.1]">
+                  <DialogHeader>
+                    <DialogTitle className="text-base font-semibold text-zinc-100">
+                      Edit Shop Item
+                    </DialogTitle>
+                    <DialogDescription className="text-xs text-zinc-400">
+                      Update price, description, and visibility for {editingShopItem?.name}.
+                    </DialogDescription>
+                  </DialogHeader>
+
+                  {editingShopItem && (
+                    <div className="space-y-3 py-2 text-xs">
+                      <div className="space-y-1">
+                        <label className="text-zinc-300 font-medium">Display Name</label>
+                        <Input
+                          value={editingShopItem.name}
+                          onChange={(e) => setEditingShopItem({ ...editingShopItem, name: e.target.value })}
+                          className="bg-[#0E0E11] border-white/[0.08] text-xs"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-zinc-300 font-medium">Price (credits)</label>
+                        <Input
+                          type="number"
+                          min="0"
+                          value={editingShopItem.price}
+                          onChange={(e) => setEditingShopItem({ ...editingShopItem, price: parseInt(e.target.value, 10) || 0 })}
+                          className="bg-[#0E0E11] border-white/[0.08] text-xs"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-zinc-300 font-medium">Description</label>
+                        <Input
+                          value={editingShopItem.description}
+                          onChange={(e) => setEditingShopItem({ ...editingShopItem, description: e.target.value })}
+                          className="bg-[#0E0E11] border-white/[0.08] text-xs"
+                        />
+                      </div>
+
+                      <div className="flex items-center gap-2 pt-2">
+                        <input
+                          type="checkbox"
+                          id="item_active_check"
+                          checked={editingShopItem.isActive}
+                          onChange={(e) => setEditingShopItem({ ...editingShopItem, isActive: e.target.checked })}
+                          className="rounded border-zinc-700 bg-zinc-900"
+                        />
+                        <label htmlFor="item_active_check" className="text-zinc-300 cursor-pointer">
+                          Item enabled and purchasable in shop
+                        </label>
+                      </div>
+                    </div>
+                  )}
+
+                  <DialogFooter className="gap-2 sm:gap-0">
+                    <Button variant="outline" onClick={() => setEditShopItemModalOpen(false)} className="text-xs border-white/[0.08]">
+                      Cancel
+                    </Button>
+                    <Button onClick={handleSaveShopItem} className="text-xs bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-zinc-950 font-medium">
+                      Save Changes
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+
+              {/* Grant Boost Modal */}
+              <Dialog open={grantBoostModalOpen} onOpenChange={setGrantBoostModalOpen}>
+                <DialogContent className="max-w-md bg-zinc-950 border-white/[0.1]">
+                  <DialogHeader>
+                    <DialogTitle className="text-base font-semibold text-zinc-100 flex items-center gap-2">
+                      <Sparkles className="size-4 text-[var(--accent)]" />
+                      Grant Server Boost
+                    </DialogTitle>
+                    <DialogDescription className="text-xs text-zinc-400">
+                      Grant or extend an active server boost with full administrative audit logging.
+                    </DialogDescription>
+                  </DialogHeader>
+
+                  <div className="space-y-3 py-2 text-xs">
+                    <div className="space-y-1">
+                      <label className="text-zinc-300 font-medium">Target Server ID</label>
+                      <Input
+                        placeholder="e.g. 1561253849816113265"
+                        value={grantBoostServerId}
+                        onChange={(e) => setGrantBoostServerId(e.target.value)}
+                        className="bg-[#0E0E11] border-white/[0.08] text-xs"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-zinc-300 font-medium">Boost Effect</label>
+                      <Select value={grantBoostEffect} onValueChange={(v) => setGrantBoostEffect(v)}>
+                        <SelectTrigger className="w-full text-xs bg-[#0E0E11] border-white/[0.08]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-[#0E0E11] border-white/[0.08] text-xs">
+                          <SelectItem value="double_bumps">2x Bumps (Halved cooldown)</SelectItem>
+                          <SelectItem value="premium">Premium Status</SelectItem>
+                          <SelectItem value="auto_bump">Auto Bump</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-zinc-300 font-medium">Duration (days)</label>
+                      <Input
+                        type="number"
+                        min="1"
+                        max="365"
+                        value={grantBoostDays}
+                        onChange={(e) => setGrantBoostDays(parseInt(e.target.value, 10) || 1)}
+                        className="bg-[#0E0E11] border-white/[0.08] text-xs"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-zinc-300 font-medium">Administrative Reason</label>
+                      <Input
+                        placeholder="e.g. Compensation for downtime or community partnership reward"
+                        value={grantBoostReason}
+                        onChange={(e) => setGrantBoostReason(e.target.value)}
+                        className="bg-[#0E0E11] border-white/[0.08] text-xs"
+                      />
+                    </div>
+                  </div>
+
+                  <DialogFooter className="gap-2 sm:gap-0">
+                    <Button variant="outline" onClick={() => setGrantBoostModalOpen(false)} className="text-xs border-white/[0.08]" disabled={grantingBoost}>
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={handleGrantBoost}
+                      disabled={grantingBoost || !grantBoostServerId.trim() || !grantBoostReason.trim()}
+                      className="text-xs bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-zinc-950 font-semibold"
+                    >
+                      {grantingBoost ? 'Granting...' : 'Confirm & Grant Boost'}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
             </div>
           )}
 

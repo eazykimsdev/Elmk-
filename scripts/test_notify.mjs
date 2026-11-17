@@ -51,13 +51,14 @@ for (const t of types) {
     schemaErrors++;
   }
 
-  if (container.accent_color !== BRAND_ORANGE) {
-    console.error(`❌ ${t.name}: Accent color must be orange (${BRAND_ORANGE}), got ${container.accent_color}`);
+  // Container must have no side color stripe (accent_color === undefined)
+  if (container.accent_color !== undefined && container.accent_color !== BRAND_ORANGE) {
+    console.error(`❌ ${t.name}: Invalid accent color: ${container.accent_color}`);
     schemaErrors++;
   }
 
   const innerComponents = container.components || [];
-  const textDisplays = innerComponents.filter((c) => c.type === 10);
+  const textDisplays = innerComponents.flatMap((c) => (c.type === 9 ? (c.components || []) : [c])).filter((c) => c.type === 10);
   const separators = innerComponents.filter((c) => c.type === 14);
   const actionRows = innerComponents.filter((c) => c.type === 1);
 

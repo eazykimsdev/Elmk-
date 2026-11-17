@@ -8,13 +8,16 @@ import { fileURLToPath } from 'url';
 
 import { createDashboardRouter, createDiscordCallbackRouter, handleBotGatewayEvent, fetchRealBotGuilds } from './api.js';
 import { startBotGateway, normalizeBotToken } from './botGateway.js';
-import { processMaturePendingJoins } from './directoryManager.js';
+import { processMaturePendingJoins, getPromotedServers } from './directoryManager.js';
 import { validateProductionEnvironment } from './shared/productionCheck.js';
 import { query as dbQuery, isPostgresConnected } from './db.js';
 import { isMaintenanceActive } from './siteStateManager.js';
 import { startSystemMonitor } from './monitorJob.js';
 import { startScheduledInviteChecks } from './inviteValidator.js';
 import { startPremiumReminderJob } from './premiumManager.js';
+import { runAutoBumps, checkBoostReminders } from './serverShopManager.js';
+import { checkVerificationExpiries } from './verificationManager.js';
+import { pruneExpiredSubmissions } from './formsManager.js';
 import { restoreDataDir, startDataSync, seedDataDir } from './dataSync.js';
 import { runLegacyKeysMigration } from './scripts/migrate_strip_legacy_keys.mjs';
 
@@ -205,6 +208,21 @@ app.get('/r/:code', (req, res, next) => {
   dashboardRouter(req, res, next);
 });
 
+// Redirect old /servers/:id to custom URL if claimed (Phase F4)
+app.get('/servers/:serverId', (req, res, next) => {
+  if (req.accepts('html')) {
+    try {
+      const servers = getPromotedServers(true);
+      const server = servers.find(s => String(s.id) === req.params.serverId || String(s.guildId) === req.params.serverId);
+      if (server && server.customUrl && server.customUrl.toLowerCase() !== req.params.serverId.toLowerCase()) {
+        const queryStr = req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : '';
+        return res.redirect(302, `/${server.customUrl}${queryStr}`);
+      }
+    } catch {}
+  }
+  next();
+});
+
 // /api/health, /api/status, Discord login and the dashboard settings all live in web/api.js.
 
 // ─── SERVE FRONTEND STATIC FILES IN PRODUCTION ──────────────────────────────
@@ -294,6 +312,23 @@ const server = app.listen(PORT, '0.0.0.0', () => {
       console.warn('[PENDING JOINS] Periodic check warning:', err.message);
     });
   }, 15000);
+
+  // Periodic Shop auto-bumps (every 60 seconds)
+  setInterval(() => {
+    runAutoBumps().catch(() => {});
+  }, 60000);
+
+  // Periodic boost and verification expiration reminders (every 15 minutes)
+  setInterval(() => {
+    checkBoostReminders().catch(() => {});
+    checkVerificationExpiries().catch(() => {});
+  }, 15 * 60 * 1000);
+
+  // Prune form submissions older than 90 days (every 6 hours)
+  try { pruneExpiredSubmissions(); } catch {}
+  setInterval(() => {
+    try { pruneExpiredSubmissions(); } catch {}
+  }, 6 * 60 * 60 * 1000);
 });
 server.on('error', (err) => {
   if (err.code === 'EADDRINUSE') {

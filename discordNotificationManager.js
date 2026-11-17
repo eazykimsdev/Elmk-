@@ -102,8 +102,7 @@ export function buildBumpReadyV2Panel({
     allowed_mentions: allowedMentions,
     components: [
       {
-        type: 17, // Container
-        accent_color: BRAND_ORANGE,
+        type: 17, // Container (No accent_color = no color on the side)
         components: [
           buildV2HeaderComponent(
             `### Ready to Bump: ${meta.name}\nThe bump cooldown for **${meta.name}** has finished.`,
@@ -168,8 +167,7 @@ export function buildBumpThankYouV2({
     allowed_mentions: callerId ? { users: [callerId], parse: [] } : { parse: [] },
     components: [
       {
-        type: 17, // Container
-        accent_color: BRAND_ORANGE,
+        type: 17, // Container (No accent_color = no color on the side)
         components: [
           buildV2HeaderComponent(
             `### Bump Confirmed: ${meta.name}\n${actorLine}`,
@@ -244,8 +242,7 @@ export function buildDailyCheckinReminderV2Panel({
     flags: 32768,
     components: [
       {
-        type: 17, // Container
-        accent_color: BRAND_ORANGE,
+        type: 17, // Container (No accent_color = no color on the side)
         components: [
           buildV2HeaderComponent(
             `### Daily Check-In Reminder: ${meta.name}\nYour daily check-in streak on **${meta.name}** will reset in ${timePhrase} (<t:${resetUnix}:R>).`,
@@ -303,8 +300,7 @@ export function buildPartnershipResolutionV2({
     allowed_mentions: { parse: [] },
     components: [
       {
-        type: 17, // Container
-        accent_color: BRAND_ORANGE,
+        type: 17, // Container (No accent_color = no color on the side)
         components: [
           buildV2HeaderComponent(`${statusHeading}\n${statusText}`, meta.iconUrl),
           {
@@ -363,8 +359,7 @@ export function buildPartnershipRequesterNotificationV2({
     flags: 32768,
     components: [
       {
-        type: 17, // Container
-        accent_color: BRAND_ORANGE,
+        type: 17, // Container (No accent_color = no color on the side)
         components: [
           buildV2HeaderComponent(statusTitle, meta.iconUrl),
           {
@@ -457,8 +452,7 @@ export function buildV2NotificationPayload({
         flags: 32768,
         components: [
           {
-            type: 17,
-            accent_color: BRAND_ORANGE,
+            type: 17, // Container (No accent_color = no color on the side)
             components: [
               buildV2HeaderComponent(
                 `### Partnership Proposal: ${proposingServer}\nA partnership proposal from **${proposingServer}** is waiting for your review.`,
@@ -494,8 +488,7 @@ export function buildV2NotificationPayload({
         flags: 32768,
         components: [
           {
-            type: 17,
-            accent_color: BRAND_ORANGE,
+            type: 17, // Container (No accent_color = no color on the side)
             components: [
               buildV2HeaderComponent(
                 `### New Review: ${meta.name}\nA member left a review on **${meta.name}**.`,
@@ -601,6 +594,45 @@ export async function sendDirectNotificationV2({
 }
 
 /**
+ * Send custom Components V2 container directly to a user's DMs
+ */
+export async function sendComponentV2Dm(targetUserId, container) {
+  const token = (process.env.DISCORD_TOKEN || process.env.DISCORD_BOT_TOKEN || process.env.CONNECTINGERLC_BOT_TOKEN || '').trim().replace(/^Bot\s+/i, '');
+  if (!token) return false;
+  if (!targetUserId) return false;
+
+  try {
+    const dmRes = await fetch('https://discord.com/api/v10/users/@me/channels', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bot ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ recipient_id: String(targetUserId) })
+    });
+    if (!dmRes.ok) return false;
+    const dmChannel = await dmRes.json();
+
+    const payload = {
+      flags: 32768, // IS_COMPONENTS_V2
+      components: Array.isArray(container) ? container : [container]
+    };
+
+    const msgRes = await fetch(`https://discord.com/api/v10/channels/${dmChannel.id}/messages`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bot ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+    return msgRes.ok;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Build Components V2 panel for incoming partnership proposal DMs
  * No embeds, no markdown dash lines, no emojis, real Separators (type: 14)
  */
@@ -643,8 +675,7 @@ export function buildPartnershipRequestV2({
     flags: 32768,
     components: [
       {
-        type: 17, // Container
-        accent_color: BRAND_ORANGE,
+        type: 17, // Container (No accent_color = no color on the side)
         components: [
           buildV2HeaderComponent(headerTitle, meta.iconUrl),
           {

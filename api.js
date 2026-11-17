@@ -1,7 +1,48 @@
+import {
+  claimCustomUrl,
+  resolveCustomUrl,
+  getServerCustomUrl,
+  listAllCustomUrls,
+  adminRemoveCustomUrl,
+  adminReassignCustomUrl,
+  loadBlockedWords,
+  saveBlockedWords
+} from './customUrlManager.js';
+import {
+  createOrUpdateForm,
+  getServerForms,
+  deleteForm,
+  resolvePublicForm,
+  submitApplication,
+  getServerSubmissions,
+  reviewApplication,
+  deleteApplicantSubmission,
+  reportForm,
+  adminDisableForm,
+  loadFormReports,
+  pruneExpiredSubmissions,
+  MAX_FORMS_PER_SERVER,
+  MAX_QUESTIONS_PER_FORM,
+  MAX_ANSWER_LENGTH
+} from './formsManager.js';
 import { getBotGatewayStatus } from './botGateway.js';
 import { getBugReports, getBugReportById, reviewBugReport, sendTestBugReviewDM } from './bugReportManager.js';
 import { getMonthlyLeaderboardPreview, executeMonthlyReward, loadMonthlyRewardConfig, saveMonthlyRewardConfig } from './monthlyLeaderboardRewardManager.js';
-import { getVerificationStatus, submitVerificationApplication, reviewVerificationApplication, revokeVerification, loadVerificationApplications } from './verificationManager.js';
+import { getVerificationStatus, submitVerificationApplication, reviewVerificationApplication, revokeVerification, loadVerificationApplications, checkVerificationExpiries } from './verificationManager.js';
+import {
+  loadShopItems,
+  saveShopItems,
+  buyShopItem,
+  hasActiveBoost,
+  getServerActiveBoosts,
+  adminManageBoost,
+  checkBoostReminders,
+  runAutoBumps
+} from './serverShopManager.js';
+import {
+  getDirectiveBoardAllowance,
+  giftDirectiveBoardCredits
+} from './directiveBoardManager.js';
 import {
   getGiveawaySettings,
   updateGiveawaySettings,
@@ -15,6 +56,7 @@ import {
 } from './giveawayManager.js';
 import { isMaintenanceActive, loadSiteState, saveSiteState, getActiveAnnouncements, createAnnouncement, updateAnnouncement, deleteAnnouncement as deleteSiteAnnouncement, dismissAnnouncement, loadDismissals, loadAnnouncements as loadSiteAnnouncements, getDefaultBannerText, setDefaultBannerText } from './siteStateManager.js';
 import { checkBlacklist, recordUserIp, addBlacklistEntry, removeBlacklistEntry, unblacklistTarget, removeUserBlacklistEntries, getAllBlacklistEntries, getUserIpCollateral } from './blacklistManager.js';
+import { createGiveawayCode, getGiveawayCodes, toggleGiveawayCode, deleteGiveawayCode, getGiveawayRedemptions, redeemGiveawayCode, generateCryptoCode } from './giveawayCodeManager.js';
 import { redeemPromoCode, checkRedeemRateLimit, recordRedeemAttempt, createPromoCode, updatePromoCodeStatus, deletePromoCode, getAllPromoCodes, getCodeRedemptions, getUserRedemptions, generateRandomCode, clearPromoLock } from './promoCodeManager.js';
 import { deleteServerHard, deleteUserAccountAndServers } from './accountDeletionManager.js';
 import { addBumpReminder, removeBumpReminder, hasBumpReminder } from './bumpReminderManager.js';
@@ -2002,8 +2044,19 @@ export function createDashboardRouter() {
   // Server Details endpoint: returns listing, owner, stats, rating summary, and user's state
   router.get('/servers/:slug', async (req, res) => {
     const { slug } = req.params;
+    let targetSlug = slug;
+    const customRecord = resolveCustomUrl(slug);
+    if (customRecord) {
+      targetSlug = customRecord.serverId;
+    }
+
     const servers = getPromotedServers();
-    let server = servers.find(s => (s.id && String(s.id) === String(slug)) || (s.guildId && String(s.guildId) === String(slug)) || (s.name && s.name.toLowerCase().replace(/\s+/g, '-') === slug.toLowerCase()));
+    let server = servers.find(s =>
+      (s.id && String(s.id) === String(targetSlug)) ||
+      (s.guildId && String(s.guildId) === String(targetSlug)) ||
+      (s.customUrl && s.customUrl.toLowerCase() === String(slug).toLowerCase()) ||
+      (s.name && s.name.toLowerCase().replace(/\s+/g, '-') === String(slug).toLowerCase())
+    );
     
     if (!server) {
       const bg = botGuildsCache.get(String(slug));
@@ -2173,7 +2226,45 @@ export function createDashboardRouter() {
         is_premium: isServerPremium(server),
         premiumUntil: server.premiumUntil || null,
         erlc: erlc?.connected ? erlc : null,
+        customUrl: server.customUrl || null,
+        isVerified: Boolean(server.verified || server.isVerified),
+        pageSections: server.pageSections || ['erlc', 'about', 'badges', 'reviews', 'staff', 'partners'],
+        sectionVisibility: server.sectionVisibility || { erlc: true, about: true, badges: true, reviews: true, staff: false, partners: false },
+        socialLinks: server.socialLinks || { discord: server.inviteUrl || '', roblox: '', twitter: '', website: '' },
+        staffList: Array.isArray(server.staffList) ? server.staffList : [],
+        partnerList: Array.isArray(server.partnerList) ? server.partnerList : [],
+        showStaffList: Boolean(server.showStaffList),
+        showPartnerList: Boolean(server.showPartnerList),
+        leaderboardRank: (() => {
+          const eligible = servers.filter(s => !s.hidden && !s.delisted && s.listedInDirectory !== false);
+          eligible.sort((a, b) => {
+            const aScore = (Number(a.verifiedJoins || 0) * 2) + Number(a.bumps || 0);
+            const bScore = (Number(b.verifiedJoins || 0) * 2) + Number(b.bumps || 0);
+            if (bScore !== aScore) return bScore - aScore;
+            return (Number(b.memberCount) || 0) - (Number(a.memberCount) || 0);
+          });
+          const idx = eligible.findIndex(s => String(s.id) === String(server.id));
+          return idx !== -1 ? idx + 1 : 1;
+        })(),
+        serverLevel: Math.max(1, Math.floor(Math.sqrt(((Number(server.verifiedJoins || 0) * 2) + Number(server.bumps || 0)) / 4)) + 1),
+        earnedBadges: (() => {
+          const badges = [];
+          if (server.verified || server.isVerified) {
+            badges.push({ id: 'verified', label: 'Verified Community', description: 'Officially authenticated and verified community', color: 'blue' });
+          }
+          if (isServerPremium(server)) {
+            badges.push({ id: 'premium', label: 'Premium Tier', description: 'Active premium visibility and advertising perks', color: 'purple' });
+          }
+          if ((Number(server.memberCount) || 0) >= 100) {
+            badges.push({ id: 'century', label: '100+ Members', description: 'Over 100 Discord members', color: 'emerald' });
+          }
+          if (Number(server.bumps || 0) >= 25) {
+            badges.push({ id: 'active_bumps', label: 'Active Community', description: 'Over 25 directory bumps', color: 'amber' });
+          }
+          return badges;
+        })(),
       },
+      reviews: reviewData.reviews,
       owner: {
         name: ownerDisplayName,
         display_name: ownerDisplayName,
@@ -2469,7 +2560,15 @@ export function createDashboardRouter() {
         joinCode: patch.joinCode ? String(patch.joinCode).trim() : null,
         autoRenewInvite: Boolean(patch.autoRenewInvite),
         autoRenewChannelId: patch.autoRenewChannelId ? String(patch.autoRenewChannelId).trim() : null,
-        listedInDirectory: patch.listedInDirectory !== undefined ? Boolean(patch.listedInDirectory) : true
+        listedInDirectory: patch.listedInDirectory !== undefined ? Boolean(patch.listedInDirectory) : true,
+        pageSections: Array.isArray(patch.pageSections) ? patch.pageSections : undefined,
+        sectionVisibility: patch.sectionVisibility && typeof patch.sectionVisibility === 'object' ? patch.sectionVisibility : undefined,
+        socialLinks: patch.socialLinks && typeof patch.socialLinks === 'object' ? patch.socialLinks : undefined,
+        staffList: Array.isArray(patch.staffList) ? patch.staffList : undefined,
+        partnerList: Array.isArray(patch.partnerList) ? patch.partnerList : undefined,
+        showStaffList: patch.showStaffList !== undefined ? Boolean(patch.showStaffList) : undefined,
+        showPartnerList: patch.showPartnerList !== undefined ? Boolean(patch.showPartnerList) : undefined,
+        customUrl: patch.customUrl ? String(patch.customUrl).trim().toLowerCase() : undefined
       };
 
       const sessionId = req.dashboardSessionId || cookieValue(req, SESSION_COOKIE);
@@ -3871,6 +3970,30 @@ export function createDashboardRouter() {
 
   const DEFAULT_CHANGELOG = [
     {
+      version: "3.4.0",
+      date: "2026-11-17T06:20:00.000Z",
+      title: "Application builder, custom short links and live ER:LC stats",
+      description: "Create custom applications for your server, claim short links like connectingerlc.xyz/your-server, connect live in-game ER:LC stats, and boost your server with the new shop.",
+      tags: ["new", "improved"],
+      items: [
+        "Custom application builder: make staff apps, partnership forms or ban appeals with 7 question types",
+        "Short application links that open at connectingerlc.xyz/your-server/form-name",
+        "Manager inbox to review applications, write notes, and accept or deny with instant Discord DMs",
+        "Automatic Discord roles given to applicants as soon as they are accepted",
+        "Claim your own short URL so your community page opens at connectingerlc.xyz/your-name",
+        "Old server links automatically redirect to your new short name",
+        "Redesigned public server pages with big banners, Discord member counts and verified badges",
+        "Live ER:LC in-game stats: connect your server key to display active players, staff on duty and queue size",
+        "Community reviews: rate and review servers with real Discord avatars (accounts must be at least 2 days old)",
+        "Server shop: buy 2x bump cooldowns, auto-bumping and monthly premium using your server balance",
+        "Apply for the official verified checkmark right from your dashboard",
+        "Clean Discord V2 notification cards with pure neutral borders and no side color stripe",
+        "Giveaway codes: redeem staff-created giveaway codes straight from your overview",
+        "Security warnings on all public forms and automatic 90-day pruning to protect applicant privacy"
+      ],
+      href: "#v3-4-0"
+    },
+    {
       version: "3.2.0",
       date: "2026-10-21T02:00:00.000Z",
       title: "V2 Bump Engine & Dynamic Telemetry Trajectory",
@@ -3994,7 +4117,7 @@ export function createDashboardRouter() {
 
   // Admin permission verification middleware
   function requireAdminRole(minRole = 'Moderator') {
-    const roleRank = { 'Reviewer': 0.5, 'Moderator': 1, 'Admin': 2, 'Owner': 3 };
+    const roleRank = { 'Reviewer': 0.5, 'Directive Board': 0.8, 'Moderator': 1, 'Admin': 2, 'Owner': 3 };
     return (req, res, next) => {
       const sessionId = cookieValue(req, SESSION_COOKIE);
       const session = req.dashboardSession || (sessionId ? getSession(sessionId) : null);
@@ -4011,6 +4134,22 @@ export function createDashboardRouter() {
       }
       if (!checkAdminRateLimit(admin.userId)) {
         return res.status(429).json({ error: 'Rate limit exceeded. Please wait a minute before making more administrative changes.' });
+      }
+      req.adminUser = admin;
+      next();
+    };
+  }
+
+  function requireDirectiveBoardRole() {
+    return (req, res, next) => {
+      const sessionId = cookieValue(req, SESSION_COOKIE);
+      const session = req.dashboardSession || (sessionId ? getSession(sessionId) : null);
+      if (!session || !session.user || !session.user.id) {
+        return res.status(404).json({ error: 'Page not found' });
+      }
+      const admin = getAdminRecord(session.user.id, session.user.username);
+      if (!admin || !['Directive Board', 'Admin', 'Owner'].includes(admin.role)) {
+        return res.status(404).json({ error: 'Page not found' });
       }
       req.adminUser = admin;
       next();
@@ -4401,7 +4540,7 @@ export function createDashboardRouter() {
   }
 
   // Admin Overview & Diagnostics
-  router.get('/admin/overview', requireAdminRole(), (_req, res) => {
+  router.get('/admin/overview', requireAdminRole('Reviewer'), (_req, res) => {
     const memory = process.memoryUsage();
     const banned = loadBannedUsers();
     const allServers = getPromotedServers(true);
@@ -5350,9 +5489,9 @@ export function createDashboardRouter() {
   });
 
   // Bug Reports Admin Endpoints (Section 4: Hidden from non-admins, 404 for them)
-  router.get('/admin/bugs', requireAdminRole('Reviewer'), (req, res) => {
+  router.get('/admin/bugs', requireAdminRole('Reviewer'), async (req, res) => {
     const status = req.query.status || 'all';
-    const bugs = getBugReports({ status });
+    const bugs = await getBugReports({ status });
 
     const userMap = new Map();
     try {
@@ -5391,8 +5530,8 @@ export function createDashboardRouter() {
     res.json({ bugs: enriched });
   });
 
-  router.get('/admin/bugs/:id', requireAdminRole('Reviewer'), (req, res) => {
-    const bug = getBugReportById(req.params.id);
+  router.get('/admin/bugs/:id', requireAdminRole('Reviewer'), async (req, res) => {
+    const bug = await getBugReportById(req.params.id);
     if (!bug) return res.status(404).json({ error: 'Bug report not found' });
 
     let avatarUrl = bug.avatarUrl || null;
@@ -5821,6 +5960,380 @@ export function createDashboardRouter() {
     }
   });
 
+  // ── Server Shop Endpoints (Phase E1) ──
+  router.get(['/workspace/:guildId/shop', '/servers/:guildId/shop'], async (req, res) => {
+    try {
+      const { guildId } = req.params;
+      const items = await loadShopItems();
+      const activeBoosts = getServerActiveBoosts(guildId);
+      const summary = getServerLedgerSummary(guildId);
+      const user = req.dashboardSession?.user || req.session?.user;
+
+      const dirData = loadDirectoryData();
+      const server = dirData.servers.find(s => String(s.id) === String(guildId) || String(s.guildId) === String(guildId));
+
+      const isOwner = Boolean(server && user && String(server.ownerId) === String(user.id));
+      const isManager = Boolean(server && user && Array.isArray(server.representatives) && server.representatives.some(r => String(r.userId || r) === String(user.id)));
+
+      res.json({
+        items,
+        activeBoosts,
+        serverBalance: summary.balance,
+        isOwner,
+        isManager: isOwner || isManager,
+        serverName: server?.name || 'Community Server'
+      });
+    } catch (err) {
+      res.status(500).json({ error: err.message || 'Could not load server shop.' });
+    }
+  });
+
+  router.post(['/workspace/:guildId/shop/buy', '/servers/:guildId/shop/buy'], async (req, res) => {
+    try {
+      const { guildId } = req.params;
+      const { itemId } = req.body || {};
+      const user = req.dashboardSession?.user || req.session?.user;
+      if (!user) return res.status(401).json({ error: 'Please log in to purchase shop items.' });
+
+      const dirData = loadDirectoryData();
+      const server = dirData.servers.find(s => String(s.id) === String(guildId) || String(s.guildId) === String(guildId));
+      if (!server) return res.status(404).json({ error: 'Server not found.' });
+
+      const isOwner = String(server.ownerId) === String(user.id);
+      const isManager = Array.isArray(server.representatives) && server.representatives.some(r => String(r.userId || r) === String(user.id));
+
+      const result = await buyShopItem({
+        serverId: guildId,
+        itemId,
+        buyerUserId: user.id,
+        buyerUsername: user.username,
+        isOwner,
+        isManager
+      });
+
+      res.json(result);
+    } catch (err) {
+      res.status(400).json({ error: err.message, code: err.code || 'SHOP_BUY_FAILED' });
+    }
+  });
+
+  // ─── Custom URL Endpoints (Phase F4) ──────────────────────────────────
+  router.get('/workspace/:guildId/custom-url', (req, res) => {
+    const { guildId } = req.params;
+    const servers = getPromotedServers(true);
+    const server = servers.find(s => String(s.id) === String(guildId) || String(s.guildId) === String(guildId));
+    if (!server) return res.status(404).json({ error: 'Server not found.' });
+    const record = getServerCustomUrl(guildId);
+    res.json({
+      customUrl: server.customUrl || record?.slug || null,
+      customUrlChangedAt: server.customUrlChangedAt || null,
+      record: record || null
+    });
+  });
+
+  router.post('/workspace/:guildId/custom-url', async (req, res) => {
+    try {
+      const { guildId } = req.params;
+      const { customUrl } = req.body || {};
+      const user = req.dashboardSession?.user || req.session?.user;
+      if (!user) return res.status(401).json({ error: 'Please sign in to claim a custom URL.' });
+
+      const servers = getPromotedServers(true);
+      const server = servers.find(s => String(s.id) === String(guildId) || String(s.guildId) === String(guildId));
+      if (!server) return res.status(404).json({ error: 'Server not found.' });
+
+      const isOwner = String(server.ownerId) === String(user.id);
+      const isManager = Array.isArray(server.representatives) && server.representatives.some(r => String(r.userId || r) === String(user.id));
+      if (!isOwner && !isManager) {
+        return res.status(403).json({ error: 'Only server owners or managers can claim custom URLs.' });
+      }
+
+      const result = await claimCustomUrl(guildId, customUrl, user.id);
+      res.json({ success: true, customUrl: result.slug, record: result });
+    } catch (err) {
+      res.status(400).json({ error: err.message });
+    }
+  });
+
+  // Admin Custom URL routes
+  router.get('/api/admin/custom-urls', requireAdminRole, (req, res) => {
+    const data = listAllCustomUrls();
+    res.json(data);
+  });
+
+  router.delete('/api/admin/custom-urls/:slug', requireAdminRole, async (req, res) => {
+    try {
+      const { slug } = req.params;
+      const { reason } = req.body || {};
+      const adminId = req.dashboardSession?.user?.id || 'admin';
+      const result = await adminRemoveCustomUrl(slug, adminId, reason);
+      res.json(result);
+    } catch (err) {
+      res.status(400).json({ error: err.message });
+    }
+  });
+
+  router.post('/api/admin/custom-urls/:slug/reassign', requireAdminRole, async (req, res) => {
+    try {
+      const { slug } = req.params;
+      const { targetServerId, reason } = req.body || {};
+      if (!targetServerId) return res.status(400).json({ error: 'Target server ID is required.' });
+      const adminId = req.dashboardSession?.user?.id || 'admin';
+      const result = await adminReassignCustomUrl(slug, targetServerId, adminId, reason);
+      res.json({ success: true, record: result });
+    } catch (err) {
+      res.status(400).json({ error: err.message });
+    }
+  });
+
+  router.get('/api/admin/custom-urls/blocked', requireAdminRole, (req, res) => {
+    const list = loadBlockedWords();
+    res.json({ blockedWords: list });
+  });
+
+  router.post('/api/admin/custom-urls/blocked', requireAdminRole, (req, res) => {
+    const { blockedWords } = req.body || {};
+    if (!Array.isArray(blockedWords)) return res.status(400).json({ error: 'blockedWords must be an array of strings.' });
+    saveBlockedWords(blockedWords);
+    res.json({ success: true, blockedWords });
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // PHASE G: COMMUNITY APPLICATION FORMS & INBOX
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  function checkFormManagerAccess(guildId, user) {
+    if (!user || !user.id) {
+      return { ok: false, status: 401, error: 'Sign in required.' };
+    }
+    const servers = getPromotedServers(true);
+    const server = servers.find(s => String(s.id) === String(guildId) || String(s.guildId) === String(guildId));
+    if (!server) {
+      return { ok: false, status: 404, error: 'Server not found.' };
+    }
+    const isOwner = String(server.ownerId) === String(user.id);
+    const isRep = Array.isArray(server.representatives) && server.representatives.some(r => String(r.userId || r) === String(user.id));
+    const isGuildAdmin = Array.isArray(user.guilds) && user.guilds.some(g => String(g.id) === String(guildId) && (g.owner || (BigInt(g.permissions || 0) & 0x20n) === 0x20n || (BigInt(g.permissions || 0) & 0x8n) === 0x8n));
+    if (!isOwner && !isRep && !isGuildAdmin) {
+      return { ok: false, status: 403, error: 'Only server owners and managers can access this.' };
+    }
+    return { ok: true, server, isOwner };
+  }
+
+  // Rate limiter tracker for form submissions
+  const formSubmitRateMap = new Map(); // userId -> timestamps array
+  function checkSubmissionRateLimit(userId) {
+    const now = Date.now();
+    const timestamps = formSubmitRateMap.get(userId) || [];
+    const valid = timestamps.filter(t => now - t < 3600 * 1000);
+    if (valid.length >= 10) {
+      return false;
+    }
+    valid.push(now);
+    formSubmitRateMap.set(userId, valid);
+    return true;
+  }
+
+  // 1. Get all forms for server
+  router.get('/workspace/:guildId/forms', (req, res) => {
+    const { guildId } = req.params;
+    const user = req.dashboardSession?.user || req.session?.user;
+    const check = checkFormManagerAccess(guildId, user);
+    if (!check.ok) return res.status(check.status).json({ error: check.error });
+
+    const forms = getServerForms(guildId);
+    res.json({
+      success: true,
+      forms,
+      limits: {
+        maxForms: MAX_FORMS_PER_SERVER,
+        maxQuestions: MAX_QUESTIONS_PER_FORM,
+        maxAnswerLength: MAX_ANSWER_LENGTH
+      }
+    });
+  });
+
+  // 2. Create or update form
+  router.post('/workspace/:guildId/forms', async (req, res) => {
+    try {
+      const { guildId } = req.params;
+      const user = req.dashboardSession?.user || req.session?.user;
+      const check = checkFormManagerAccess(guildId, user);
+      if (!check.ok) return res.status(check.status).json({ error: check.error });
+
+      const form = await createOrUpdateForm(guildId, req.body || {}, user.id);
+      res.json({ success: true, form });
+    } catch (err) {
+      res.status(400).json({ error: err.message });
+    }
+  });
+
+  // 3. Delete form
+  router.delete('/workspace/:guildId/forms/:formId', (req, res) => {
+    try {
+      const { guildId, formId } = req.params;
+      const user = req.dashboardSession?.user || req.session?.user;
+      const check = checkFormManagerAccess(guildId, user);
+      if (!check.ok) return res.status(check.status).json({ error: check.error });
+
+      deleteForm(formId, guildId, user.id);
+      res.json({ success: true });
+    } catch (err) {
+      res.status(400).json({ error: err.message });
+    }
+  });
+
+  // 4. Get manager submissions inbox
+  router.get('/workspace/:guildId/submissions', (req, res) => {
+    const { guildId } = req.params;
+    const { status, formId } = req.query;
+    const user = req.dashboardSession?.user || req.session?.user;
+    const check = checkFormManagerAccess(guildId, user);
+    if (!check.ok) return res.status(check.status).json({ error: check.error });
+
+    let submissions = getServerSubmissions(guildId, status || 'all');
+    if (formId) {
+      submissions = submissions.filter(s => s.formId === formId);
+    }
+    res.json({ success: true, submissions });
+  });
+
+  // 5. Review submission (Accept, Deny, Needs Info)
+  router.post('/workspace/:guildId/submissions/:submissionId/review', async (req, res) => {
+    try {
+      const { guildId, submissionId } = req.params;
+      const { action, notes } = req.body || {};
+      const user = req.dashboardSession?.user || req.session?.user;
+      const check = checkFormManagerAccess(guildId, user);
+      if (!check.ok) return res.status(check.status).json({ error: check.error });
+
+      const result = await reviewApplication(submissionId, guildId, user, action, notes);
+      res.json(result);
+    } catch (err) {
+      res.status(400).json({ error: err.message });
+    }
+  });
+
+  // 6. Public Form Resolution: GET /api/public/forms/:serverIdentifier/:formSlug
+  router.get('/api/public/forms/:serverIdentifier/:formSlug', (req, res) => {
+    const { serverIdentifier, formSlug } = req.params;
+    const resolved = resolvePublicForm(serverIdentifier, formSlug);
+    if (!resolved) {
+      return res.status(404).json({ error: 'Application form not found.' });
+    }
+
+    // Check if authenticated user already has an application
+    const user = req.dashboardSession?.user || req.session?.user;
+    let userApplication = null;
+    if (user?.id) {
+      const submissions = getServerSubmissions(resolved.server.id, 'all');
+      userApplication = submissions.find(s => s.applicantId === String(user.id) && s.formId === resolved.form.id) || null;
+    }
+
+    res.json({
+      success: true,
+      form: resolved.form,
+      server: resolved.server,
+      userApplication
+    });
+  });
+
+  // 7. Public Application Submission: POST /api/public/forms/:formId/submit
+  router.post('/api/public/forms/:formId/submit', async (req, res) => {
+    try {
+      const { formId } = req.params;
+      const { answers } = req.body || {};
+      const user = req.dashboardSession?.user || req.session?.user;
+      if (!user || !user.id) {
+        return res.status(401).json({ error: 'Please sign in with Discord to submit an application.' });
+      }
+
+      if (!checkSubmissionRateLimit(user.id)) {
+        return res.status(429).json({ error: 'Too many application submissions. Please wait before applying again.' });
+      }
+
+      const submission = await submitApplication(formId, user, answers || {});
+      res.json({ success: true, submission });
+    } catch (err) {
+      res.status(400).json({ error: err.message });
+    }
+  });
+
+  // 8. Public Form Report: POST /api/public/forms/:formId/report
+  router.post('/api/public/forms/:formId/report', (req, res) => {
+    try {
+      const { formId } = req.params;
+      const { reason, details } = req.body || {};
+      const user = req.dashboardSession?.user || req.session?.user;
+      const reporterId = user?.id || 'anonymous';
+      const result = reportForm(formId, reporterId, reason || 'Safety violation', details);
+      res.json(result);
+    } catch (err) {
+      res.status(400).json({ error: err.message });
+    }
+  });
+
+  // 9. My Applications: GET /api/applications/my
+  router.get('/api/applications/my', (req, res) => {
+    const user = req.dashboardSession?.user || req.session?.user;
+    if (!user || !user.id) {
+      return res.status(401).json({ error: 'Please sign in to view your applications.' });
+    }
+    const submissions = loadSubmissions().filter(s => String(s.applicantId) === String(user.id) && !s.deleted);
+    res.json({ success: true, applications: submissions });
+  });
+
+  // 10. Delete own application: DELETE /api/applications/:submissionId
+  router.delete('/api/applications/:submissionId', (req, res) => {
+    try {
+      const { submissionId } = req.params;
+      const user = req.dashboardSession?.user || req.session?.user;
+      if (!user || !user.id) {
+        return res.status(401).json({ error: 'Please sign in to delete your application.' });
+      }
+      deleteApplicantSubmission(submissionId, user.id);
+      res.json({ success: true });
+    } catch (err) {
+      res.status(400).json({ error: err.message });
+    }
+  });
+
+  // 11. Admin: View Form Reports: GET /api/admin/forms/reports
+  router.get('/api/admin/forms/reports', requireAdminRole, (_req, res) => {
+    const reports = loadFormReports();
+    res.json({ success: true, reports });
+  });
+
+  // 12. Admin: Disable Form: POST /api/admin/forms/:formId/disable
+  router.post('/api/admin/forms/:formId/disable', requireAdminRole, (req, res) => {
+    try {
+      const { formId } = req.params;
+      const { reason } = req.body || {};
+      const adminId = req.dashboardSession?.user?.id || 'admin';
+      adminDisableForm(formId, adminId, reason || 'Administrative disable');
+      res.json({ success: true });
+    } catch (err) {
+      res.status(400).json({ error: err.message });
+    }
+  });
+
+  // Daily Check-In status endpoint (Phase F1)
+  router.get('/user/daily-checkin', (req, res) => {
+    const userId = req.dashboardSession?.user?.id;
+    if (!userId) {
+      return res.json({ streak: 0, claimedToday: false, rewardAmount: 10 });
+    }
+    const data = loadPartnershipsData();
+    const userAch = data.achievements[userId] || { lastCheckin: 0, streak: 0, lastClaimDate: null };
+    const todayUtc = new Date().toISOString().slice(0, 10);
+    res.json({
+      streak: userAch.streak || 0,
+      claimedToday: userAch.lastClaimDate === todayUtc,
+      rewardAmount: 10,
+      lastClaimDate: userAch.lastClaimDate || null
+    });
+  });
+
   router.post('/workspace/:guildId/bot-nickname', async (req, res) => {
     try {
       const { guildId } = req.params;
@@ -6221,6 +6734,110 @@ export function createDashboardRouter() {
       res.json(result);
     } catch (err) {
       res.status(400).json({ error: err.message });
+    }
+  });
+
+  // ── Admin Shop Management Endpoints (Phase E1) ──
+  router.get('/admin/shop/items', requireAdminRole('Reviewer'), async (_req, res) => {
+    try {
+      const items = await loadShopItems();
+      res.json({ items });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  router.patch('/admin/shop/items/:id', requireAdminRole('Admin'), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { name, price, durationMs, isActive, description } = req.body || {};
+      const items = await loadShopItems();
+      const item = items.find(i => i.id === id);
+      if (!item) return res.status(404).json({ error: 'Shop item not found.' });
+
+      if (name !== undefined) item.name = String(name).trim();
+      if (price !== undefined) item.price = Math.max(0, parseInt(price, 10) || 0);
+      if (durationMs !== undefined) item.durationMs = Math.max(60000, parseInt(durationMs, 10) || 86400000);
+      if (isActive !== undefined) item.isActive = Boolean(isActive);
+      if (description !== undefined) item.description = String(description).trim();
+
+      await saveShopItems(items);
+
+      recordAuditAction({
+        action: 'UPDATE_SHOP_ITEM',
+        actor: req.adminUser?.username || 'Admin',
+        actorRole: req.adminUser?.role || 'Admin',
+        target: id,
+        reason: `Updated shop item ${id}: price=${item.price}, active=${item.isActive}`
+      });
+
+      res.json({ success: true, item });
+    } catch (err) {
+      res.status(400).json({ error: err.message });
+    }
+  });
+
+  router.post('/admin/shop/boosts/grant', requireAdminRole('Admin'), async (req, res) => {
+    try {
+      const { serverId, effect, durationDays, reason } = req.body || {};
+      const result = await adminManageBoost({
+        serverId,
+        effect,
+        action: 'grant',
+        durationDays,
+        reason,
+        adminUser: req.adminUser
+      });
+      res.json(result);
+    } catch (err) {
+      res.status(400).json({ error: err.message });
+    }
+  });
+
+  router.post('/admin/shop/boosts/revoke', requireAdminRole('Admin'), async (req, res) => {
+    try {
+      const { serverId, effect, reason } = req.body || {};
+      const result = await adminManageBoost({
+        serverId,
+        effect,
+        action: 'revoke',
+        reason,
+        adminUser: req.adminUser
+      });
+      res.json(result);
+    } catch (err) {
+      res.status(400).json({ error: err.message });
+    }
+  });
+
+  // ── Directive Board Endpoints (Phase E3) ──
+  router.get('/admin/directive-board/allowance', requireDirectiveBoardRole(), (req, res) => {
+    try {
+      const allowance = getDirectiveBoardAllowance(req.adminUser?.userId || req.adminUser?.id);
+      res.json(allowance);
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  router.post('/admin/directive-board/gift', requireDirectiveBoardRole(), async (req, res) => {
+    try {
+      const { serverId, amount, reason } = req.body || {};
+      const result = await giftDirectiveBoardCredits({
+        memberUser: {
+          id: req.adminUser?.userId || req.adminUser?.id,
+          username: req.adminUser?.username,
+          displayName: req.adminUser?.displayName,
+          role: req.adminUser?.role
+        },
+        serverId,
+        amount,
+        reason
+      });
+      res.json(result);
+    } catch (err) {
+      if (err.status === 404) return res.status(404).json({ error: 'Page not found' });
+      res.status(400).json({ error: err.message, code: err.code });
     }
   });
 
@@ -8773,6 +9390,82 @@ export function createDashboardRouter() {
     res.json({ redemptions: getUserRedemptions(userId) });
   });
 
+  // ─── Giveaway Codes (Replaces old Promo Codes) ───────────────────────────
+  router.get('/admin/giveaway-codes', requireAdminRole('Reviewer'), async (_req, res) => {
+    try {
+      const codes = await getGiveawayCodes();
+      res.json({ codes });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  router.post('/admin/giveaway-codes', requireAdminRole('Admin'), async (req, res) => {
+    try {
+      const createdBy = req.adminUser?.username || 'Admin';
+      const code = await createGiveawayCode({ ...req.body, createdBy });
+      res.json({ success: true, code });
+    } catch (err) {
+      res.status(400).json({ error: err.message });
+    }
+  });
+
+  router.patch('/admin/giveaway-codes/:id/toggle', requireAdminRole('Admin'), async (req, res) => {
+    try {
+      const result = await toggleGiveawayCode(req.params.id, Boolean(req.body.isActive), req.adminUser);
+      res.json(result);
+    } catch (err) {
+      res.status(400).json({ error: err.message });
+    }
+  });
+
+  router.delete('/admin/giveaway-codes/:id', requireAdminRole('Admin'), async (req, res) => {
+    try {
+      const result = await deleteGiveawayCode(req.params.id, req.adminUser);
+      res.json(result);
+    } catch (err) {
+      res.status(400).json({ error: err.message });
+    }
+  });
+
+  router.get('/admin/giveaway-codes/:id/redemptions', requireAdminRole('Reviewer'), async (req, res) => {
+    try {
+      const redemptions = await getGiveawayRedemptions(req.params.id);
+      res.json({ redemptions });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  router.get('/admin/giveaway-codes/random', requireAdminRole('Admin'), (_req, res) => {
+    res.json({ code: generateCryptoCode() });
+  });
+
+  router.post(['/giveaway-codes/redeem', '/promo/redeem'], async (req, res) => {
+    const sessionId = cookieValue(req, SESSION_COOKIE);
+    const session = req.dashboardSession || (sessionId ? getSession(sessionId) : null);
+    const userId = session?.user?.id || req.body?.userId;
+    const username = session?.user?.username || req.body?.username || 'Discord User';
+    const serverId = req.body?.serverId || req.body?.targetServerId || req.body?.guildId;
+    const code = req.body?.code;
+
+    if (!userId) {
+      return res.status(401).json({ error: 'Please sign in to redeem giveaway codes.' });
+    }
+
+    const result = await redeemGiveawayCode({
+      code,
+      serverId,
+      userId,
+      username
+    });
+
+    if (!result.success) {
+      return res.status(400).json({ error: result.error });
+    }
+    res.json(result);
+  });
+
   // ─── Admin Promo Codes Management ───────────────────────────────────────
   router.get('/admin/promos', requireAdminRole(), (_req, res) => {
     res.json({ promos: getAllPromoCodes() });
@@ -9087,8 +9780,7 @@ export function createDashboardRouter() {
         flags: 32768, // IsComponentsV2
         components: [
           {
-            type: 17, // Container
-            accent_color: 16347158, // Orange
+            type: 17, // Container (No accent_color = no color on the side)
             components: [
               {
                 type: 10, // TextDisplay

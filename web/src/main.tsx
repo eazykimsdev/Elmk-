@@ -22,6 +22,7 @@ import { MaintenancePage } from './pages/MaintenancePage';
 import { UnderConstructionPage } from './pages/UnderConstructionPage';
 import { AdminPortalPage } from './pages/AdminPortalPage';
 import { PublicServerListingPage } from './pages/PublicServerListingPage';
+import { PublicApplicationPage } from './pages/PublicApplicationPage';
 import { DiscoveryInvitePage } from './pages/DiscoveryInvitePage';
 import { DirectoryPage } from './pages/DirectoryPage';
 import { ChangelogPage } from './pages/ChangelogPage';
@@ -436,6 +437,9 @@ const router = createBrowserRouter(
           </ProtectedRoute>
         }
       />
+      <Route path="/apply/:serverSlug/:formSlug" element={<PublicApplicationPage />} />
+      <Route path="/:serverSlug/:formSlug" element={<PublicApplicationPage />} />
+      <Route path="/:customSlug" element={<PublicServerListingPage />} />
       <Route path="*" element={<NotFoundPage />} />
     </Route>
   )

@@ -125,8 +125,7 @@ export function buildPremiumAdPayload(server, content, postedByUsername) {
     allowed_mentions: { parse: [] }, // Nothing allowed
     components: [
       {
-        type: 17, // Container
-        accent_color: 12856117, // Crimson / Accent (#C42B35)
+        type: 17, // Container (No accent_color = no color on the side)
         components: [
           {
             type: 10, // Text display
@@ -436,8 +435,7 @@ export async function sendTestPremiumAd(options = {}) {
     allowed_mentions: { parse: [] },
     components: [
       {
-        type: 17, // Container
-        accent_color: 12856117,
+        type: 17, // Container (No accent_color = no color on the side)
         components: [
           {
             type: 10, // Text display

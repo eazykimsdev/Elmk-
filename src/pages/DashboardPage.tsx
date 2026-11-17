@@ -43,6 +43,8 @@ import { DiscordConnectionTab } from './dashboard/DiscordConnectionTab';
 import { SettingsTab } from './dashboard/SettingsTab';
 import { PartnershipsTab } from './dashboard/PartnershipsTab';
 import { RecruitsTab } from './dashboard/RecruitsTab';
+import { ShopTab } from './dashboard/ShopTab';
+import { FormsTab } from './dashboard/FormsTab';
 import { NotFoundPage } from './NotFoundPage';
 import { AdminPortalPage } from './AdminPortalPage';
 import { ServerProfileModal } from '@/components/ServerProfileModal';
@@ -61,7 +63,11 @@ const VALID_DASHBOARD_TABS = new Set([
   'joins',
   'my-joins',
   'partnerships',
+  'forms',
+  'applications',
   'premium',
+  'shop',
+  'server-shop',
   'recruits',
   'history',
   'transfer',
@@ -85,6 +91,7 @@ const TAB_ALIASES: Record<string, string> = {
   'my-joins': 'joins',
   'daily-check-in': 'checkin',
   'check-in': 'checkin',
+  'server-shop': 'shop',
   'bot': 'discord',
   'discord-connection': 'discord',
   'gateway': 'discord',
@@ -1177,6 +1184,28 @@ export function DashboardPage() {
                 workspace={workspace}
                 config={config}
                 onNavigateTab={(t) => navigate(`/dashboard/${currentGuildId}/${t}`)}
+                addToast={addToast}
+              />
+            </TabErrorBoundary>
+          )}
+
+          {activeTabKey === 'shop' && (
+            <TabErrorBoundary tabTitle="Server shop">
+              <ShopTab
+                currentGuildId={currentGuildId}
+                serverName={selectedGuild?.name || 'Server'}
+                onNavigateTab={(t) => navigate(`/dashboard/${currentGuildId}/${t}`)}
+                addToast={addToast}
+              />
+            </TabErrorBoundary>
+          )}
+
+          {(activeTabKey === 'forms' || activeTabKey === 'applications') && (
+            <TabErrorBoundary tabTitle="Applications & Forms">
+              <FormsTab
+                currentGuildId={currentGuildId}
+                serverName={selectedGuild?.name || 'Server'}
+                customUrl={workspace?.customUrl || null}
                 addToast={addToast}
               />
             </TabErrorBoundary>

@@ -271,6 +271,52 @@ export function OverviewTab({
 
   // Real per-server bot presence (from the Discord REST check on the backend)
   const [botInGuild, setBotInGuild] = useState<boolean | null>(null);
+
+  // Daily Check-in status (Phase F1)
+  const [checkinStreak, setCheckinStreak] = useState<number>(0);
+  const [checkinClaimedToday, setCheckinClaimedToday] = useState<boolean>(false);
+  const [checkinClaiming, setCheckinClaiming] = useState<boolean>(false);
+
+  const fetchCheckinStatus = async () => {
+    try {
+      const res = await fetch('/api/user/daily-checkin', { credentials: 'include' });
+      if (res.ok) {
+        const data = await res.json();
+        setCheckinStreak(Number(data.streak) || 0);
+        setCheckinClaimedToday(Boolean(data.claimedToday));
+      }
+    } catch {}
+  };
+
+  useEffect(() => {
+    fetchCheckinStatus();
+  }, []);
+
+  const handleClaimDailyCheckin = async () => {
+    if (checkinClaimedToday || checkinClaiming) return;
+    setCheckinClaiming(true);
+    try {
+      const res = await fetch('/api/user/daily-checkin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include'
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to claim daily reward.');
+      setCheckinClaimedToday(true);
+      setCheckinStreak(data.userAchievements?.streak || checkinStreak + 1);
+      fetchBalanceAndActivity();
+      if (addToast) {
+        addToast('success', 'Daily Reward Claimed', `Earned +10 credits! Current streak: ${data.userAchievements?.streak || checkinStreak + 1} days.`);
+      }
+    } catch (err: any) {
+      if (addToast) {
+        addToast('error', 'Claim Failed', err.message || 'Could not claim daily reward.');
+      }
+    } finally {
+      setCheckinClaiming(false);
+    }
+  };
   useEffect(() => {
     let mounted = true;
     fetch(`/api/servers/${guildId}/bot-status`, { credentials: 'include' })
@@ -499,6 +545,50 @@ export function OverviewTab({
           <div className="text-[36px] sm:text-[38px] leading-tight font-semibold text-[#F4F4F5] tabular-nums font-sans mt-3">
             {directoryViews.toLocaleString()}
           </div>
+        </div>
+      </div>
+
+      {/* ── DAILY CHECK-IN CARD (Phase F1) ────────────────────────────────── */}
+      <div className="rounded-[16px] border border-[rgba(255,255,255,0.07)] bg-[#0E0E11] p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex items-center gap-3.5">
+          <div className="p-3 rounded-xl bg-white/[0.04] border border-white/[0.06] text-amber-400">
+            <CalendarCheck className="size-5" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h3 className="text-sm font-medium text-zinc-100">Daily check-in</h3>
+              <span className="text-[11px] px-2 py-0.5 rounded-full bg-white/[0.06] text-zinc-300 font-mono">
+                {checkinStreak} {checkinStreak === 1 ? 'day' : 'days'} streak
+              </span>
+            </div>
+            <p className="text-xs text-zinc-400 mt-0.5">
+              Claim your daily reward of 10 credits to build your streak and grow your community.
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3 shrink-0">
+          <Button
+            onClick={handleClaimDailyCheckin}
+            disabled={checkinClaimedToday || checkinClaiming}
+            size="sm"
+            className={`text-xs h-9 px-4 font-medium transition-colors ${
+              checkinClaimedToday
+                ? 'bg-white/[0.06] text-zinc-400 border border-white/[0.08] cursor-default'
+                : 'bg-[var(--accent)] hover:opacity-90 text-white border-0'
+            }`}
+          >
+            {checkinClaimedToday ? (
+              <>
+                <Check className="size-3.5 mr-1.5 text-emerald-400" />
+                Claimed today
+              </>
+            ) : (
+              <>
+                <Coins className="size-3.5 mr-1.5 text-amber-300" />
+                {checkinClaiming ? 'Claiming…' : 'Claim 10 cr'}
+              </>
+            )}
+          </Button>
         </div>
       </div>
 

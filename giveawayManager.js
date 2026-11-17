@@ -337,8 +337,7 @@ export function buildGiveawayV2Panel({
     flags: 32768, // MessageFlags.IsComponentsV2
     components: [
       {
-        type: 17, // Container
-        accent_color: 16347158, // Brand Orange #F97316 (Zero green)
+        type: 17, // Container (No accent_color = no color on the side)
         components: [
           {
             type: 10, // TextDisplay

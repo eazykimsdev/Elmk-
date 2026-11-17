@@ -16,6 +16,7 @@ import { isUserBanned } from './adminManager.js';
 import { recordAuditAction } from './adminManager.js';
 import { getPromotedServers } from './directoryManager.js';
 import { recordLedgerTransaction } from './ledgerManager.js';
+import { getAdminSettings } from './premiumManager.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -257,18 +258,68 @@ export async function createBugReport({ userId, username, displayName, avatarUrl
 /**
  * Get all bug reports with optional filter
  */
-export function getBugReports({ status = 'all' } = {}) {
-  const all = loadBugReports();
-  if (status && status !== 'all') {
-    return all.filter((r) => r.status.toLowerCase() === status.toLowerCase());
+export async function getBugReports({ status = 'all' } = {}) {
+  let list = [];
+  if (isPostgresConnected()) {
+    try {
+      const res = await query(`
+        SELECT id, user_id AS "userId", username, title, description, steps_to_reproduce AS "stepsToReproduce",
+               status, staff_notes AS "staffNotes", reviewed_by AS "reviewedBy", reviewed_at AS "reviewedAt",
+               reward_given AS "rewardGiven", reward_guild_id AS "rewardGuildId", created_at AS "createdAt"
+        FROM bug_reports
+        ORDER BY created_at DESC
+      `);
+      if (res && Array.isArray(res.rows)) {
+        list = res.rows.map(r => ({
+          ...r,
+          rewardGiven: Boolean(r.rewardGiven),
+          createdAt: r.createdAt ? new Date(r.createdAt).toISOString() : new Date().toISOString()
+        }));
+      }
+    } catch (err) {
+      console.error('[BUG REPORTS] Error querying Postgres:', err.message);
+      list = loadBugReports();
+    }
+  } else {
+    list = loadBugReports();
   }
-  return all;
+
+  // Ensure JSON local cache has whatever Postgres returned
+  if (list.length > 0 && isPostgresConnected()) {
+    saveBugReports(list);
+  }
+
+  if (status && status !== 'all') {
+    return list.filter((r) => String(r.status || '').toLowerCase() === status.toLowerCase());
+  }
+  return list;
 }
 
 /**
  * Get single bug report by ID
  */
-export function getBugReportById(id) {
+export async function getBugReportById(id) {
+  if (isPostgresConnected()) {
+    try {
+      const res = await query(`
+        SELECT id, user_id AS "userId", username, title, description, steps_to_reproduce AS "stepsToReproduce",
+               status, staff_notes AS "staffNotes", reviewed_by AS "reviewedBy", reviewed_at AS "reviewedAt",
+               reward_given AS "rewardGiven", reward_guild_id AS "rewardGuildId", created_at AS "createdAt"
+        FROM bug_reports
+        WHERE id = $1
+      `, [id]);
+      if (res && res.rows && res.rows[0]) {
+        const r = res.rows[0];
+        return {
+          ...r,
+          rewardGiven: Boolean(r.rewardGiven),
+          createdAt: r.createdAt ? new Date(r.createdAt).toISOString() : new Date().toISOString()
+        };
+      }
+    } catch (err) {
+      console.error('[BUG REPORTS] Error querying Postgres by ID:', err.message);
+    }
+  }
   const all = loadBugReports();
   return all.find((r) => r.id === id) || null;
 }
@@ -346,8 +397,7 @@ export function buildBugReviewV2Payload({ report, status, staffNotes, rewardGuil
     flags: 32768, // MessageFlags.IsComponentsV2
     components: [
       {
-        type: 17, // Container
-        accent_color: accentColor,
+        type: 17, // Container (No accent_color = no color on the side)
         components: containerComponents
       }
     ]
@@ -466,8 +516,19 @@ export async function reviewBugReport(id, { status, staffNotes = '', staffUser }
     throw new Error('Invalid status. Allowed: accepted, rejected, duplicate.');
   }
 
-  const all = loadBugReports();
-  const reportIndex = all.findIndex((r) => r.id === id);
+  let all = loadBugReports();
+  let reportIndex = all.findIndex((r) => r.id === id);
+
+  if (reportIndex === -1 && isPostgresConnected()) {
+    try {
+      const dbReport = await getBugReportById(id);
+      if (dbReport) {
+        all.unshift(dbReport);
+        reportIndex = 0;
+      }
+    } catch {}
+  }
+
   if (reportIndex === -1) {
     throw new Error('Bug report not found.');
   }
@@ -485,6 +546,11 @@ export async function reviewBugReport(id, { status, staffNotes = '', staffUser }
   let rewardServerName = null;
   let isPending = false;
 
+  const adminSettings = getAdminSettings();
+  const rewardAmount = typeof adminSettings.bug_report_reward_credits === 'number'
+    ? adminSettings.bug_report_reward_credits
+    : 50;
+
   // Idempotent reward crediting
   if (cleanStatus === 'accepted' && !report.rewardGiven && !report.pendingReward) {
     // Check if reporter has a server listed on ConnectingERLC
@@ -501,7 +567,7 @@ export async function reviewBugReport(id, { status, staffNotes = '', staffUser }
         recordLedgerTransaction({
           userId: report.userId,
           type: 'earned',
-          amount: 50,
+          amount: rewardAmount,
           reason: 'bug report reward',
           description: `Bug report accepted: ${report.title}`,
           guildId: targetGuildId,
@@ -514,15 +580,15 @@ export async function reviewBugReport(id, { status, staffNotes = '', staffUser }
 
         report.rewardGiven = true;
         report.rewardGuildId = targetGuildId;
-        console.log(`[BUG REPORTS] Awarded 50 credits to guild ${targetGuildId} for bug report ${id}`);
+        console.log(`[BUG REPORTS] Awarded ${rewardAmount} credits to guild ${targetGuildId} for bug report ${id}`);
       } catch (err) {
         console.error(`[BUG REPORTS] Failed to record ledger transaction for ${id}:`, err.message);
       }
     } else {
-      // Save pending 50 credit reward for his Discord ID
+      // Save pending credit reward for his Discord ID
       addPendingReward({
         userId: report.userId,
-        amount: 50,
+        amount: rewardAmount,
         reason: 'bug report reward',
         reportId: report.id
       });
@@ -530,7 +596,7 @@ export async function reviewBugReport(id, { status, staffNotes = '', staffUser }
       report.pendingReward = true;
       report.rewardGuildId = 'pending';
       isPending = true;
-      console.log(`[BUG REPORTS] Reporter ${report.userId} has no listed server. Saved pending 50 credit reward.`);
+      console.log(`[BUG REPORTS] Reporter ${report.userId} has no listed server. Saved pending ${rewardAmount} credit reward.`);
     }
   }
 
