@@ -1,5 +1,51 @@
 [
   {
+    "version": "3.4.1",
+    "date": "2026-11-17T07:15:00.000Z",
+    "title": "Clean Discord cards, new Boosts hub, and faster forms",
+    "description": "Removed the orange border from Discord bump alerts, combined shop and premium into one clean Boosts hub, and made workspace forms and uploads much smoother.",
+    "tags": [
+      "improved",
+      "fixed"
+    ],
+    "items": [
+      "Discord bump cards now have clean neutral borders with zero orange stripe on the side",
+      "New Boosts tab in the server dashboard combining the server shop, active perks, and community ideas",
+      "Fixed form loading issues so your application builder and submissions inbox load instantly without errors",
+      "Automatic session security: CSRF tokens are handled in the background so claiming URLs and saving never fails",
+      "Fixed server manager permissions so real Discord server owners and managers can always claim custom URLs and perks",
+      "Added secure banner uploads supporting PNG, JPG, WebP, and animated GIFs for premium communities"
+    ],
+    "href": "#v3-4-1"
+  },
+  {
+    "version": "3.4.0",
+    "date": "2026-11-17T06:20:00.000Z",
+    "title": "Application builder, custom short links and live ER:LC stats",
+    "description": "Create custom applications for your server, claim short links like connectingerlc.xyz/your-server, connect live in-game ER:LC stats, and boost your server with the new shop.",
+    "tags": [
+      "new",
+      "improved"
+    ],
+    "items": [
+      "Custom application builder: make staff apps, partnership forms or ban appeals with 7 question types",
+      "Short application links that open at connectingerlc.xyz/your-server/form-name",
+      "Manager inbox to review applications, write notes, and accept or deny with instant Discord DMs",
+      "Automatic Discord roles given to applicants as soon as they are accepted",
+      "Claim your own short URL so your community page opens at connectingerlc.xyz/your-name",
+      "Old server links automatically redirect to your new short name",
+      "Redesigned public server pages with big banners, Discord member counts and verified badges",
+      "Live ER:LC in-game stats: connect your server key to display active players, staff on duty and queue size",
+      "Community reviews: rate and review servers with real Discord avatars (accounts must be at least 2 days old)",
+      "Server shop: buy 2x bump cooldowns, auto-bumping and monthly premium using your server balance",
+      "Apply for the official verified checkmark right from your dashboard",
+      "Clean Discord V2 notification cards with pure neutral borders and no side color stripe",
+      "Giveaway codes: redeem staff-created giveaway codes straight from your overview",
+      "Security warnings on all public forms and automatic 90-day pruning to protect applicant privacy"
+    ],
+    "href": "#v3-4-0"
+  },
+  {
     "version": "3.3.0",
     "date": "2026-11-14T05:44:52.212Z",
     "title": "Christmas theme, bug reports and a faster bump engine",

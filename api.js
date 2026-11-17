@@ -27,6 +27,7 @@ import {
 } from './formsManager.js';
 import { getBotGatewayStatus } from './botGateway.js';
 import { getBugReports, getBugReportById, reviewBugReport, sendTestBugReviewDM } from './bugReportManager.js';
+import { processAndSaveBanner } from './bannerUploadManager.js';
 import { getMonthlyLeaderboardPreview, executeMonthlyReward, loadMonthlyRewardConfig, saveMonthlyRewardConfig } from './monthlyLeaderboardRewardManager.js';
 import { getVerificationStatus, submitVerificationApplication, reviewVerificationApplication, revokeVerification, loadVerificationApplications, checkVerificationExpiries } from './verificationManager.js';
 import {
@@ -1026,6 +1027,67 @@ async function findAuthorizedGuild(session, guildId) {
   if (typeof guildId !== 'string' || !/^\d{17,20}$/.test(guildId)) return null;
   const guilds = await manageableGuilds(session);
   return guilds.find(guild => guild.id === guildId) || null;
+}
+
+/**
+ * Shared Server Owner & Manager Authorization Check (Item 1c)
+ * Verifies if the signed-in session user has Owner or Manager authority on the given server.
+ * Sources checked (strictly server-side, never from request body):
+ * 1. Discord OAuth manageable guilds (refreshed from Discord token):
+ *    - guild.owner === true -> isOwner = true, isManager = true
+ *    - guild has MANAGE_GUILD (0x20n) or ADMINISTRATOR (0x8n) -> isManager = true
+ * 2. Directory Server Record:
+ *    - server.ownerId === user.id -> isOwner = true, isManager = true
+ *    - server.representatives contains user.id -> isManager = true
+ * 3. Platform Admin:
+ *    - isAdmin(user.id) -> isOwner = true, isManager = true
+ * Never trusts client request bodies for ownership or permissions.
+ */
+export async function verifyServerManagerAccess(session, guildId) {
+  if (!session || !session.user || !session.user.id) {
+    return { ok: false, status: 401, error: 'Sign in with Discord to continue.', isOwner: false, isManager: false };
+  }
+  const userId = String(session.user.id);
+  const gid = String(guildId);
+
+  // 1. Platform Admin bypass
+  const adminRec = getAdminRecord(userId, session.user.username);
+  if (adminRec) {
+    const servers = getPromotedServers(true);
+    const server = servers.find(s => String(s.id) === gid || String(s.guildId) === gid);
+    return { ok: true, isOwner: true, isManager: true, server, isAdmin: true };
+  }
+
+  // 2. Directory Server Record check
+  const servers = getPromotedServers(true);
+  const server = servers.find(s => String(s.id) === gid || String(s.guildId) === gid);
+  if (server) {
+    if (String(server.ownerId) === userId) {
+      return { ok: true, isOwner: true, isManager: true, server };
+    }
+    if (Array.isArray(server.representatives) && server.representatives.some(r => String(r.userId || r) === userId)) {
+      return { ok: true, isOwner: false, isManager: true, server };
+    }
+  }
+
+  // 3. Discord OAuth User Guilds check (real owner or Manage Server permission)
+  try {
+    const authorized = await findAuthorizedGuild(session, gid);
+    if (authorized && permissionsAllowManageGuild(authorized)) {
+      const isOwner = Boolean(authorized.owner);
+      return { ok: true, isOwner, isManager: true, server, guild: authorized };
+    }
+  } catch (err) {
+    console.warn('[AUTH CHECK] Could not verify Discord guilds:', err.message);
+  }
+
+  return {
+    ok: false,
+    status: 403,
+    error: 'Only server owners or managers can perform this action.',
+    isOwner: false,
+    isManager: false
+  };
 }
 
 function publicCustomizations(customizations = {}) {
@@ -5988,27 +6050,26 @@ export function createDashboardRouter() {
     }
   });
 
-  router.post(['/workspace/:guildId/shop/buy', '/servers/:guildId/shop/buy'], async (req, res) => {
+  router.post(['/workspace/:guildId/shop/buy', '/api/workspace/:guildId/shop/buy', '/servers/:guildId/shop/buy', '/api/servers/:guildId/shop/buy'], async (req, res) => {
     try {
       const { guildId } = req.params;
       const { itemId } = req.body || {};
-      const user = req.dashboardSession?.user || req.session?.user;
+      const session = req.dashboardSession || req.session;
+      const user = session?.user;
       if (!user) return res.status(401).json({ error: 'Please log in to purchase shop items.' });
 
-      const dirData = loadDirectoryData();
-      const server = dirData.servers.find(s => String(s.id) === String(guildId) || String(s.guildId) === String(guildId));
-      if (!server) return res.status(404).json({ error: 'Server not found.' });
-
-      const isOwner = String(server.ownerId) === String(user.id);
-      const isManager = Array.isArray(server.representatives) && server.representatives.some(r => String(r.userId || r) === String(user.id));
+      const authCheck = await verifyServerManagerAccess(session, guildId);
+      if (!authCheck.ok) {
+        return res.status(authCheck.status || 403).json({ error: authCheck.error });
+      }
 
       const result = await buyShopItem({
         serverId: guildId,
         itemId,
         buyerUserId: user.id,
         buyerUsername: user.username,
-        isOwner,
-        isManager
+        isOwner: authCheck.isOwner,
+        isManager: authCheck.isManager
       });
 
       res.json(result);
@@ -6018,7 +6079,7 @@ export function createDashboardRouter() {
   });
 
   // ─── Custom URL Endpoints (Phase F4) ──────────────────────────────────
-  router.get('/workspace/:guildId/custom-url', (req, res) => {
+  router.get(['/workspace/:guildId/custom-url', '/api/workspace/:guildId/custom-url'], (req, res) => {
     const { guildId } = req.params;
     const servers = getPromotedServers(true);
     const server = servers.find(s => String(s.id) === String(guildId) || String(s.guildId) === String(guildId));
@@ -6031,21 +6092,17 @@ export function createDashboardRouter() {
     });
   });
 
-  router.post('/workspace/:guildId/custom-url', async (req, res) => {
+  router.post(['/workspace/:guildId/custom-url', '/api/workspace/:guildId/custom-url'], async (req, res) => {
     try {
       const { guildId } = req.params;
       const { customUrl } = req.body || {};
-      const user = req.dashboardSession?.user || req.session?.user;
+      const session = req.dashboardSession || req.session;
+      const user = session?.user;
       if (!user) return res.status(401).json({ error: 'Please sign in to claim a custom URL.' });
 
-      const servers = getPromotedServers(true);
-      const server = servers.find(s => String(s.id) === String(guildId) || String(s.guildId) === String(guildId));
-      if (!server) return res.status(404).json({ error: 'Server not found.' });
-
-      const isOwner = String(server.ownerId) === String(user.id);
-      const isManager = Array.isArray(server.representatives) && server.representatives.some(r => String(r.userId || r) === String(user.id));
-      if (!isOwner && !isManager) {
-        return res.status(403).json({ error: 'Only server owners or managers can claim custom URLs.' });
+      const authCheck = await verifyServerManagerAccess(session, guildId);
+      if (!authCheck.ok) {
+        return res.status(authCheck.status || 403).json({ error: authCheck.error });
       }
 
       const result = await claimCustomUrl(guildId, customUrl, user.id);
@@ -6098,26 +6155,52 @@ export function createDashboardRouter() {
     res.json({ success: true, blockedWords });
   });
 
+  // ─── Banner Upload Endpoint (Phase H3) ──────────────────────────────────
+  router.post(['/workspace/:guildId/banner', '/api/workspace/:guildId/banner'], async (req, res) => {
+    try {
+      const { guildId } = req.params;
+      const session = req.dashboardSession || req.session;
+      const authCheck = await verifyServerManagerAccess(session, guildId);
+      if (!authCheck.ok) {
+        return res.status(authCheck.status || 403).json({ error: authCheck.error });
+      }
+
+      let buffer = null;
+      let originalFilename = 'banner.png';
+
+      if (req.body?.imageBase64) {
+        const base64Str = req.body.imageBase64.replace(/^data:image\/[a-zA-Z0-9+.-]+;base64,/, '');
+        buffer = Buffer.from(base64Str, 'base64');
+        if (req.body.filename) originalFilename = String(req.body.filename);
+      } else if (Buffer.isBuffer(req.body)) {
+        buffer = req.body;
+      }
+
+      if (!buffer || buffer.length === 0) {
+        return res.status(400).json({ error: 'No image data provided.' });
+      }
+
+      const result = await processAndSaveBanner({
+        serverId: guildId,
+        buffer,
+        originalFilename
+      });
+
+      // Update in directory
+      updatePromotedServerDetails(guildId, { bannerUrl: result.bannerUrl });
+
+      res.json({ success: true, bannerUrl: result.bannerUrl, format: result.format });
+    } catch (err) {
+      res.status(400).json({ error: err.message, code: err.code || 'BANNER_UPLOAD_FAILED' });
+    }
+  });
+
   // ═══════════════════════════════════════════════════════════════════════════
   // PHASE G: COMMUNITY APPLICATION FORMS & INBOX
   // ═══════════════════════════════════════════════════════════════════════════
 
-  function checkFormManagerAccess(guildId, user) {
-    if (!user || !user.id) {
-      return { ok: false, status: 401, error: 'Sign in required.' };
-    }
-    const servers = getPromotedServers(true);
-    const server = servers.find(s => String(s.id) === String(guildId) || String(s.guildId) === String(guildId));
-    if (!server) {
-      return { ok: false, status: 404, error: 'Server not found.' };
-    }
-    const isOwner = String(server.ownerId) === String(user.id);
-    const isRep = Array.isArray(server.representatives) && server.representatives.some(r => String(r.userId || r) === String(user.id));
-    const isGuildAdmin = Array.isArray(user.guilds) && user.guilds.some(g => String(g.id) === String(guildId) && (g.owner || (BigInt(g.permissions || 0) & 0x20n) === 0x20n || (BigInt(g.permissions || 0) & 0x8n) === 0x8n));
-    if (!isOwner && !isRep && !isGuildAdmin) {
-      return { ok: false, status: 403, error: 'Only server owners and managers can access this.' };
-    }
-    return { ok: true, server, isOwner };
+  async function checkFormManagerAccess(guildId, session) {
+    return await verifyServerManagerAccess(session, guildId);
   }
 
   // Rate limiter tracker for form submissions
@@ -6135,10 +6218,10 @@ export function createDashboardRouter() {
   }
 
   // 1. Get all forms for server
-  router.get('/workspace/:guildId/forms', (req, res) => {
+  router.get(['/workspace/:guildId/forms', '/api/workspace/:guildId/forms'], async (req, res) => {
     const { guildId } = req.params;
-    const user = req.dashboardSession?.user || req.session?.user;
-    const check = checkFormManagerAccess(guildId, user);
+    const session = req.dashboardSession || req.session;
+    const check = await checkFormManagerAccess(guildId, session);
     if (!check.ok) return res.status(check.status).json({ error: check.error });
 
     const forms = getServerForms(guildId);
@@ -6154,14 +6237,14 @@ export function createDashboardRouter() {
   });
 
   // 2. Create or update form
-  router.post('/workspace/:guildId/forms', async (req, res) => {
+  router.post(['/workspace/:guildId/forms', '/api/workspace/:guildId/forms'], async (req, res) => {
     try {
       const { guildId } = req.params;
-      const user = req.dashboardSession?.user || req.session?.user;
-      const check = checkFormManagerAccess(guildId, user);
+      const session = req.dashboardSession || req.session;
+      const check = await checkFormManagerAccess(guildId, session);
       if (!check.ok) return res.status(check.status).json({ error: check.error });
 
-      const form = await createOrUpdateForm(guildId, req.body || {}, user.id);
+      const form = await createOrUpdateForm(guildId, req.body || {}, session.user.id);
       res.json({ success: true, form });
     } catch (err) {
       res.status(400).json({ error: err.message });
@@ -6169,14 +6252,14 @@ export function createDashboardRouter() {
   });
 
   // 3. Delete form
-  router.delete('/workspace/:guildId/forms/:formId', (req, res) => {
+  router.delete(['/workspace/:guildId/forms/:formId', '/api/workspace/:guildId/forms/:formId'], async (req, res) => {
     try {
       const { guildId, formId } = req.params;
-      const user = req.dashboardSession?.user || req.session?.user;
-      const check = checkFormManagerAccess(guildId, user);
+      const session = req.dashboardSession || req.session;
+      const check = await checkFormManagerAccess(guildId, session);
       if (!check.ok) return res.status(check.status).json({ error: check.error });
 
-      deleteForm(formId, guildId, user.id);
+      deleteForm(formId, guildId, session.user.id);
       res.json({ success: true });
     } catch (err) {
       res.status(400).json({ error: err.message });
@@ -6184,11 +6267,11 @@ export function createDashboardRouter() {
   });
 
   // 4. Get manager submissions inbox
-  router.get('/workspace/:guildId/submissions', (req, res) => {
+  router.get(['/workspace/:guildId/submissions', '/api/workspace/:guildId/submissions'], async (req, res) => {
     const { guildId } = req.params;
     const { status, formId } = req.query;
-    const user = req.dashboardSession?.user || req.session?.user;
-    const check = checkFormManagerAccess(guildId, user);
+    const session = req.dashboardSession || req.session;
+    const check = await checkFormManagerAccess(guildId, session);
     if (!check.ok) return res.status(check.status).json({ error: check.error });
 
     let submissions = getServerSubmissions(guildId, status || 'all');
@@ -6199,15 +6282,15 @@ export function createDashboardRouter() {
   });
 
   // 5. Review submission (Accept, Deny, Needs Info)
-  router.post('/workspace/:guildId/submissions/:submissionId/review', async (req, res) => {
+  router.post(['/workspace/:guildId/submissions/:submissionId/review', '/api/workspace/:guildId/submissions/:submissionId/review'], async (req, res) => {
     try {
       const { guildId, submissionId } = req.params;
       const { action, notes } = req.body || {};
-      const user = req.dashboardSession?.user || req.session?.user;
-      const check = checkFormManagerAccess(guildId, user);
+      const session = req.dashboardSession || req.session;
+      const check = await checkFormManagerAccess(guildId, session);
       if (!check.ok) return res.status(check.status).json({ error: check.error });
 
-      const result = await reviewApplication(submissionId, guildId, user, action, notes);
+      const result = await reviewApplication(submissionId, guildId, session.user, action, notes);
       res.json(result);
     } catch (err) {
       res.status(400).json({ error: err.message });
@@ -6215,7 +6298,7 @@ export function createDashboardRouter() {
   });
 
   // 6. Public Form Resolution: GET /api/public/forms/:serverIdentifier/:formSlug
-  router.get('/api/public/forms/:serverIdentifier/:formSlug', (req, res) => {
+  router.get(['/public/forms/:serverIdentifier/:formSlug', '/api/public/forms/:serverIdentifier/:formSlug'], (req, res) => {
     const { serverIdentifier, formSlug } = req.params;
     const resolved = resolvePublicForm(serverIdentifier, formSlug);
     if (!resolved) {
@@ -6239,7 +6322,7 @@ export function createDashboardRouter() {
   });
 
   // 7. Public Application Submission: POST /api/public/forms/:formId/submit
-  router.post('/api/public/forms/:formId/submit', async (req, res) => {
+  router.post(['/public/forms/:formId/submit', '/api/public/forms/:formId/submit'], async (req, res) => {
     try {
       const { formId } = req.params;
       const { answers } = req.body || {};
@@ -6260,7 +6343,7 @@ export function createDashboardRouter() {
   });
 
   // 8. Public Form Report: POST /api/public/forms/:formId/report
-  router.post('/api/public/forms/:formId/report', (req, res) => {
+  router.post(['/public/forms/:formId/report', '/api/public/forms/:formId/report'], (req, res) => {
     try {
       const { formId } = req.params;
       const { reason, details } = req.body || {};
@@ -6274,7 +6357,7 @@ export function createDashboardRouter() {
   });
 
   // 9. My Applications: GET /api/applications/my
-  router.get('/api/applications/my', (req, res) => {
+  router.get(['/applications/my', '/api/applications/my'], (req, res) => {
     const user = req.dashboardSession?.user || req.session?.user;
     if (!user || !user.id) {
       return res.status(401).json({ error: 'Please sign in to view your applications.' });
@@ -8429,7 +8512,6 @@ export function createDashboardRouter() {
           embeds: [{
             title: '🤝 ConnectingERLC Partnership Webhook Connected',
             description: `Automated partnership announcements for **${guildName || 'your community'}** will be broadcasted here.`,
-            color: 0xF97316,
             footer: { text: 'ConnectingERLC Automated Alliances' },
             timestamp: new Date().toISOString()
           }]

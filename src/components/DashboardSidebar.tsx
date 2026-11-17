@@ -38,6 +38,8 @@ import {
   FileText,
 } from 'lucide-react';
 
+export const SIDEBAR_BOOSTS_CATEGORY_TITLE = 'Boosts';
+
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -479,11 +481,11 @@ export function DashboardSidebar({
         ],
       },
       {
-        label: 'Premium',
+        label: SIDEBAR_BOOSTS_CATEGORY_TITLE,
         items: [
           {
-            label: 'Premium',
-            href: `/dashboard/${currentGuildId}/premium`,
+            label: 'Boosts',
+            href: `/dashboard/${currentGuildId}/boosts`,
             icon: Sparkles,
           },
         ],

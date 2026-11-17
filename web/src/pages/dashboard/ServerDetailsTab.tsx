@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { api } from '@/lib/api';
+import { api, apiFetch } from '@/lib/api';
 import type { DiscordGuild, WorkspaceBot, WorkspaceCustomizations } from '@/types';
 
 interface ServerDetailsTabProps {
@@ -245,7 +245,7 @@ export function ServerDetailsTab({
     if (!candidate || !guildId) return;
     setClaimingCustomUrl(true);
     try {
-      const res = await fetch(`/api/workspace/${guildId}/custom-url`, {
+      const res = await apiFetch(`/api/workspace/${guildId}/custom-url`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ customUrl: candidate })

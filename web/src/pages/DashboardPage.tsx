@@ -36,6 +36,7 @@ import { HistoryTab } from './dashboard/HistoryTab';
 import { TransferTab } from './dashboard/TransferTab';
 import { UptimeTab } from './dashboard/UptimeTab';
 import { PremiumTab } from './dashboard/PremiumTab';
+import { BoostsTab } from './dashboard/BoostsTab';
 import { ChangelogTab } from './dashboard/ChangelogTab';
 import { ServerDetailsTab } from './dashboard/ServerDetailsTab';
 import { BotManagementTab } from './dashboard/BotManagementTab';
@@ -65,6 +66,7 @@ const VALID_DASHBOARD_TABS = new Set([
   'partnerships',
   'forms',
   'applications',
+  'boosts',
   'premium',
   'shop',
   'server-shop',
@@ -772,7 +774,9 @@ export function DashboardPage() {
       leaderboard: 'Leaderboard',
       joins: 'My joins',
       partnerships: 'Partnerships',
-      premium: 'Premium',
+      boosts: 'Boosts',
+      shop: 'Boosts',
+      premium: 'Boosts',
       history: 'Credit history',
       discord: 'Discord connection',
       'discord-connection': 'Discord connection',
@@ -1177,25 +1181,17 @@ export function DashboardPage() {
             </TabErrorBoundary>
           )}
 
-          {activeTabKey === 'premium' && (
-            <TabErrorBoundary tabTitle="Premium">
-              <PremiumTab
+          {(activeTabKey === 'boosts' || activeTabKey === 'premium' || activeTabKey === 'shop' || activeTabKey === 'server-shop') && (
+            <TabErrorBoundary tabTitle="Boosts">
+              <BoostsTab
+                currentGuildId={currentGuildId}
                 guild={selectedGuild}
                 workspace={workspace}
                 config={config}
-                onNavigateTab={(t) => navigate(`/dashboard/${currentGuildId}/${t}`)}
-                addToast={addToast}
-              />
-            </TabErrorBoundary>
-          )}
-
-          {activeTabKey === 'shop' && (
-            <TabErrorBoundary tabTitle="Server shop">
-              <ShopTab
-                currentGuildId={currentGuildId}
                 serverName={selectedGuild?.name || 'Server'}
+                initialSubTab={activeTabKey === 'premium' ? 'premium' : 'shop'}
                 onNavigateTab={(t) => navigate(`/dashboard/${currentGuildId}/${t}`)}
-                addToast={(t: any) => addToast(t.type || 'info', t.title, t.description || '')}
+                addToast={(variant, title, body = '') => addToast(variant, title, body)}
               />
             </TabErrorBoundary>
           )}

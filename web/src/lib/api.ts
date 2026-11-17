@@ -1,6 +1,9 @@
 import type { DiscordGuild, DiscordUser, WorkspaceBot, LiveErlcServer, WorkspaceCustomizations } from '../types';
 
 let csrfToken = '';
+try {
+  csrfToken = sessionStorage.getItem('erlc_csrf_token') || '';
+} catch {}
 
 export function getDiscordLoginUrl(): string {
   // The backend builds the Discord authorize URL so the OAuth state and server-membership check apply.
@@ -9,26 +12,82 @@ export function getDiscordLoginUrl(): string {
 
 export function setCsrfToken(token: string) {
   csrfToken = token;
+  try {
+    sessionStorage.setItem('erlc_csrf_token', token);
+  } catch {}
 }
 
-export async function api<T>(path: string, init: RequestInit = {}, isRetry = false): Promise<T> {
+export function getCsrfToken(): string {
+  return csrfToken;
+}
+
+/**
+ * Shared API Fetch Wrapper (Item 1a & 1b)
+ * Used across the dashboard for all API operations:
+ * - Ensures credentials: 'include'
+ * - Injects X-CSRF-Token on state-changing requests (POST, PUT, PATCH, DELETE)
+ * - Normalizes URL path (adds /api prefix if relative without /api)
+ * - Safely verifies response Content-Type (throws clear error if HTML instead of JSON)
+ */
+export async function apiFetch(input: string | URL, init: RequestInit = {}): Promise<Response> {
   const method = (init.method || 'GET').toUpperCase();
   const headers = new Headers(init.headers);
   headers.set('Accept', 'application/json');
-  if (init.body && !(init.body instanceof FormData)) {
+
+  if (init.body && !(init.body instanceof FormData) && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json');
   }
-  if (!['GET', 'HEAD', 'OPTIONS'].includes(method) && csrfToken) {
-    headers.set('X-CSRF-Token', csrfToken);
+
+  // Ensure CSRF token is attached for state-changing requests
+  if (!['GET', 'HEAD', 'OPTIONS'].includes(method)) {
+    let token = csrfToken;
+    if (!token) {
+      try {
+        token = sessionStorage.getItem('erlc_csrf_token') || '';
+      } catch {}
+    }
+    if (!token) {
+      try {
+        const meRes = await fetch('/api/auth/me', { credentials: 'include' });
+        if (meRes.ok) {
+          const meData = await meRes.json();
+          if (meData?.csrfToken) {
+            token = meData.csrfToken;
+            setCsrfToken(token);
+          }
+        }
+      } catch {}
+    }
+    if (token) {
+      headers.set('X-CSRF-Token', token);
+    }
   }
 
-  const normalizedPath = path.startsWith('/api') ? path : `/api${path}`;
-  const response = await fetch(normalizedPath, {
+  const rawUrl = typeof input === 'string' ? input : input.toString();
+  let normalizedUrl = rawUrl;
+  if (!rawUrl.startsWith('http') && !rawUrl.startsWith('/api') && !rawUrl.startsWith('/auth')) {
+    normalizedUrl = `/api${rawUrl.startsWith('/') ? '' : '/'}${rawUrl}`;
+  }
+
+  const res = await fetch(normalizedUrl, {
     ...init,
     method,
     headers,
     credentials: 'include'
   });
+
+  // Check Content-Type: If non-OK and not JSON, throw human-readable error
+  const contentType = res.headers.get('content-type') || '';
+  if (!res.ok && !contentType.includes('application/json')) {
+    throw new Error(`Server returned unexpected ${res.status} response (${contentType.split(';')[0] || 'non-JSON'}).`);
+  }
+
+  return res;
+}
+
+export async function api<T>(path: string, init: RequestInit = {}, isRetry = false): Promise<T> {
+  const method = (init.method || 'GET').toUpperCase();
+  const response = await apiFetch(path, init);
 
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {

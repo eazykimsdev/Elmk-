@@ -189,6 +189,10 @@ app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 const dashboardRouter = createDashboardRouter();
 app.use('/api', dashboardRouter);
+app.use('/workspace', (req, res, next) => {
+  req.url = '/workspace' + (req.url === '/' ? '' : req.url);
+  dashboardRouter(req, res, next);
+});
 app.use('/auth/discord', createDiscordCallbackRouter());
 
 // Discovery invite redirect: connectingerlc.xyz/discovery/:serverId/invite
@@ -225,6 +229,11 @@ app.get('/servers/:serverId', (req, res, next) => {
 
 // /api/health, /api/status, Discord login and the dashboard settings all live in web/api.js.
 
+// ─── API 404 HANDLER: API routes must ALWAYS return JSON and NEVER index.html ──
+app.use(['/api', '/workspace'], (req, res) => {
+  res.status(404).json({ error: 'Endpoint not found', path: req.originalUrl || req.path });
+});
+
 // ─── SERVE FRONTEND STATIC FILES IN PRODUCTION ──────────────────────────────
 const candidatePaths = [
   path.join(__dirname, 'dist'),
@@ -239,7 +248,7 @@ console.log('[CONNECTINGERLC WEB] Serving frontend from:', webDistPath || 'NOT F
 if (webDistPath) {
   app.use(express.static(webDistPath));
   app.use((req, res, next) => {
-    if (req.method === 'GET' && !req.path.startsWith('/api') && !req.path.startsWith('/auth')) {
+    if (req.method === 'GET' && !req.path.startsWith('/api') && !req.path.startsWith('/auth') && !req.path.startsWith('/workspace')) {
       return res.sendFile(path.join(webDistPath, 'index.html'));
     }
     next();
