@@ -1181,14 +1181,7 @@ export function DashboardPage() {
           )}
 
           {(activeTabKey === 'forms' || activeTabKey === 'applications') && (
-            <TabErrorBoundary tabTitle="Applications & Forms">
-              <FormsTab
-                currentGuildId={currentGuildId}
-                serverName={selectedGuild?.name || 'Server'}
-                customUrl={(workspace as any)?.customUrl || null}
-                addToast={(t: any) => addToast(t.type || 'info', t.title, t.description || '')}
-              />
-            </TabErrorBoundary>
+            <UnderConstructionPage embedded />
           )}
 
           {(activeTabKey === 'discord' || activeTabKey === 'bot') && (
