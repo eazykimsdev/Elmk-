@@ -47,6 +47,7 @@ import { RecruitsTab } from './dashboard/RecruitsTab';
 import { ShopTab } from './dashboard/ShopTab';
 import { FormsTab } from './dashboard/FormsTab';
 import { NotFoundPage } from './NotFoundPage';
+import { UnderConstructionPage } from './UnderConstructionPage';
 import { AdminPortalPage } from './AdminPortalPage';
 import { ServerProfileModal } from '@/components/ServerProfileModal';
 import { TabErrorBoundary } from '@/components/TabErrorBoundary';
@@ -1082,13 +1083,7 @@ export function DashboardPage() {
           )}
 
           {(activeTabKey === 'details' || activeTabKey === 'server-page') && (
-            <ServerDetailsTab
-              guild={selectedGuild}
-              workspace={workspace}
-              config={config}
-              onNavigateTab={(t) => navigate(`/dashboard/${currentGuildId}/${t}`)}
-              addToast={addToast}
-            />
+            <UnderConstructionPage embedded />
           )}
 
           {activeTabKey === 'import' && (
@@ -1182,18 +1177,7 @@ export function DashboardPage() {
           )}
 
           {(activeTabKey === 'boosts' || activeTabKey === 'premium' || activeTabKey === 'shop' || activeTabKey === 'server-shop') && (
-            <TabErrorBoundary tabTitle="Boosts">
-              <BoostsTab
-                currentGuildId={currentGuildId}
-                guild={selectedGuild}
-                workspace={workspace}
-                config={config}
-                serverName={selectedGuild?.name || 'Server'}
-                initialSubTab={activeTabKey === 'premium' ? 'premium' : 'shop'}
-                onNavigateTab={(t) => navigate(`/dashboard/${currentGuildId}/${t}`)}
-                addToast={(variant, title, body = '') => addToast(variant, title, body)}
-              />
-            </TabErrorBoundary>
+            <UnderConstructionPage embedded />
           )}
 
           {(activeTabKey === 'forms' || activeTabKey === 'applications') && (
