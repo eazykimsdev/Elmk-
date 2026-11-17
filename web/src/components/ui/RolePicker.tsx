@@ -71,11 +71,17 @@ export function RolePicker({
     return roleList.find((r) => String(r.id) === String(value));
   }, [roleList, value]);
 
+  const assignableRoles = useMemo(() => {
+    return roleList.filter((r) => r.belowBot !== false && !r.managed);
+  }, [roleList]);
+
+  const hiddenCount = Math.max(0, roleList.length - assignableRoles.length);
+
   const filteredRoles = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return roleList;
-    return roleList.filter((r) => r.name.toLowerCase().includes(q));
-  }, [roleList, search]);
+    if (!q) return assignableRoles;
+    return assignableRoles.filter((r) => r.name.toLowerCase().includes(q));
+  }, [assignableRoles, search]);
 
   const isSelectedRoleAboveBot = selectedRole && selectedRole.belowBot === false;
 
@@ -224,6 +230,12 @@ export function RolePicker({
                 })
               )}
             </div>
+            {/* Explanation for hidden roles */}
+            <div className="pt-1.5 px-2 border-t border-white/[0.06] text-[11px] text-zinc-500 leading-snug">
+              {hiddenCount > 0
+                ? `${hiddenCount} ${hiddenCount === 1 ? 'role is' : 'roles are'} hidden because the bot cannot assign roles above its own highest role or roles managed by another integration.`
+                : 'Roles above the bot or managed by another integration are hidden because Discord does not allow the bot to assign them.'}
+            </div>
           </Popover.Content>
         </Popover.Portal>
       </Popover.Root>
@@ -237,3 +249,4 @@ export function RolePicker({
     </div>
   );
 }
+

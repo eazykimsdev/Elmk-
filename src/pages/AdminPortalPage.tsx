@@ -5604,13 +5604,53 @@ export function AdminPortalPage() {
                     />
                   </div>
 
+                  <div className="space-y-2 pt-2 border-t border-white/[0.06]">
+                    <label className="text-xs font-medium text-zinc-300">Feature-Specific Maintenance (Selective)</label>
+                    <p className="text-[11px] text-zinc-400">
+                      Put individual features under construction if something goes wrong, without bringing down the full website:
+                    </p>
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      {[
+                        { id: 'server-page', label: 'Public Server Page' },
+                        { id: 'boosts', label: 'Boosts & Shop' },
+                        { id: 'forms', label: 'Applications & Forms' },
+                        { id: 'earn', label: 'Earn Credits Directory' },
+                        { id: 'partnerships', label: 'Partnerships' },
+                      ].map((feature) => {
+                        const isSelected = Array.isArray(maintenance.affectedServices) && maintenance.affectedServices.includes(feature.id);
+                        return (
+                          <button
+                            key={feature.id}
+                            type="button"
+                            onClick={() => {
+                              setMaintenance((m) => {
+                                const current = Array.isArray(m.affectedServices) ? m.affectedServices : [];
+                                const updated = isSelected
+                                  ? current.filter((id) => id !== feature.id)
+                                  : [...current, feature.id];
+                                return { ...m, affectedServices: updated };
+                              });
+                            }}
+                            className={`text-xs px-3 py-1.5 rounded-lg border font-medium transition-colors cursor-pointer ${
+                              isSelected
+                                ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                                : 'bg-[#0E0E11] text-zinc-400 border-white/[0.08] hover:text-zinc-200'
+                            }`}
+                          >
+                            {feature.label} {isSelected ? '(Under Maintenance)' : ''}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
                   <div className="pt-2">
                     <Button
                       onClick={() => handleSaveMaintenance()}
                       disabled={maintenanceSaving}
                       className="text-xs bg-white/10 hover:bg-white/15 text-white"
                     >
-                      Save Notice Changes
+                      Save Notice & Maintenance Changes
                     </Button>
                   </div>
                 </div>

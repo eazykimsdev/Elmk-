@@ -18,6 +18,7 @@ import { startPremiumReminderJob } from './premiumManager.js';
 import { runAutoBumps, checkBoostReminders } from './serverShopManager.js';
 import { checkVerificationExpiries } from './verificationManager.js';
 import { pruneExpiredSubmissions } from './formsManager.js';
+import { resolveCustomUrl } from './customUrlManager.js';
 import { restoreDataDir, startDataSync, seedDataDir } from './dataSync.js';
 import { runLegacyKeysMigration } from './scripts/migrate_strip_legacy_keys.mjs';
 
@@ -256,7 +257,60 @@ if (webDistPath) {
   app.use(express.static(webDistPath));
   app.use((req, res, next) => {
     if (req.method === 'GET' && !req.path.startsWith('/api') && !req.path.startsWith('/auth') && !req.path.startsWith('/workspace')) {
-      return res.sendFile(path.join(webDistPath, 'index.html'));
+      const indexHtmlPath = path.join(webDistPath, 'index.html');
+      try {
+        const cleanPath = req.path.replace(/^\/+|\/+$/g, '');
+        const parts = cleanPath.split('/');
+        let candidateSlug = null;
+        if ((parts[0] === 'servers' || parts[0] === 's') && parts[1]) {
+          candidateSlug = decodeURIComponent(parts[1]);
+        } else if (parts.length === 1 && parts[0] && !['login', 'dashboard', 'servers', 'changelog', 'terms', 'privacy', 'status', 'uptime', 'admin-portal', 'admin-panel', 'banned'].includes(parts[0].toLowerCase())) {
+          candidateSlug = decodeURIComponent(parts[0]);
+        }
+
+        if (candidateSlug && fs.existsSync(indexHtmlPath)) {
+          const customRec = resolveCustomUrl(candidateSlug);
+          const targetId = customRec ? customRec.serverId : candidateSlug;
+          const allServers = getPromotedServers(true);
+          const srv = allServers.find(s =>
+            String(s.id) === String(targetId) ||
+            String(s.guildId) === String(targetId) ||
+            (s.customUrl && s.customUrl.toLowerCase() === candidateSlug.toLowerCase())
+          );
+          if (srv) {
+            const esc = (str) => String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+            const origin = `${req.protocol}://${req.get('host') || 'connectingerlc.xyz'}`;
+            const title = `${srv.name} — ConnectingERLC`;
+            const members = Number(srv.memberCount || 0).toLocaleString();
+            const cat = srv.category || 'Roleplay Server';
+            const descSummary = (srv.summary || srv.description || '').replace(/[#*_`~>\[\]]/g, '').trim().slice(0, 160);
+            const description = `${members} members • ${cat}${descSummary ? ` — ${descSummary}` : ''}`;
+            const rawBanner = srv.bannerUrl ? (srv.bannerUrl.startsWith('http') ? srv.bannerUrl : `${origin}${srv.bannerUrl.startsWith('/') ? '' : '/'}${srv.bannerUrl}`) : '';
+            const rawIcon = srv.iconUrl || srv.icon || `${origin}/brand/logo.png`;
+            const ogImage = rawBanner || rawIcon;
+            const cardType = rawBanner ? 'summary_large_image' : 'summary';
+
+            const ogMeta = [
+              `<title>${esc(title)}</title>`,
+              `<meta property="og:type" content="website" />`,
+              `<meta property="og:site_name" content="ConnectingERLC" />`,
+              `<meta property="og:title" content="${esc(title)}" />`,
+              `<meta property="og:description" content="${esc(description)}" />`,
+              `<meta property="og:image" content="${esc(ogImage)}" />`,
+              `<meta name="twitter:card" content="${cardType}" />`,
+              `<meta name="twitter:title" content="${esc(title)}" />`,
+              `<meta name="twitter:description" content="${esc(description)}" />`,
+              `<meta name="twitter:image" content="${esc(ogImage)}" />`
+            ].join('\n    ');
+
+            let html = fs.readFileSync(indexHtmlPath, 'utf8');
+            html = html.replace(/<title>.*?<\/title>/i, ogMeta);
+            res.setHeader('Content-Type', 'text/html; charset=utf-8');
+            return res.send(html);
+          }
+        }
+      } catch {}
+      return res.sendFile(indexHtmlPath);
     }
     next();
   });

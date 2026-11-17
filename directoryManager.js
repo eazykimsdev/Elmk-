@@ -2,10 +2,10 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { randomBytes } from 'node:crypto';
-import { getUserLedgerSummary, getServerLedgerSummary, recordLedgerTransaction, appendServerActivity, REWARD_DEBT_FLOOR, countDailyBumpRewards } from './ledgerManager.js';
+import { getUserLedgerSummary, getServerLedgerSummary, recordLedgerTransaction, appendServerActivity, REWARD_DEBT_FLOOR, countDailyBumpRewards, loadLedgerData } from './ledgerManager.js';
 import { cleanSqlReplace } from './markdownSanitizer.js';
 import { findActiveJoinIntent, markJoinIntentConverted } from './inviteValidator.js';
-import { getAdminSettings } from './premiumManager.js';
+import { getAdminSettings, isServerPremium } from './premiumManager.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -46,13 +46,15 @@ export function savePendingJoins(list) {
 export function getJoinSettings() {
   const adminSettings = getAdminSettings();
   const reward = typeof adminSettings.join_reward_credits === 'number' ? adminSettings.join_reward_credits : 2;
+  const premiumReward = typeof adminSettings.premium_join_reward_credits === 'number' ? adminSettings.premium_join_reward_credits : 5;
+  const dailyCapPerServer = typeof adminSettings.daily_join_reward_cap_per_server === 'number' ? adminSettings.daily_join_reward_cap_per_server : 50;
   const minStayMs = typeof adminSettings.join_minimum_stay_seconds === 'number'
     ? adminSettings.join_minimum_stay_seconds * 1000
     : 120000;
   const retentionMs = typeof adminSettings.join_retention_window_hours === 'number'
     ? adminSettings.join_retention_window_hours * 3600000
     : 72 * 3600000;
-  return { reward, minStayMs, retentionMs };
+  return { reward, premiumReward, dailyCapPerServer, minStayMs, retentionMs };
 }
 
 export function recordBotMemberJoin(guildId, userId, options = {}) {
@@ -108,7 +110,13 @@ export function recordBotMemberJoin(guildId, userId, options = {}) {
   if (existingPending) return existingPending;
 
   const joinSettings = getJoinSettings();
-  const rewardAmt = typeof options.reward === 'number' ? options.reward : (server.rewardCoins ? Number(server.rewardCoins) : joinSettings.reward);
+  const isPremServer = isServerPremium(server);
+  const defaultReward = isPremServer ? joinSettings.premiumReward : joinSettings.reward;
+  const rewardAmt = typeof options.reward === 'number'
+    ? options.reward
+    : (isPremServer
+        ? Math.max(Number(server.rewardCoins || 0), joinSettings.premiumReward)
+        : (server.rewardCoins ? Number(server.rewardCoins) : defaultReward));
   const now = Date.now();
   const stayRequiredMs = typeof options.stayRequiredMs === 'number' ? Math.max(0, options.stayRequiredMs) : joinSettings.minStayMs;
 
@@ -296,15 +304,46 @@ export async function processMaturePendingJoins(botToken = null) {
       continue;
     }
 
-    const userOwnedServer = data.servers.find(s => String(s.ownerId) === p.userId && String(s.id) !== p.serverId);
+    const userOwnedServer = data.servers.find(s => (String(s.ownerId) === p.userId || String(s.owner_discord_id) === p.userId) && String(s.id) !== p.serverId);
     const recipientServerId = String(p.recipientServerId || userOwnedServer?.id || p.serverId);
     const recipientServer = data.servers.find(s => String(s.id) === recipientServerId || String(s.guildId) === recipientServerId);
     const joinedServer = data.servers.find(s => String(s.id) === p.serverId || String(s.guildId) === p.serverId);
+
+    // Check daily join reward cap per server (UTC day)
+    const joinSettings = getJoinSettings();
+    const todayUtcStart = new Date();
+    todayUtcStart.setUTCHours(0, 0, 0, 0);
+    const todayStartMs = todayUtcStart.getTime();
+    const ledgerData = loadLedgerData();
+    const earnedTodayForServer = (ledgerData?.transactions || [])
+      .filter(tx => (String(tx.serverId) === recipientServerId || String(tx.guildId) === recipientServerId) && tx.reason === 'verified_join' && Number(tx.timestamp || 0) >= todayStartMs)
+      .reduce((sum, tx) => sum + Number(tx.amount || 0), 0);
 
     // Award credits to the server as one append-only ledger entry, once only
     p.status = 'completed';
     p.completedAt = now;
     p.recipientServerId = recipientServerId;
+
+    if (earnedTodayForServer + Number(p.reward || 0) > joinSettings.dailyCapPerServer) {
+      console.log(`[JOIN CAP] Daily join reward cap (${joinSettings.dailyCapPerServer} cr) reached for server ${recipientServerId}. Skipping credit payout.`);
+      data.userJoinRecords[joinKey] = {
+        userId: p.userId,
+        serverId: p.serverId,
+        recipientServerId,
+        joinedAt: new Date(p.joinedAt).toISOString(),
+        stayEndsAt: new Date(now).toISOString(),
+        completedAt: now,
+        stayCompleted: true,
+        rewarded: false,
+        capReached: true,
+        status: 'joined',
+        reward: 0
+      };
+      if (joinedServer) {
+        joinedServer.verifiedJoins = (Number(joinedServer.verifiedJoins) || 0) + 1;
+      }
+      continue;
+    }
 
     try {
       recordLedgerTransaction({
@@ -539,10 +578,13 @@ function getInviteStatusRank(server) {
   return 1; // 'unknown' or unverified
 }
 
-/** Get all promoted servers sorted with valid invites first, unknown next, expired last */
+/** Get all promoted servers sorted with valid invites first, featured spots next, then recent bumps */
 export function getPromotedServers(includeHidden = false) {
   const data = loadDirectoryData();
   const bannedIds = getBannedUserIds();
+  const now = Date.now();
+  const joinSettings = getJoinSettings();
+
   const activeServers = data.servers.filter(s => {
     if (!s) return false;
     if (s.ownerId && bannedIds.has(String(s.ownerId))) return false;
@@ -550,12 +592,29 @@ export function getPromotedServers(includeHidden = false) {
       return isServerListable(s, bannedIds);
     }
     return true;
+  }).map(s => {
+    const isPrem = isServerPremium(s, now);
+    const isFeatured = Boolean(s.boosts?.featured_spot?.activeUntil && Number(s.boosts.featured_spot.activeUntil) > now);
+    const isHighlighted = Boolean(s.boosts?.listing_highlight?.activeUntil && Number(s.boosts.listing_highlight.activeUntil) > now);
+    return {
+      ...s,
+      is_premium: isPrem,
+      isFeaturedSpot: isFeatured,
+      isHighlighted,
+      rewardCoins: isPrem
+        ? Math.max(Number(s.rewardCoins || 0), joinSettings.premiumReward)
+        : (Number(s.rewardCoins) || joinSettings.reward)
+    };
   });
+
   return activeServers.sort((a, b) => {
     const rankA = getInviteStatusRank(a);
     const rankB = getInviteStatusRank(b);
     if (rankA !== rankB) {
       return rankA - rankB;
+    }
+    if (a.isFeaturedSpot !== b.isFeaturedSpot) {
+      return a.isFeaturedSpot ? -1 : 1;
     }
     const aTime = a.lastBumpedAt || a.createdAt || 0;
     const bTime = b.lastBumpedAt || b.createdAt || 0;
@@ -693,7 +752,19 @@ export function upsertPromotedServer(serverData, owner) {
     hidden: serverData.hidden !== undefined ? Boolean(serverData.hidden) : (existing?.hidden !== undefined ? Boolean(existing.hidden) : false),
     delisted: serverData.delisted !== undefined ? Boolean(serverData.delisted) : (existing?.delisted !== undefined ? Boolean(existing.delisted) : false),
     verified: serverData.verified !== undefined ? Boolean(serverData.verified) : (existing?.verified !== undefined ? Boolean(existing.verified) : false),
-    reviews: Array.isArray(existing?.reviews) ? existing.reviews : []
+    reviews: Array.isArray(existing?.reviews) ? existing.reviews : [],
+    pageSections: Array.isArray(serverData.pageSections) ? serverData.pageSections : (existing?.pageSections || ['about', 'erlc', 'reviews']),
+    sectionVisibility: serverData.sectionVisibility && typeof serverData.sectionVisibility === 'object' ? serverData.sectionVisibility : (existing?.sectionVisibility || { about: true, erlc: true, reviews: true, badges: true, staff: false, partners: false }),
+    socialLinks: serverData.socialLinks && typeof serverData.socialLinks === 'object' ? serverData.socialLinks : (existing?.socialLinks || {}),
+    staffList: Array.isArray(serverData.staffList) ? serverData.staffList : (Array.isArray(existing?.staffList) ? existing.staffList : []),
+    partnerList: Array.isArray(serverData.partnerList) ? serverData.partnerList : (Array.isArray(existing?.partnerList) ? existing.partnerList : []),
+    showStaffList: serverData.showStaffList !== undefined ? Boolean(serverData.showStaffList) : Boolean(existing?.showStaffList),
+    showPartnerList: serverData.showPartnerList !== undefined ? Boolean(serverData.showPartnerList) : Boolean(existing?.showPartnerList),
+    showCredits: serverData.showCredits !== undefined ? Boolean(serverData.showCredits) : (existing?.showCredits !== undefined ? Boolean(existing.showCredits) : true),
+    boosts: existing?.boosts || {},
+    premiumUntil: existing?.premiumUntil || null,
+    is_premium: existing?.is_premium || false,
+    advertisers: Array.isArray(existing?.advertisers) ? existing.advertisers : []
   };
 
   if (existingIndex >= 0) {
@@ -1363,5 +1434,63 @@ export function getUserJoinedCommunities(userId) {
   results.sort((a, b) => (b.joinedAt || 0) - (a.joinedAt || 0));
   return results;
 }
+
+/**
+ * Compute real 7-day and 30-day owner analytics (page views, join clicks, bumps)
+ * strictly from real recorded activity, join intents, and ledger tables.
+ * Never returns fake or placeholder numbers.
+ */
+export function getServerAnalytics(serverId, nowMs = Date.now()) {
+  const sid = String(serverId || '');
+  if (!sid) {
+    return {
+      last7Days: { pageViews: 0, joinClicks: 0, bumps: 0 },
+      last30Days: { pageViews: 0, joinClicks: 0, bumps: 0 }
+    };
+  }
+
+  const window7d = nowMs - 7 * 86400 * 1000;
+  const window30d = nowMs - 30 * 86400 * 1000;
+
+  let activityList = [];
+  try {
+    const actFile = path.join(DATA_DIR, 'server_activity.json');
+    if (fs.existsSync(actFile)) {
+      const parsed = JSON.parse(fs.readFileSync(actFile, 'utf8') || '{}');
+      if (Array.isArray(parsed?.[sid])) {
+        activityList = parsed[sid];
+      }
+    }
+  } catch {}
+
+  let joinIntents = [];
+  try {
+    const intentsFile = path.join(DATA_DIR, 'join_intents.json');
+    if (fs.existsSync(intentsFile)) {
+      const parsed = JSON.parse(fs.readFileSync(intentsFile, 'utf8') || '[]');
+      if (Array.isArray(parsed)) {
+        joinIntents = parsed.filter(i => String(i.serverId) === sid);
+      }
+    }
+  } catch {}
+
+  const countInWindow = (sinceMs) => {
+    const pageViews = activityList.filter(a => a.type === 'page_view' && Number(a.timestamp || 0) >= sinceMs).length;
+    const actJoinClicks = activityList.filter(a => a.type === 'join_click' && Number(a.timestamp || 0) >= sinceMs).length;
+    const intentClicks = joinIntents.filter(i => {
+      const ts = typeof i.createdAt === 'number' ? i.createdAt : new Date(i.createdAt || 0).getTime();
+      return Number.isFinite(ts) && ts >= sinceMs;
+    }).length;
+    const joinClicks = Math.max(actJoinClicks, intentClicks);
+    const bumps = activityList.filter(a => a.type === 'bump' && Number(a.timestamp || 0) >= sinceMs).length;
+    return { pageViews, joinClicks, bumps };
+  };
+
+  return {
+    last7Days: countInWindow(window7d),
+    last30Days: countInWindow(window30d)
+  };
+}
+
 
 

@@ -314,6 +314,11 @@ export function EarnCoinsTab({
       const rankA = getRank(a);
       const rankB = getRank(b);
       if (rankA !== rankB) return rankA - rankB;
+      if (rankA !== 2) {
+        const featA = (a as any).isFeaturedSpot ? 1 : 0;
+        const featB = (b as any).isFeaturedSpot ? 1 : 0;
+        if (featA !== featB) return featB - featA;
+      }
       const timeA = Number(a.lastBumpedAt || a.createdAt || 0);
       const timeB = Number(b.lastBumpedAt || b.createdAt || 0);
       return timeB - timeA;
@@ -514,6 +519,61 @@ export function EarnCoinsTab({
         </div>
       ) : (
         <div className="space-y-6">
+          {/* Featured spot row */}
+          {filteredServers.some((s) => (s as any).isFeaturedSpot) && (
+            <div className="space-y-2.5">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
+                  Featured
+                </h2>
+              </div>
+              <div className="grid grid-cols-1 min-[900px]:grid-cols-2 gap-4">
+                {filteredServers
+                  .filter((s) => (s as any).isFeaturedSpot)
+                  .map((server) => {
+                    const isOwnServer = currentGuildId && String(server.id) === String(currentGuildId);
+                    const userJoin = userJoins[server.id];
+                    const isVerifying = Boolean(userJoin && userJoin.status === 'verifying');
+                    const isVerified = Boolean(userJoin && (userJoin.status === 'verified' || userJoin.status === 'joined'));
+                    const iconUrl = getResolvedServerIcon(server);
+                    const cardData: DirectoryServerData = {
+                      id: server.id,
+                      name: server.name,
+                      icon: iconUrl,
+                      iconUrl: iconUrl,
+                      category: server.category,
+                      description: server.description,
+                      summary: server.summary,
+                      tags: server.tags,
+                      bannerUrl: server.bannerUrl,
+                      memberCount: server.memberCount,
+                      verified: server.verified,
+                      is_premium: (server as any).is_premium,
+                      isFeaturedSpot: true,
+                      isHighlighted: (server as any).isHighlighted,
+                      invite_status: (server as any).invite_status,
+                      bot_in_guild: (server as any).bot_in_guild,
+                      inviteUrl: server.inviteUrl,
+                      rewardCoins: server.rewardCoins,
+                      erlc: (server as any).erlc || null,
+                    };
+                    return (
+                      <DirectoryCard
+                        key={`featured-${server.id}`}
+                        server={cardData}
+                        rewardCoins={server.rewardCoins || 2}
+                        isOwnServer={Boolean(isOwnServer)}
+                        isJoined={isVerified}
+                        isVerifying={isVerifying}
+                        onJoin={handleJoinServer}
+                        onClick={() => openServerProfile(server.id, server)}
+                      />
+                    );
+                  })}
+              </div>
+            </div>
+          )}
+
           {/* Restored 2-column Grid (1 column on mobile, 2 from 900px) - 10 rows per page */}
           <div className="grid grid-cols-1 min-[900px]:grid-cols-2 gap-4">
             {paginatedServers.map((server) => {
@@ -535,13 +595,14 @@ export function EarnCoinsTab({
                 bannerUrl: server.bannerUrl,
                 memberCount: server.memberCount,
                 verified: server.verified,
+                is_premium: (server as any).is_premium,
+                isFeaturedSpot: (server as any).isFeaturedSpot,
+                isHighlighted: (server as any).isHighlighted,
+                invite_status: (server as any).invite_status,
+                bot_in_guild: (server as any).bot_in_guild,
                 inviteUrl: server.inviteUrl,
                 rewardCoins: server.rewardCoins,
-                erlc: server.joinCode ? {
-                  connected: true,
-                  currentPlayers: Math.min(24, Math.floor((server.memberCount || 10) / 4)),
-                  maxPlayers: 32,
-                } : null,
+                erlc: (server as any).erlc || null,
               };
 
               return (

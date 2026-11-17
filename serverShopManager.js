@@ -13,36 +13,62 @@ const __dirname = path.dirname(__filename);
 const DATA_DIR = process.env.DATA_DIR || path.join(process.cwd(), 'data');
 const SHOP_ITEMS_FILE = path.join(DATA_DIR, 'shop_items.json');
 
-// Default initial items living in DB / admin settings
+// Default initial items living in DB / admin settings (Item 4)
 export const DEFAULT_SHOP_ITEMS = [
-  {
-    id: 'item_2x_bumps',
-    name: '2x bumps, 1 day',
-    effect: 'double_bumps',
-    durationMs: 24 * 60 * 60 * 1000, // 24 hours
-    price: 50,
-    isActive: true,
-    description: 'Halves your server bump cooldown from 1 hour to 30 minutes for 24 hours.'
-  },
-  {
-    id: 'item_premium_1m',
-    name: 'Premium, 1 month',
-    effect: 'premium',
-    durationMs: 30 * 24 * 60 * 60 * 1000, // 30 days
-    price: 500, // Configurable in settings; user sets price without guessing
-    isActive: true,
-    description: '30 days of premium directory placement, elevated advertising channels, and perks.'
-  },
   {
     id: 'item_auto_bump_1d',
     name: 'Auto bump, 1 day',
     effect: 'auto_bump',
     durationMs: 24 * 60 * 60 * 1000, // 24 hours
-    price: 100,
+    price: 15,
     isActive: true,
-    description: 'The bot automatically bumps your server the instant cooldown ends for 24 hours (gives 0 credits).'
+    description: 'The bot automatically bumps your server when the cooldown ends for 24 hours (gives 0 credits).'
+  },
+  {
+    id: 'item_featured_spot_1d',
+    name: 'Featured spot on Earn credits, 24 hours',
+    effect: 'featured_spot',
+    durationMs: 24 * 60 * 60 * 1000, // 24 hours
+    price: 40,
+    isActive: true,
+    description: 'Places your community at the top of the Earn credits directory for 24 hours.'
+  },
+  {
+    id: 'item_listing_highlight_7d',
+    name: 'Listing highlight, 7 days',
+    effect: 'listing_highlight',
+    durationMs: 7 * 24 * 60 * 60 * 1000, // 7 days
+    price: 30,
+    isActive: true,
+    description: 'Highlights your community card in the directory with an accent border for 7 days.'
+  },
+  {
+    id: 'item_extra_advertiser_30d',
+    name: 'Extra advertiser seat, 30 days',
+    effect: 'extra_advertiser',
+    durationMs: 30 * 24 * 60 * 60 * 1000, // 30 days
+    price: 20,
+    isActive: true,
+    description: 'Unlocks an additional advertiser slot for your community for 30 days.'
   }
 ];
+
+function normalizeShopItemsList(loadedItems) {
+  const map = new Map();
+  for (const def of DEFAULT_SHOP_ITEMS) {
+    map.set(def.id, { ...def });
+  }
+  if (Array.isArray(loadedItems)) {
+    for (const it of loadedItems) {
+      if (!it || it.id === 'item_2x_bumps' || it.effect === 'double_bumps') continue;
+      if (it.id === 'item_auto_bump_1d' && Number(it.price) === 100) {
+        it.price = 15;
+      }
+      map.set(it.id, { ...(map.get(it.id) || {}), ...it });
+    }
+  }
+  return Array.from(map.values()).filter(it => it.id !== 'item_2x_bumps' && it.effect !== 'double_bumps' && it.id !== 'item_premium_1m');
+}
 
 function ensureShopFile() {
   if (!fs.existsSync(DATA_DIR)) {
@@ -60,7 +86,7 @@ export async function loadShopItems() {
     try {
       const res = await pool.query('SELECT * FROM shop_items ORDER BY id ASC');
       if (res.rows.length > 0) {
-        return res.rows.map(r => ({
+        const dbItems = res.rows.map(r => ({
           id: r.id,
           name: r.name,
           effect: r.effect,
@@ -69,6 +95,7 @@ export async function loadShopItems() {
           isActive: Boolean(r.is_active),
           description: r.description || ''
         }));
+        return normalizeShopItemsList(dbItems);
       }
     } catch (err) {
       // Table might not exist yet; will fall back to JSON
@@ -79,7 +106,9 @@ export async function loadShopItems() {
   try {
     const raw = fs.readFileSync(SHOP_ITEMS_FILE, 'utf8');
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed?.items) ? parsed.items : DEFAULT_SHOP_ITEMS;
+    const normalized = normalizeShopItemsList(parsed?.items);
+    fs.writeFileSync(SHOP_ITEMS_FILE, JSON.stringify({ items: normalized }, null, 2), 'utf8');
+    return normalized;
   } catch {
     return DEFAULT_SHOP_ITEMS;
   }
@@ -172,15 +201,23 @@ export function getServerActiveBoosts(serverId) {
     });
   }
 
-  // Check custom boosts (double_bumps, auto_bump)
+  // Check custom boosts (auto_bump, featured_spot, listing_highlight, extra_advertiser)
+  const BOOST_LABELS = {
+    auto_bump: 'Auto Bump',
+    featured_spot: 'Featured Spot on Earn Credits',
+    listing_highlight: 'Listing Highlight',
+    extra_advertiser: 'Extra Advertiser Seat'
+  };
   if (server.boosts && typeof server.boosts === 'object') {
     for (const [effect, b] of Object.entries(server.boosts)) {
+      if (effect === 'double_bumps' || effect === 'premium') continue;
       if (b && Number(b.activeUntil || 0) > now) {
         const leftMs = Number(b.activeUntil) - now;
-        const name = effect === 'double_bumps' ? '2x Bumps' : (effect === 'auto_bump' ? 'Auto Bump' : effect);
+        const name = BOOST_LABELS[effect] || effect;
         boosts.push({
           effect,
           name,
+          seats: effect === 'extra_advertiser' ? Number(b.seats || 1) : undefined,
           activeUntil: Number(b.activeUntil),
           remainingSeconds: Math.ceil(leftMs / 1000),
           formattedTimeLeft: formatDuration(leftMs),
@@ -282,8 +319,10 @@ export async function buyShopItem({
       const currentBoost = server.boosts[item.effect];
       const currentExpiry = Number(currentBoost?.activeUntil || 0);
       activeUntil = (currentExpiry > now ? currentExpiry : now) + durationMs;
+      const prevSeats = currentExpiry > now ? Number(currentBoost?.seats || 0) : 0;
       server.boosts[item.effect] = {
         activeUntil,
+        seats: item.effect === 'extra_advertiser' ? Math.max(1, prevSeats + 1) : undefined,
         reminderSent: false,
         purchasedAt: now,
       };

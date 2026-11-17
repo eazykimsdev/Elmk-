@@ -38,7 +38,13 @@ import {
   FileText,
 } from 'lucide-react';
 
-export const SIDEBAR_BOOSTS_CATEGORY_TITLE = 'Boosts';
+export const SIDEBAR_SHOP_NAV = {
+  category: 'Shop',
+  boosts: 'Boosts',
+  premium: 'Premium',
+} as const;
+
+export const SIDEBAR_BOOSTS_CATEGORY_TITLE = SIDEBAR_SHOP_NAV.category;
 
 import {
   DropdownMenu,
@@ -400,11 +406,6 @@ export function DashboardSidebar({
             icon: Megaphone,
           },
           {
-            label: 'Server shop',
-            href: `/dashboard/${currentGuildId}/shop`,
-            icon: ShoppingBag,
-          },
-          {
             label: 'Earn credits',
             href: `/dashboard/${currentGuildId}/earn`,
             icon: Coins,
@@ -481,11 +482,16 @@ export function DashboardSidebar({
         ],
       },
       {
-        label: SIDEBAR_BOOSTS_CATEGORY_TITLE,
+        label: SIDEBAR_SHOP_NAV.category,
         items: [
           {
-            label: 'Boosts',
+            label: SIDEBAR_SHOP_NAV.boosts,
             href: `/dashboard/${currentGuildId}/boosts`,
+            icon: ShoppingBag,
+          },
+          {
+            label: SIDEBAR_SHOP_NAV.premium,
+            href: `/dashboard/${currentGuildId}/premium`,
             icon: Sparkles,
           },
         ],

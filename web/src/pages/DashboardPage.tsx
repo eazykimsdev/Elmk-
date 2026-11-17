@@ -121,6 +121,50 @@ export function DashboardPage() {
   })();
   const currentGuildId = guildId || defaultSavedGuild || selectedGuild?.id || '';
 
+  // Maintenance & Selective Feature Under Construction Watcher
+  const [tabMaintenance, setTabMaintenance] = useState<{
+    active: boolean;
+    title?: string;
+    message?: string;
+    affectedServices?: string[];
+  } | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    fetch('/api/status')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!active || !data?.maintenance) return;
+        const m = data.maintenance;
+        const isMaint = Boolean(m.active === true || m.mode === 'maintenance' || m.maintenance_on === true);
+        if (isMaint || (Array.isArray(m.affectedServices) && m.affectedServices.length > 0)) {
+          setTabMaintenance({
+            active: isMaint,
+            title: m.title,
+            message: m.message,
+            affectedServices: Array.isArray(m.affectedServices) ? m.affectedServices : []
+          });
+        } else {
+          setTabMaintenance(null);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const isTabUnderMaintenance = (tabKey: string) => {
+    if (!tabMaintenance) return false;
+    const services = tabMaintenance.affectedServices || [];
+    if (tabKey === 'server-page' || tabKey === 'details') return services.includes('server-page');
+    if (tabKey === 'boosts' || tabKey === 'shop' || tabKey === 'server-shop' || tabKey === 'premium') return services.includes('boosts');
+    if (tabKey === 'forms' || tabKey === 'applications') return services.includes('forms');
+    if (tabKey === 'earn' || tabKey === 'earn-credits') return services.includes('earn');
+    if (tabKey === 'partnerships') return services.includes('partnerships');
+    return services.includes(tabKey);
+  };
+
   // Strict Auth Guard: Never allow viewing dashboard without signing in
   useEffect(() => {
     if (!authLoading && !auth.user) {
@@ -777,7 +821,9 @@ export function DashboardPage() {
       partnerships: 'Partnerships',
       boosts: 'Boosts',
       shop: 'Boosts',
-      premium: 'Boosts',
+      premium: 'Premium',
+      forms: 'Applications',
+      applications: 'Applications',
       history: 'Credit history',
       discord: 'Discord connection',
       'discord-connection': 'Discord connection',
@@ -827,13 +873,6 @@ export function DashboardPage() {
       onSignOut={handleSignOut}
     >
       {/* Dynamic PageHeader */}
-      {(activeTabKey === 'details' || activeTabKey === 'server-page') && (
-        <PageHeader
-          title="Server page"
-          description="How your server looks in the public directory."
-        />
-      )}
-
       {activeTabKey === 'earn' && (
         <PageHeader
           title="Earn credits"
@@ -1072,7 +1111,11 @@ export function DashboardPage() {
             </div>
           )}
 
-          {activeTabKey === 'overview' && (
+          {isTabUnderMaintenance(activeTabKey) ? (
+            <UnderConstructionPage embedded maintenance={tabMaintenance || undefined} />
+          ) : (
+            <>
+              {activeTabKey === 'overview' && (
             <OverviewTab
               guild={selectedGuild}
               workspace={workspace}
@@ -1083,7 +1126,13 @@ export function DashboardPage() {
           )}
 
           {(activeTabKey === 'details' || activeTabKey === 'server-page') && (
-            <UnderConstructionPage embedded />
+            <ServerDetailsTab
+              guild={selectedGuild}
+              workspace={workspace}
+              config={config}
+              onNavigateTab={(t) => navigate(`/dashboard/${currentGuildId}/${t}`)}
+              addToast={addToast}
+            />
           )}
 
           {activeTabKey === 'import' && (
@@ -1176,12 +1225,36 @@ export function DashboardPage() {
             </TabErrorBoundary>
           )}
 
-          {(activeTabKey === 'boosts' || activeTabKey === 'premium' || activeTabKey === 'shop' || activeTabKey === 'server-shop') && (
-            <UnderConstructionPage embedded />
+          {(activeTabKey === 'boosts' || activeTabKey === 'shop' || activeTabKey === 'server-shop') && (
+            <BoostsTab
+              currentGuildId={currentGuildId}
+              guild={selectedGuild}
+              workspace={workspace}
+              config={config}
+              serverName={selectedGuild?.name || 'Server'}
+              initialSubTab="shop"
+              onNavigateTab={(t) => navigate(`/dashboard/${currentGuildId}/${t}`)}
+              addToast={(v, t, b) => addToast(v, t, b || '')}
+            />
+          )}
+
+          {activeTabKey === 'premium' && (
+            <PremiumTab
+              guild={selectedGuild}
+              workspace={workspace}
+              config={config}
+              onNavigateTab={(t) => navigate(`/dashboard/${currentGuildId}/${t}`)}
+              addToast={addToast}
+            />
           )}
 
           {(activeTabKey === 'forms' || activeTabKey === 'applications') && (
-            <UnderConstructionPage embedded />
+            <FormsTab
+              currentGuildId={currentGuildId}
+              serverName={selectedGuild?.name || 'Server'}
+              customUrl={(config as any)?.customUrl || (workspace as any)?.customUrl || null}
+              addToast={addToast}
+            />
           )}
 
           {(activeTabKey === 'discord' || activeTabKey === 'bot') && (
@@ -1211,6 +1284,8 @@ export function DashboardPage() {
           )}
 
           {activeTabKey === 'changelog' && <ChangelogTab />}
+            </>
+          )}
         </main>
       </div>
 

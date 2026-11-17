@@ -21,6 +21,55 @@ export function getCsrfToken(): string {
   return csrfToken;
 }
 
+const nativeFetch = typeof window !== 'undefined' ? window.fetch.bind(window) : fetch;
+
+async function resolveCsrfToken(): Promise<string> {
+  if (csrfToken) return csrfToken;
+  try {
+    const stored = sessionStorage.getItem('erlc_csrf_token') || '';
+    if (stored) {
+      csrfToken = stored;
+      return stored;
+    }
+  } catch {}
+  try {
+    const meRes = await nativeFetch('/api/auth/me', { credentials: 'include' });
+    if (meRes.ok) {
+      const meData = await meRes.json();
+      if (meData?.csrfToken) {
+        setCsrfToken(meData.csrfToken);
+        return meData.csrfToken;
+      }
+    }
+  } catch {}
+  return '';
+}
+
+// Automatically attach X-CSRF-Token and credentials on any same-origin state-changing fetch call
+if (typeof window !== 'undefined' && !(window as any).__erlcFetchPatched) {
+  (window as any).__erlcFetchPatched = true;
+  window.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+    const rawUrl = typeof input === 'string' ? input : input instanceof URL ? input.toString() : (input as Request).url;
+    const isSameOrigin = rawUrl.startsWith('/') || (typeof window !== 'undefined' && rawUrl.startsWith(window.location.origin));
+    const method = (init?.method || (input instanceof Request ? input.method : 'GET') || 'GET').toUpperCase();
+
+    if (isSameOrigin && !['GET', 'HEAD', 'OPTIONS'].includes(method)) {
+      const headers = new Headers(init?.headers || (input instanceof Request ? input.headers : undefined));
+      if (!headers.has('X-CSRF-Token')) {
+        const token = await resolveCsrfToken();
+        if (token) headers.set('X-CSRF-Token', token);
+      }
+      return nativeFetch(input, {
+        ...init,
+        method,
+        headers,
+        credentials: init?.credentials || 'include'
+      });
+    }
+    return nativeFetch(input, init);
+  };
+}
+
 /**
  * Shared API Fetch Wrapper (Item 1a & 1b)
  * Used across the dashboard for all API operations:
@@ -40,24 +89,7 @@ export async function apiFetch(input: string | URL, init: RequestInit = {}): Pro
 
   // Ensure CSRF token is attached for state-changing requests
   if (!['GET', 'HEAD', 'OPTIONS'].includes(method)) {
-    let token = csrfToken;
-    if (!token) {
-      try {
-        token = sessionStorage.getItem('erlc_csrf_token') || '';
-      } catch {}
-    }
-    if (!token) {
-      try {
-        const meRes = await fetch('/api/auth/me', { credentials: 'include' });
-        if (meRes.ok) {
-          const meData = await meRes.json();
-          if (meData?.csrfToken) {
-            token = meData.csrfToken;
-            setCsrfToken(token);
-          }
-        }
-      } catch {}
-    }
+    const token = await resolveCsrfToken();
     if (token) {
       headers.set('X-CSRF-Token', token);
     }
@@ -69,16 +101,16 @@ export async function apiFetch(input: string | URL, init: RequestInit = {}): Pro
     normalizedUrl = `/api${rawUrl.startsWith('/') ? '' : '/'}${rawUrl}`;
   }
 
-  const res = await fetch(normalizedUrl, {
+  const res = await nativeFetch(normalizedUrl, {
     ...init,
     method,
     headers,
     credentials: 'include'
   });
 
-  // Check Content-Type: If non-OK and not JSON, throw human-readable error
+  // Check Content-Type: If not JSON (e.g. HTML fallback), throw human-readable error instead of JSON parse crash
   const contentType = res.headers.get('content-type') || '';
-  if (!res.ok && !contentType.includes('application/json')) {
+  if (res.status !== 204 && !contentType.includes('application/json')) {
     throw new Error(`Server returned unexpected ${res.status} response (${contentType.split(';')[0] || 'non-JSON'}).`);
   }
 

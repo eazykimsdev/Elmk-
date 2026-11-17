@@ -5,7 +5,8 @@ import { randomBytes } from 'node:crypto';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const LEDGER_FILE = path.join(__dirname, 'data', 'ledger.json');
+const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
+const LEDGER_FILE = path.join(DATA_DIR, 'ledger.json');
 
 // Ensure directory exists
 function ensureLedgerFile() {
@@ -291,7 +292,7 @@ export function getCreditHistory(userId, options = {}) {
 
 export const REWARD_DEBT_FLOOR = -20;
 
-const SERVER_ACTIVITY_FILE = path.join(__dirname, 'data', 'server_activity.json');
+const SERVER_ACTIVITY_FILE = path.join(DATA_DIR, 'server_activity.json');
 
 export function appendServerActivity(serverId, event) {
   if (!serverId) return null;

@@ -12,6 +12,9 @@ import {
   createOrUpdateForm,
   getServerForms,
   deleteForm,
+  getFormDraft,
+  saveFormDraft,
+  deleteFormDraft,
   resolvePublicForm,
   submitApplication,
   getServerSubmissions,
@@ -101,7 +104,8 @@ import {
   recordBotMemberJoin,
   recordBotMemberLeave,
   processMaturePendingJoins,
-  getUserJoinedCommunities
+  getUserJoinedCommunities,
+  getServerAnalytics
 } from './directoryManager.js';
 import {
   getServerReviews,
@@ -251,7 +255,7 @@ import { sanitizeMarkdown, stripMarkdown, cleanSqlReplace } from './markdownSani
 import { createRateLimiter } from './rateLimiter.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const DATA_DIR = path.join(process.cwd(), 'data');
+const DATA_DIR = process.env.DATA_DIR || path.join(process.cwd(), 'data');
 const SESSIONS_FILE = path.join(DATA_DIR, 'web_sessions.json');
 
 const SESSION_COOKIE = 'connectingerlc_session';
@@ -323,6 +327,7 @@ export function handleBotGatewayEvent(type, data) {
       icon_hash: data.icon,
       iconHash: data.icon,
       iconUrl: data.icon ? `https://cdn.discordapp.com/icons/${data.id}/${data.icon}.webp?size=128` : null,
+      ownerId: data.owner_id ? String(data.owner_id) : null,
       permissions: String(data.permissions || '8'),
       memberCount: Number(data.member_count || data.approximate_member_count || 0)
     });
@@ -983,6 +988,7 @@ async function manageableGuilds(session, { force = false } = {}) {
       iconHash: guild.icon,
       iconUrl: guildIconUrl(guild),
       owner: Boolean(guild.owner),
+      permissions: String(guild.permissions || guild.permissions_new || (guild.owner ? '8' : '32')),
       memberCount: Number(guild.approximate_member_count || 0)
     }));
     session.guildCache = { guilds: filtered, expiresAt: Date.now() + 5 * 60 * 1000 };
@@ -1061,16 +1067,28 @@ export async function verifyServerManagerAccess(session, guildId) {
     return { ok: true, isOwner: true, isManager: true, server, isAdmin: true };
   }
 
-  // 2. Directory Server Record check
+  // 2. Directory Server Record & Bot Instance check
   const servers = getPromotedServers(true);
   const server = servers.find(s => String(s.id) === gid || String(s.guildId) === gid);
   if (server) {
-    if (String(server.ownerId) === userId) {
+    if (String(server.ownerId) === userId || String(server.owner_discord_id) === userId) {
       return { ok: true, isOwner: true, isManager: true, server };
     }
     if (Array.isArray(server.representatives) && server.representatives.some(r => String(r.userId || r) === userId)) {
       return { ok: true, isOwner: false, isManager: true, server };
     }
+  }
+
+  try {
+    const botInst = findGuildBot(gid);
+    if (botInst && (String(botInst.ownerId) === userId || String(botInst.userId) === userId || String(botInst.customizations?.ownerId) === userId)) {
+      return { ok: true, isOwner: true, isManager: true, server };
+    }
+  } catch {}
+
+  const cachedBotGuild = botGuildsCache.get(gid);
+  if (cachedBotGuild && cachedBotGuild.ownerId && String(cachedBotGuild.ownerId) === userId) {
+    return { ok: true, isOwner: true, isManager: true, server, guild: cachedBotGuild };
   }
 
   // 3. Discord OAuth User Guilds check (real owner or Manage Server permission)
@@ -1479,8 +1497,24 @@ export function createDashboardRouter() {
     const sessionId = cookieValue(req, SESSION_COOKIE);
     const session = sessionId ? getSession(sessionId) : null;
     if (session && session.expiresAtSession >= Date.now()) {
+      if (!session.csrfToken) {
+        session.csrfToken = randomBytes(24).toString('hex');
+        persistSessions();
+      }
       req.dashboardSession = session;
       req.dashboardSessionId = sessionId;
+
+      if (!['GET', 'HEAD', 'OPTIONS'].includes(req.method) && req.path !== '/telemetry/error') {
+        const incomingCsrf = req.get('x-csrf-token');
+        if (!incomingCsrf || !session.csrfToken) {
+          return res.status(403).json({ error: 'Missing CSRF token', code: 'CSRF_MISSING' });
+        }
+        const bufA = Buffer.from(String(incomingCsrf));
+        const bufB = Buffer.from(String(session.csrfToken));
+        if (bufA.length !== bufB.length || !timingSafeEqual(bufA, bufB)) {
+          return res.status(403).json({ error: 'Invalid CSRF token', code: 'CSRF_INVALID' });
+        }
+      }
     }
     const userId = session?.user?.id || req.user?.id;
     const clientIp = (req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket?.remoteAddress || req.ip || '').replace(/^::ffff:/, '');
@@ -2012,11 +2046,17 @@ export function createDashboardRouter() {
       servers = servers.filter(s => (s.category && s.category.toLowerCase() === cat));
     }
 
-    // Sort: bump (default, valid first then lastBumpedAt), members_desc, or members_asc
+    // Sort: featured spots first among valid invites, then bump/members
     if (sort === 'members_asc') {
-      servers.sort((a, b) => (a.memberCount || 0) - (b.memberCount || 0));
+      servers.sort((a, b) => {
+        if (Boolean(a.isFeaturedSpot) !== Boolean(b.isFeaturedSpot)) return a.isFeaturedSpot ? -1 : 1;
+        return (a.memberCount || 0) - (b.memberCount || 0);
+      });
     } else if (sort === 'members_desc') {
-      servers.sort((a, b) => (b.memberCount || 0) - (a.memberCount || 0));
+      servers.sort((a, b) => {
+        if (Boolean(a.isFeaturedSpot) !== Boolean(b.isFeaturedSpot)) return a.isFeaturedSpot ? -1 : 1;
+        return (b.memberCount || 0) - (a.memberCount || 0);
+      });
     }
     // Otherwise keep the default getPromotedServers() sort (valid > unknown > expired, most recent bump first)
 
@@ -2078,6 +2118,8 @@ export function createDashboardRouter() {
           ownerAvatarHash = null;
         }
       }
+      const showCredits = s.showCredits !== false;
+      const serverCredits = showCredits ? Number(getServerLedgerSummary(s.id).balance || 0) : null;
       const enriched = {
         ...s,
         icon: iconUrl,
@@ -2088,6 +2130,8 @@ export function createDashboardRouter() {
         owner_display_name: ownerDisplayName,
         owner_avatar_hash: ownerAvatarHash,
         ownerAvatar: ownerAvatar,
+        showCredits,
+        serverCredits,
         bannerUrl: s.bannerUrl || null,
         summary: stripMarkdown(s.summary || s.description || ''),
         description: sanitizeMarkdown(s.description || ''),
@@ -2195,7 +2239,24 @@ export function createDashboardRouter() {
       checkServerInvite(server).catch(() => {});
     }
 
+    // Record real page view unless skipView=true (used by editor fetches)
+    if (req.query.skipView !== '1' && req.query.skipView !== 'true') {
+      appendServerActivity(server.id, {
+        type: 'page_view',
+        text: 'Public server page viewed',
+        timestamp: Date.now()
+      });
+    }
+
     const erlc = await getErlcStatus(server.id).catch(() => null);
+    const showCredits = server.showCredits !== false;
+    const serverLedgerSummary = getServerLedgerSummary(server.id);
+    const serverCredits = showCredits ? Number(serverLedgerSummary.balance || 0) : null;
+    const isPrem = isServerPremium(server);
+    const settings = getAdminSettings();
+    const effectiveRewardCoins = isPrem
+      ? Math.max(Number(server.rewardCoins || 0), Number(settings.premium_join_reward_credits) || 5)
+      : (Number(server.rewardCoins) || Number(settings.join_reward_credits) || 2);
 
     const reviewData = getServerReviews(server.id, { page: 1, pageSize: 5 });
     const userId = req.dashboardSession?.user?.id || req.session?.user?.id || null;
@@ -2299,11 +2360,16 @@ export function createDashboardRouter() {
         autoRenewInvite: Boolean(server.autoRenewInvite),
         autoRenewChannelId: server.autoRenewChannelId || null,
         expired_click_count: Number(server.expired_click_count || 0),
-        is_premium: isServerPremium(server),
+        is_premium: isPrem,
         premiumUntil: server.premiumUntil || null,
         erlc: erlc?.connected ? erlc : null,
         customUrl: server.customUrl || null,
         isVerified: Boolean(server.verified || server.isVerified),
+        showCredits,
+        serverCredits,
+        rewardCoins: effectiveRewardCoins,
+        isFeaturedSpot: Boolean(server.boosts?.featured_spot?.activeUntil && Number(server.boosts.featured_spot.activeUntil) > Date.now()),
+        isHighlighted: Boolean(server.boosts?.listing_highlight?.activeUntil && Number(server.boosts.listing_highlight.activeUntil) > Date.now()),
         pageSections: server.pageSections || ['erlc', 'about', 'badges', 'reviews', 'staff', 'partners'],
         sectionVisibility: server.sectionVisibility || { erlc: true, about: true, badges: true, reviews: true, staff: false, partners: false },
         socialLinks: server.socialLinks || { discord: server.inviteUrl || '', roblox: '', twitter: '', website: '' },
@@ -2328,7 +2394,7 @@ export function createDashboardRouter() {
           if (server.verified || server.isVerified) {
             badges.push({ id: 'verified', label: 'Verified Community', description: 'Officially authenticated and verified community', color: 'blue' });
           }
-          if (isServerPremium(server)) {
+          if (isPrem) {
             badges.push({ id: 'premium', label: 'Premium Tier', description: 'Active premium visibility and advertising perks', color: 'purple' });
           }
           if ((Number(server.memberCount) || 0) >= 100) {
@@ -2343,6 +2409,7 @@ export function createDashboardRouter() {
       reviews: reviewData.reviews,
       owner: {
         name: ownerDisplayName,
+        username: server.ownerUsername || ownerDisplayName,
         display_name: ownerDisplayName,
         avatar: ownerAvatar,
         avatar_hash: ownerAvatarHash,
@@ -2353,7 +2420,8 @@ export function createDashboardRouter() {
         bumps: server.bumps !== undefined ? server.bumps : (server.totalBumps || 0),
         verifiedJoins: server.verifiedJoins || 0,
         views: server.views || 0,
-        rewardCoins: server.rewardCoins || 2
+        rewardCoins: effectiveRewardCoins,
+        serverCredits
       },
       ratingSummary: reviewData.summary,
       userState: {
@@ -2572,24 +2640,58 @@ export function createDashboardRouter() {
   });
 
   // Dedicated listing save endpoint: PUT /api/servers/:id/listing
-  router.put('/servers/:id/listing', (req, res) => {
+  router.put('/servers/:id/listing', async (req, res) => {
     const { id } = req.params;
     const patch = req.body || {};
 
     try {
+      const sessionId = req.dashboardSessionId || cookieValue(req, SESSION_COOKIE);
+      const session = req.dashboardSession || (sessionId ? getSession(sessionId) : null);
+      const user = session?.user || req.session?.user;
+      if (!user) return res.status(401).json({ error: 'Please sign in to save server settings.' });
+
+      const authCheck = await verifyServerManagerAccess(session, id);
+      if (!authCheck.ok) {
+        return res.status(authCheck.status || 403).json({ error: authCheck.error });
+      }
+
+      const allExisting = getPromotedServers(true);
+      const existingListing = allExisting.find(s => String(s.id) === String(id));
+      const isNewListing = !existingListing;
+
+      // Round 11 Section 3: Bot must be invited first when creating a new directory listing
+      const botStatus = getGuildBotStatus(id);
+      if (isNewListing && !botStatus.bot_in_guild) {
+        return res.status(403).json({
+          error: 'BOT_NOT_IN_GUILD',
+          botStatus: botStatus.botStatus,
+          message: 'ConnectingERLC bot must be added to your server before publishing or saving settings.'
+        });
+      }
+
       const cleanData = {
         id,
-        name: String(patch.name || patch.serverName || '').trim(),
-        category: patch.category || patch.serverCategory || 'Roleplay Server',
-        description: sanitizeMarkdown(String(patch.description ?? patch.serverDescription ?? '').trim()),
-        summary: stripMarkdown(String(patch.summary ?? patch.serverSummary ?? '').trim()),
-        tags: Array.isArray(patch.tags)
-          ? patch.tags.filter(t => typeof t === 'string').map(t => t.trim()).filter(Boolean).slice(0, 5)
-          : (typeof patch.tags === 'string' ? patch.tags.split(',').map(t => t.trim()).filter(Boolean).slice(0, 5) : []),
-        language: String(patch.language ?? 'English').trim() || 'English',
-        inviteUrl: String(patch.inviteUrl ?? patch.discordInvite ?? '').trim(),
-        bannerUrl: String(patch.bannerUrl ?? patch.serverBannerUrl ?? '').trim(),
-        rewardCoins: Number(patch.rewardCoins || patch.reward || 2),
+        name: String(patch.name || patch.serverName || existingListing?.name || '').trim(),
+        category: patch.category || patch.serverCategory || existingListing?.category || 'Roleplay Server',
+        description: patch.description !== undefined || patch.serverDescription !== undefined
+          ? sanitizeMarkdown(String(patch.description ?? patch.serverDescription ?? '').trim())
+          : (existingListing?.description || ''),
+        summary: patch.summary !== undefined || patch.serverSummary !== undefined
+          ? stripMarkdown(String(patch.summary ?? patch.serverSummary ?? '').trim())
+          : (existingListing?.summary || ''),
+        tags: patch.tags !== undefined
+          ? (Array.isArray(patch.tags)
+              ? patch.tags.filter(t => typeof t === 'string').map(t => t.trim()).filter(Boolean).slice(0, 12)
+              : (typeof patch.tags === 'string' ? patch.tags.split(',').map(t => t.trim()).filter(Boolean).slice(0, 12) : []))
+          : (existingListing?.tags || []),
+        language: String(patch.language ?? existingListing?.language ?? 'English').trim() || 'English',
+        inviteUrl: patch.inviteUrl !== undefined || patch.discordInvite !== undefined
+          ? String(patch.inviteUrl ?? patch.discordInvite ?? '').trim()
+          : (existingListing?.inviteUrl || ''),
+        bannerUrl: patch.bannerUrl !== undefined || patch.serverBannerUrl !== undefined
+          ? String(patch.bannerUrl ?? patch.serverBannerUrl ?? '').trim()
+          : (existingListing?.bannerUrl || ''),
+        rewardCoins: Number(patch.rewardCoins || patch.reward || existingListing?.rewardCoins || 2),
         offerHigherReward: Boolean(patch.offerHigherReward),
         extraCreditsPerJoin: patch.extraCreditsPerJoin !== undefined ? Math.min(20, Math.max(0, Number(patch.extraCreditsPerJoin))) : (patch.offerHigherReward ? Math.max(1, Number(patch.rewardCoins || 2) - 2) : 1),
         retentionTargetHours: Number(patch.retentionTargetHours || 72),
@@ -2644,31 +2746,14 @@ export function createDashboardRouter() {
         partnerList: Array.isArray(patch.partnerList) ? patch.partnerList : undefined,
         showStaffList: patch.showStaffList !== undefined ? Boolean(patch.showStaffList) : undefined,
         showPartnerList: patch.showPartnerList !== undefined ? Boolean(patch.showPartnerList) : undefined,
+        showCredits: patch.showCredits !== undefined ? Boolean(patch.showCredits) : undefined,
         customUrl: patch.customUrl ? String(patch.customUrl).trim().toLowerCase() : undefined
       };
 
-      const sessionId = req.dashboardSessionId || cookieValue(req, SESSION_COOKIE);
-      const session = req.dashboardSession || (sessionId ? getSession(sessionId) : null);
-      const user = session?.user || req.session?.user;
-      if (!user) return res.status(401).json({ error: 'Please sign in to save server settings.' });
-
-      // Round 11 Section 3: Bot must be invited first
-      const botStatus = getGuildBotStatus(id);
-      if (!botStatus.bot_in_guild) {
-        return res.status(403).json({
-          error: 'BOT_NOT_IN_GUILD',
-          botStatus: botStatus.botStatus,
-          message: 'ConnectingERLC bot must be added to your server before publishing or saving settings.'
-        });
-      }
-
-      const allExisting = getPromotedServers(true);
-      const existingListing = allExisting.find(s => String(s.id) === String(id));
       if (existingListing && cleanData.inviteUrl && cleanData.inviteUrl !== existingListing.inviteUrl) {
         clearOwnerDashboardNotices(id, 'invite_expired');
       }
-      const isNewListing = !allExisting.some(s => String(s.id) === String(id));
-      const server = upsertPromotedServer(cleanData, user);
+      const server = upsertPromotedServer(cleanData, authCheck.isOwner ? user : null);
       invalidateShowcaseCache();
       if (isNewListing) {
         tryClaimLaunchGiveaway({ server, ownerUser: user, botInGuild: botStatus.bot_in_guild, isNewListing: true, siteUrl: appOrigin(req) }).catch(err => console.warn('[GIVEAWAY] Claim evaluation error:', err.message));
@@ -2833,38 +2918,45 @@ export function createDashboardRouter() {
       ? Math.max(0, Math.ceil((Number(server.premiumUntil) - now) / (24 * 3600 * 1000)))
       : 0;
     const summary = getServerLedgerSummary(id);
+    const rawPrice = Number(settings.premium_price_credits);
+    const price = Number.isFinite(rawPrice) && rawPrice > 0 ? rawPrice : null;
 
     res.json({
       isPremium: isPrem,
       premiumUntil: server.premiumUntil || null,
       daysLeft,
-      price: Number(settings.premium_price_credits) || 500,
+      price,
       durationDays: Number(settings.premium_duration_days) || 30,
-      balance: Number(summary.balance || 0)
+      balance: Number(summary.balance || 0),
+      perks: Array.isArray(settings.premium_perks) ? settings.premium_perks : [
+        `Members earn ${Number(settings.premium_join_reward_credits) || 5} credits per verified join (instead of ${Number(settings.join_reward_credits) || 2})`,
+        'Animated GIF banners on your public server page and directory listing',
+        'Priority directory placement and Premium community badge',
+        'Broadcast announcements to the Premium Ads channel every 6 hours'
+      ]
     });
   });
 
   // Buy premium endpoint: POST /api/servers/:id/buy-premium or /api/servers/:id/premium/buy
   router.post(['/servers/:id/buy-premium', '/servers/:id/premium/buy'], async (req, res) => {
     const { id } = req.params;
-    const userId = req.dashboardSession?.user?.id || req.session?.user?.id;
+    const session = req.dashboardSession || req.session;
+    const userId = session?.user?.id;
     if (!userId) {
       return res.status(401).json({ error: 'Please sign in to purchase premium.' });
     }
 
-    const server = getPromotedServers(true).find(s => String(s.id) === String(id) || String(s.guildId) === String(id));
-    if (!server) return res.status(404).json({ error: 'Server not found' });
-
-    const ownerId = server.ownerId || server.owner_discord_id;
-    if (ownerId && String(ownerId) !== String(userId)) {
-      return res.status(403).json({ error: 'Only the server owner can purchase premium.' });
+    const authCheck = await verifyServerManagerAccess(session, id);
+    if (!authCheck.ok) {
+      return res.status(authCheck.status || 403).json({ error: authCheck.error });
     }
 
     try {
       const result = await buyServerPremium(id, userId, {
+        months: req.body?.months,
         idempotencyKey: req.body?.idempotencyKey
       });
-      res.json(result);
+      res.json({ success: true, is_premium: true, totalCost: result.price, ...result });
     } catch (err) {
       if (err.code === 'INSUFFICIENT_CREDITS') {
         return res.status(400).json({
@@ -2887,9 +2979,14 @@ export function createDashboardRouter() {
     const server = getPromotedServers(true).find(s => String(s.id) === String(id) || String(s.guildId) === String(id));
     if (!server) return res.status(404).json({ error: 'Server not found' });
     const settings = getAdminSettings();
+    const baseMax = Number(settings.max_advertisers_per_server) || 5;
+    const extraBoost = server.boosts?.extra_advertiser;
+    const extraSeats = (extraBoost && Number(extraBoost.activeUntil || 0) > Date.now()) ? Number(extraBoost.seats || 1) : 0;
     res.json({
       advertisers: Array.isArray(server.advertisers) ? server.advertisers : [],
-      maxAdvertisers: Number(settings.max_advertisers_per_server) || 5,
+      maxAdvertisers: baseMax + extraSeats,
+      baseMaxAdvertisers: baseMax,
+      extraSeats,
       isPremium: isServerPremium(server)
     });
   });
@@ -3250,7 +3347,13 @@ export function createDashboardRouter() {
   router.post('/servers/:id/erlc/connect', async (req, res) => {
     const { id } = req.params;
     const { key } = req.body || {};
-    const userId = req.dashboardSession?.user?.id || (req.dashboardSession?.user?.id || req.session?.user?.id);
+    const session = req.dashboardSession || req.session;
+    const userId = session?.user?.id;
+
+    const authCheck = await verifyServerManagerAccess(session, id);
+    if (!authCheck.ok) {
+      return res.status(authCheck.status || 403).json({ error: authCheck.error });
+    }
 
     if (!key || typeof key !== 'string' || !key.trim()) {
       return res.status(400).json({ error: 'Please provide a valid ER:LC API key.' });
@@ -3293,7 +3396,13 @@ export function createDashboardRouter() {
   // Test ER:LC connection
   router.post('/servers/:id/erlc/test', async (req, res) => {
     const { id } = req.params;
-    const userId = req.dashboardSession?.user?.id || (req.dashboardSession?.user?.id || req.session?.user?.id);
+    const session = req.dashboardSession || req.session;
+    const userId = session?.user?.id;
+
+    const authCheck = await verifyServerManagerAccess(session, id);
+    if (!authCheck.ok) {
+      return res.status(authCheck.status || 403).json({ error: authCheck.error });
+    }
 
     if (!checkRateLimit(id, 5)) {
       return res.status(429).json({ error: 'Rate limit exceeded. Please wait a minute before testing again.' });
@@ -3314,7 +3423,13 @@ export function createDashboardRouter() {
   // Disconnect ER:LC key
   router.post('/servers/:id/erlc/disconnect', async (req, res) => {
     const { id } = req.params;
-    const userId = req.dashboardSession?.user?.id || (req.dashboardSession?.user?.id || req.session?.user?.id);
+    const session = req.dashboardSession || req.session;
+    const userId = session?.user?.id;
+
+    const authCheck = await verifyServerManagerAccess(session, id);
+    if (!authCheck.ok) {
+      return res.status(authCheck.status || 403).json({ error: authCheck.error });
+    }
 
     try {
       await disconnectErlcServer(id, userId);
@@ -6170,25 +6285,35 @@ export function createDashboardRouter() {
   });
 
   // ─── Banner Upload Endpoint (Phase H3) ──────────────────────────────────
-  router.post(['/workspace/:guildId/banner', '/api/workspace/:guildId/banner'], async (req, res) => {
-    try {
-      const { guildId } = req.params;
-      const session = req.dashboardSession || req.session;
-      const authCheck = await verifyServerManagerAccess(session, guildId);
-      if (!authCheck.ok) {
-        return res.status(authCheck.status || 403).json({ error: authCheck.error });
-      }
+  router.post(
+    [
+      '/workspace/:guildId/banner',
+      '/api/workspace/:guildId/banner',
+      '/servers/:guildId/banner',
+      '/api/servers/:guildId/banner'
+    ],
+    async (req, res) => {
+      try {
+        const { guildId } = req.params;
+        const session = req.dashboardSession || req.session;
+        const authCheck = await verifyServerManagerAccess(session, guildId);
+        if (!authCheck.ok) {
+          return res.status(authCheck.status || 403).json({ error: authCheck.error });
+        }
 
-      let buffer = null;
-      let originalFilename = 'banner.png';
+        let buffer = null;
+        let originalFilename = 'banner.png';
+        const rawB64 = req.body?.imageBase64 || req.body?.imageData;
 
-      if (req.body?.imageBase64) {
-        const base64Str = req.body.imageBase64.replace(/^data:image\/[a-zA-Z0-9+.-]+;base64,/, '');
-        buffer = Buffer.from(base64Str, 'base64');
-        if (req.body.filename) originalFilename = String(req.body.filename);
-      } else if (Buffer.isBuffer(req.body)) {
-        buffer = req.body;
-      }
+        if (rawB64) {
+          const base64Str = String(rawB64).replace(/^data:image\/[a-zA-Z0-9+.-]+;base64,/, '');
+          buffer = Buffer.from(base64Str, 'base64');
+          if (req.body.filename || req.body.fileName) {
+            originalFilename = String(req.body.filename || req.body.fileName);
+          }
+        } else if (Buffer.isBuffer(req.body)) {
+          buffer = req.body;
+        }
 
       if (!buffer || buffer.length === 0) {
         return res.status(400).json({ error: 'No image data provided.' });
@@ -6230,6 +6355,142 @@ export function createDashboardRouter() {
     formSubmitRateMap.set(userId, valid);
     return true;
   }
+
+  // 0. Form Draft Auto-Save & Restore (Item 5)
+  router.get(['/workspace/:guildId/forms/draft', '/api/workspace/:guildId/forms/draft'], async (req, res) => {
+    const { guildId } = req.params;
+    const formId = req.query.formId || 'new';
+    const session = req.dashboardSession || req.session;
+    const check = await checkFormManagerAccess(guildId, session);
+    if (!check.ok) return res.status(check.status).json({ error: check.error });
+
+    const draft = getFormDraft(guildId, formId);
+    res.json({ success: true, draft: draft ? { ...draft.draft, updatedAt: draft.updatedAt } : null });
+  });
+
+  router.post(['/workspace/:guildId/forms/draft', '/api/workspace/:guildId/forms/draft'], async (req, res) => {
+    try {
+      const { guildId } = req.params;
+      const session = req.dashboardSession || req.session;
+      const check = await checkFormManagerAccess(guildId, session);
+      if (!check.ok) return res.status(check.status).json({ error: check.error });
+
+      const formId = req.body?.formId || req.body?.id || 'new';
+      const saved = saveFormDraft(guildId, formId, req.body || {}, session.user.id);
+      res.json({ success: true, draft: saved ? { ...saved.draft, updatedAt: saved.updatedAt } : null });
+    } catch (err) {
+      res.status(400).json({ error: err.message });
+    }
+  });
+
+  router.delete(['/workspace/:guildId/forms/draft', '/api/workspace/:guildId/forms/draft'], async (req, res) => {
+    const { guildId } = req.params;
+    const formId = req.query.formId || req.body?.formId || 'new';
+    const session = req.dashboardSession || req.session;
+    const check = await checkFormManagerAccess(guildId, session);
+    if (!check.ok) return res.status(check.status).json({ error: check.error });
+
+    deleteFormDraft(guildId, formId);
+    res.json({ success: true });
+  });
+
+  // Discord Members & User Lookup for Staff Team Picker (Item 3)
+  router.get(['/workspace/:guildId/discord-members', '/api/workspace/:guildId/discord-members'], async (req, res) => {
+    try {
+      const { guildId } = req.params;
+      const { roleId, query } = req.query;
+      const session = req.dashboardSession || req.session;
+      const check = await verifyServerManagerAccess(session, guildId);
+      if (!check.ok) return res.status(check.status).json({ error: check.error });
+
+      const token = (process.env.CONNECTINGERLC_BOT_TOKEN || process.env.DISCORD_BOT_TOKEN || process.env.DISCORD_TOKEN || '').trim().replace(/^Bot\s+/i, '');
+      const members = [];
+
+      if (token) {
+        try {
+          const url = query && String(query).trim()
+            ? `https://discord.com/api/v10/guilds/${guildId}/members/search?query=${encodeURIComponent(String(query).trim())}&limit=50`
+            : `https://discord.com/api/v10/guilds/${guildId}/members?limit=100`;
+          const mRes = await fetch(url, {
+            headers: { Authorization: `Bot ${token}` },
+            signal: AbortSignal.timeout(5000)
+          });
+          if (mRes.ok) {
+            const rawMembers = await mRes.json();
+            if (Array.isArray(rawMembers)) {
+              for (const m of rawMembers) {
+                if (!m?.user || m.user.bot) continue;
+                if (roleId && (!Array.isArray(m.roles) || !m.roles.includes(String(roleId)))) continue;
+                const u = m.user;
+                const avatarUrl = u.avatar
+                  ? `https://cdn.discordapp.com/avatars/${u.id}/${u.avatar}.${u.avatar.startsWith('a_') ? 'gif' : 'png'}?size=64`
+                  : null;
+                members.push({
+                  id: String(u.id),
+                  username: u.username,
+                  displayName: m.nick || u.global_name || u.username,
+                  avatarUrl,
+                  roles: Array.isArray(m.roles) ? m.roles : []
+                });
+              }
+            }
+          }
+        } catch {}
+      }
+
+      // If query is a Discord snowflake ID and wasn't in the list, look up the user directly on Discord
+      const qStr = String(query || '').trim();
+      if (/^\d{17,20}$/.test(qStr) && !members.some(m => m.id === qStr)) {
+        if (token) {
+          try {
+            const uRes = await fetch(`https://discord.com/api/v10/users/${qStr}`, {
+              headers: { Authorization: `Bot ${token}` },
+              signal: AbortSignal.timeout(4000)
+            });
+            if (uRes.ok) {
+              const u = await uRes.json();
+              if (u && u.id) {
+                const avatarUrl = u.avatar
+                  ? `https://cdn.discordapp.com/avatars/${u.id}/${u.avatar}.${u.avatar.startsWith('a_') ? 'gif' : 'png'}?size=64`
+                  : null;
+                members.unshift({
+                  id: String(u.id),
+                  username: u.username,
+                  displayName: u.global_name || u.username,
+                  avatarUrl,
+                  roles: []
+                });
+              }
+            }
+          } catch {}
+        }
+        // Fallback to known users cache if offline/rate-limited
+        if (!members.some(m => m.id === qStr)) {
+          const known = getAllKnownUsers().find(u => String(u.userId || u.id) === qStr);
+          if (known) {
+            members.unshift({
+              id: String(known.userId || known.id),
+              username: known.username,
+              displayName: known.globalName || known.displayName || known.username,
+              avatarUrl: known.avatarUrl || null,
+              roles: []
+            });
+          }
+        }
+      }
+
+      res.json({ ok: true, members });
+    } catch (err) {
+      res.status(400).json({ error: err.message });
+    }
+  });
+
+  // Owner Analytics Endpoint (Item 8: 7d and 30d page views, join clicks, bumps)
+  router.get(['/servers/:id/analytics', '/workspace/:id/analytics', '/api/servers/:id/analytics', '/api/workspace/:id/analytics'], (req, res) => {
+    const { id } = req.params;
+    const analytics = getServerAnalytics(id);
+    res.json({ ok: true, ...analytics });
+  });
 
   // 1. Get all forms for server
   router.get(['/workspace/:guildId/forms', '/api/workspace/:guildId/forms'], async (req, res) => {
@@ -6414,20 +6675,28 @@ export function createDashboardRouter() {
     }
   });
 
-  // Daily Check-In status endpoint (Phase F1)
+  // Daily Check-In status endpoint (Phase F1 / Item 7)
   router.get('/user/daily-checkin', (req, res) => {
     const userId = req.dashboardSession?.user?.id;
+    const settings = getAdminSettings();
+    const rewardAmount = Number(settings.daily_checkin_reward_credits) || 10;
+    const now = new Date();
+    const nextResetUtc = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1, 0, 0, 0)).toISOString();
     if (!userId) {
-      return res.json({ streak: 0, claimedToday: false, rewardAmount: 10 });
+      return res.json({ streak: 0, claimedToday: false, rewardAmount, nextResetUtc });
     }
     const data = loadPartnershipsData();
     const userAch = data.achievements[userId] || { lastCheckin: 0, streak: 0, lastClaimDate: null };
-    const todayUtc = new Date().toISOString().slice(0, 10);
+    const todayUtc = now.toISOString().slice(0, 10);
+    const guildId = req.query.guildId ? String(req.query.guildId) : '';
+    const reminderPref = guildId ? getReminderPreference(userId, guildId) : { enabled: false };
     res.json({
       streak: userAch.streak || 0,
       claimedToday: userAch.lastClaimDate === todayUtc,
-      rewardAmount: 10,
-      lastClaimDate: userAch.lastClaimDate || null
+      rewardAmount,
+      lastClaimDate: userAch.lastClaimDate || null,
+      nextResetUtc,
+      reminderEnabled: Boolean(reminderPref?.enabled)
     });
   });
 
@@ -8545,7 +8814,8 @@ export function createDashboardRouter() {
   router.post('/user/daily-checkin', (req, res) => {
     try {
       const userId = req.dashboardSession?.user?.id;
-      const result = claimDailyReward(userId);
+      const guildId = req.body?.guildId || req.query?.guildId || null;
+      const result = claimDailyReward(userId, guildId);
       res.json(result);
     } catch (err) {
       res.status(400).json({ error: err.message || 'Could not claim daily reward.' });

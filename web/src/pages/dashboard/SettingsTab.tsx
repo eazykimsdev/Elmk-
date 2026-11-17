@@ -20,7 +20,9 @@ import {
   MessageSquare,
   Server,
   X,
-  Volume2
+  Volume2,
+  Sparkles,
+  Wrench
 } from 'lucide-react';
 
 import { useTheme } from '@/components/library/theme-provider';
@@ -33,6 +35,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import {
   Select,
   SelectContent,
@@ -528,10 +531,11 @@ export function SettingsTab({
     };
   }, [guildId]);
 
-  // Promo code redemption state
+  // Giveaway code redemption state
   const [promoInputCode, setPromoInputCode] = useState('');
   const [promoTargetServerId, setPromoTargetServerId] = useState('');
   const [redeemingPromo, setRedeemingPromo] = useState(false);
+  const [redemptionSuccessDialog, setRedemptionSuccessDialog] = useState<{ open: boolean; amount: number; newBalance: number; serverName: string; code: string } | null>(null);
   const [userServers, setUserServers] = useState<Array<{ id: string; name: string; iconUrl?: string | null }>>([]);
 
   useEffect(() => {
@@ -577,14 +581,21 @@ export function SettingsTab({
       });
       const data = await res.json().catch(() => ({}));
       if (res.ok && data.success) {
-        const amt = Number(data.credits || 25);
-        const sName = data.serverName || (targetSid ? (serverName || 'your server') : 'your personal wallet');
-        addToast('success', 'Redeemed', `Redeemed. ${amt} credits were added to ${sName}.`);
+        const amt = Number(data.amount || data.credits || 100);
+        const newBal = Number(data.newBalance || 0);
+        const sName = data.serverName || (targetSid ? (serverName || 'your server') : 'your community treasury');
+        setRedemptionSuccessDialog({
+          open: true,
+          amount: amt,
+          newBalance: newBal,
+          serverName: sName,
+          code: data.code || promoInputCode.trim()
+        });
         setPromoInputCode('');
         window.dispatchEvent(new CustomEvent('credits_awarded', { detail: { amount: amt } }));
         window.dispatchEvent(new Event('balance_updated'));
       } else {
-        addToast('error', 'Redemption failed', data.error || 'Invalid or expired promotional code.');
+        addToast('error', 'Redemption failed', data.error || 'Invalid or expired giveaway code.');
       }
     } catch {
       addToast('error', 'Network error', 'Could not redeem code. Try again in a moment.');
@@ -803,14 +814,87 @@ export function SettingsTab({
               </div>
 
               <div className="flex items-center justify-between pt-1">
-                <span className="text-[11px] text-zinc-500">Rate limited to 5 attempts per hour.</span>
+                <span className="text-[11px] text-zinc-500">One redemption per community server.</span>
                 <Button
                   type="button"
                   disabled={!promoInputCode.trim() || redeemingPromo}
                   onClick={handleRedeemPromo}
-                  className="bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-zinc-950 text-xs font-semibold h-8.5 px-4 rounded-xl cursor-pointer disabled:opacity-40"
+                  className="bg-[var(--accent)] hover:opacity-90 text-[var(--accent-foreground)] text-xs font-semibold h-8.5 px-4 rounded-xl cursor-pointer disabled:opacity-40"
                 >
                   {redeemingPromo ? 'Redeeming...' : 'Redeem code'}
+                </Button>
+              </div>
+            </div>
+
+            {/* Giveaway Code Redemption Success Dialog */}
+            <Dialog open={redemptionSuccessDialog !== null} onOpenChange={(open) => !open && setRedemptionSuccessDialog(null)}>
+              <DialogContent className="max-w-[420px] bg-[#0E0E11] border border-white/[0.1] rounded-2xl p-6 text-center space-y-4">
+                <div className="size-12 rounded-full bg-[var(--accent)]/15 border border-[var(--accent)]/30 mx-auto flex items-center justify-center">
+                  <Sparkles className="size-6 text-[var(--accent)]" />
+                </div>
+                <div className="space-y-1">
+                  <DialogTitle className="text-lg font-bold text-white font-sans">
+                    Giveaway Code Redeemed!
+                  </DialogTitle>
+                  <DialogDescription className="text-xs text-zinc-400 font-sans">
+                    Your community treasury balance has been updated.
+                  </DialogDescription>
+                </div>
+                <div className="p-4 rounded-xl bg-[#141417] border border-white/[0.08] space-y-2 text-center">
+                  <div className="text-2xl font-extrabold text-[var(--accent)] font-mono">
+                    +{redemptionSuccessDialog?.amount} Credits
+                  </div>
+                  <div className="text-xs text-zinc-400 font-sans">
+                    Deposited to <span className="text-white font-semibold">{redemptionSuccessDialog?.serverName}</span>
+                  </div>
+                  <div className="pt-2 border-t border-white/[0.06] flex items-center justify-between text-xs font-sans">
+                    <span className="text-zinc-500">New Balance</span>
+                    <span className="text-white font-semibold font-mono">{redemptionSuccessDialog?.newBalance} credits</span>
+                  </div>
+                </div>
+                <Button
+                  onClick={() => setRedemptionSuccessDialog(null)}
+                  className="w-full bg-[var(--accent)] hover:opacity-90 text-[var(--accent-foreground)] font-semibold text-xs h-9 cursor-pointer"
+                >
+                  Done
+                </Button>
+              </DialogContent>
+            </Dialog>
+
+            {/* System Status & Maintenance Controls */}
+            <div className="rounded-xl border border-white/[0.06] bg-[#0E0E11] p-5 space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <Wrench className="size-4 text-zinc-400" />
+                    <h3 className="text-sm font-semibold text-white">Emergency maintenance controls</h3>
+                  </div>
+                  <p className="text-zinc-400 text-xs mt-1">
+                    Control public under construction screens for the whole site or specific features if something goes wrong.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-sans">
+                    <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    Operational
+                  </span>
+                </div>
+              </div>
+
+              <div className="pt-2 border-t border-white/[0.06] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <span className="text-[11px] text-zinc-500">
+                  Selectively take down Boosts, Forms, Server Pages, or the entire website anytime from the Admin Portal.
+                </span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    window.location.href = '/admin-portal';
+                  }}
+                  className="text-xs border-white/10 hover:bg-white/5 cursor-pointer text-zinc-300 shrink-0"
+                >
+                  Manage maintenance &rarr;
                 </Button>
               </div>
             </div>

@@ -1,10 +1,11 @@
+import * as React from 'react';
 import { useState, useEffect, useCallback } from 'react';
-import { MessageSquare, Send, CheckCircle2, Crown, ChevronUp, Sparkles, Check } from 'lucide-react';
+import { Check, Coins, Clock, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { Card } from '@/components/ui/card';
-import { api } from '@/lib/api';
+import { apiFetch } from '@/lib/api';
 import type { DiscordGuild, WorkspaceBot, WorkspaceCustomizations } from '@/types';
+
+const DURATION_STEPS = [1, 2, 3, 6, 12] as const;
 
 interface PremiumTabProps {
   guild: DiscordGuild | null;
@@ -14,332 +15,339 @@ interface PremiumTabProps {
   addToast: (variant: 'success' | 'info' | 'warning' | 'error', title: string, body: string) => void;
 }
 
-interface CommunityIdea {
-  id: string;
-  suggestion: string;
-  status: 'accepted' | 'shipped';
-  upvotes: number;
-  hasUpvoted: boolean;
-  createdAt: string;
-  user: {
-    id: string;
-    username: string;
-    displayName: string;
-    avatarUrl: string | null;
-  } | null;
-}
+export function PremiumTab({ guild, workspace, addToast }: PremiumTabProps) {
+  const guildId = guild?.id || workspace?.guildId || '';
+  const serverName = guild?.name || 'Community Server';
 
-export function PremiumTab({ guild, onNavigateTab, addToast }: PremiumTabProps) {
-  const [suggestionText, setSuggestionText] = useState('');
-  const [contactOk, setContactOk] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
+  const [stepIndex, setStepIndex] = useState<number>(0);
+  const selectedMonths = DURATION_STEPS[stepIndex] ?? 1;
 
-  // Accepted community feature suggestions for the upvote board
-  const [communityIdeas, setCommunityIdeas] = useState<CommunityIdea[]>([]);
-  const [loadingIdeas, setLoadingIdeas] = useState(false);
-  const [upvotingIds, setUpvotingIds] = useState<Record<string, boolean>>({});
+  const [pricePerMonth, setPricePerMonth] = useState<number | null>(null);
+  const [perks, setPerks] = useState<string[]>([]);
+  const [serverBalance, setServerBalance] = useState<number>(0);
+  const [isPremium, setIsPremium] = useState<boolean>(false);
+  const [premiumExpiresAt, setPremiumExpiresAt] = useState<string | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [confirmOpen, setConfirmOpen] = useState<boolean>(false);
+  const [purchasing, setPurchasing] = useState<boolean>(false);
 
-  const loadCommunityIdeas = useCallback(async () => {
-    setLoadingIdeas(true);
+  const loadPremiumState = useCallback(async () => {
+    if (!guildId) return;
+    setLoading(true);
     try {
-      const data = await api<{ ok: boolean; suggestions: CommunityIdea[] }>('/suggestions/premium');
-      if (Array.isArray(data?.suggestions)) {
-        setCommunityIdeas(data.suggestions);
+      const [settingsRes, serverRes] = await Promise.all([
+        fetch('/api/premium/settings'),
+        fetch(`/api/servers/${guildId}/premium`)
+      ]);
+
+      if (settingsRes.ok) {
+        const sData = await settingsRes.json();
+        const s = sData?.settings || {};
+        const rawPrice = s.premium_price_credits;
+        if (rawPrice === null || rawPrice === undefined || rawPrice === '' || Number(rawPrice) <= 0) {
+          setPricePerMonth(null);
+        } else {
+          setPricePerMonth(Number(rawPrice));
+        }
+        if (Array.isArray(s.premium_perks) && s.premium_perks.length > 0) {
+          setPerks(s.premium_perks);
+        } else {
+          setPerks([
+            `${s.premium_join_reward_credits || 5} credits paid to members per verified join`,
+            'Animated GIF banner uploads on your public server page',
+            `Up to ${s.premium_max_advertisers || 5} advertiser seats`,
+            `${s.premium_bump_cooldown_minutes || 60}-minute bump cooldown`,
+            'Premium badge across directory and public server page'
+          ]);
+        }
       }
-    } catch {
-      // Clean fallback
+
+      if (serverRes.ok) {
+        const pData = await serverRes.json();
+        setServerBalance(Number(pData.creditBalance || 0));
+        setIsPremium(Boolean(pData.is_premium));
+        setPremiumExpiresAt(pData.premium_expires_at || null);
+      }
+    } catch (err) {
+      console.warn('[PREMIUM] Failed to load premium state:', err);
     } finally {
-      setLoadingIdeas(false);
+      setLoading(false);
     }
-  }, []);
+  }, [guildId]);
 
   useEffect(() => {
-    loadCommunityIdeas();
-  }, [loadCommunityIdeas]);
+    loadPremiumState();
+  }, [loadPremiumState]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!suggestionText.trim()) {
-      addToast('warning', 'Missing Details', 'Please share a few details about your suggestion.');
-      return;
-    }
+  const isPriceSet = pricePerMonth !== null && pricePerMonth > 0;
+  const totalPrice = isPriceSet ? pricePerMonth * selectedMonths : null;
+  const canAfford = totalPrice !== null && serverBalance >= totalPrice;
+  const sliderProgressPct = (stepIndex / (DURATION_STEPS.length - 1)) * 100;
 
-    setSubmitting(true);
+  const handleConfirmPurchase = async () => {
+    if (!guildId || !isPriceSet || totalPrice === null || purchasing) return;
+    setPurchasing(true);
     try {
-      await api<any>('/suggestions/premium', {
+      const res = await apiFetch(`/api/servers/${guildId}/premium/buy`, {
         method: 'POST',
-        body: JSON.stringify({
-          suggestion: suggestionText.trim(),
-          contactOk,
-          guildId: guild?.id,
-          guildName: guild?.name,
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ months: selectedMonths })
       });
-      setSubmitted(true);
-      setSuggestionText('');
-      addToast('success', 'Suggestion Delivered', 'Your idea has been sent directly to the founder. Thank you!');
-      loadCommunityIdeas();
-    } catch (err: any) {
-      addToast('error', 'Submission Failed', err.message || 'Could not send suggestion.');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleToggleUpvote = async (ideaId: string) => {
-    if (upvotingIds[ideaId]) return;
-    setUpvotingIds((prev) => ({ ...prev, [ideaId]: true }));
-
-    // Optimistic state update
-    setCommunityIdeas((prev) =>
-      prev.map((item) => {
-        if (item.id === ideaId) {
-          const nextHasUpvoted = !item.hasUpvoted;
-          const nextCount = nextHasUpvoted ? item.upvotes + 1 : Math.max(0, item.upvotes - 1);
-          return { ...item, hasUpvoted: nextHasUpvoted, upvotes: nextCount };
-        }
-        return item;
-      })
-    );
-
-    try {
-      const res = await api<{ ok: boolean; upvotes: number; hasUpvoted: boolean }>(
-        `/suggestions/premium/${ideaId}/upvote`,
-        { method: 'POST' }
-      );
-      if (res?.ok) {
-        setCommunityIdeas((prev) =>
-          prev.map((item) => {
-            if (item.id === ideaId) {
-              return { ...item, hasUpvoted: res.hasUpvoted, upvotes: res.upvotes };
-            }
-            return item;
-          })
-        );
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Could not complete Premium purchase.');
       }
+      setConfirmOpen(false);
+      await loadPremiumState();
+      addToast(
+        'success',
+        'Premium Activated',
+        `Activated ${selectedMonths} ${selectedMonths === 1 ? 'month' : 'months'} of Premium for ${serverName}.`
+      );
     } catch (err: any) {
-      // Revert optimistic update
-      loadCommunityIdeas();
-      addToast('error', 'Upvote Failed', err.message || 'Please log in to upvote.');
+      addToast('error', 'Purchase Failed', err.message || 'Could not complete Premium purchase.');
     } finally {
-      setUpvotingIds((prev) => ({ ...prev, [ideaId]: false }));
+      setPurchasing(false);
     }
   };
 
   return (
-    <div className="space-y-8 max-w-4xl mx-auto">
-      {/* ── HEADER (Centered) ── */}
-      <div className="text-center space-y-2 border-b border-white/[0.06] pb-6">
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white font-sans">
+    <div className="w-full max-w-[1100px] mx-auto space-y-6 pb-16 font-sans text-zinc-200">
+      {/* Breadcrumb & Plain Header */}
+      <div className="space-y-1 pb-5 border-b border-white/[0.08]">
+        <div className="text-xs text-zinc-500">Shop / Premium</div>
+        <h1 className="text-2xl font-semibold tracking-tight text-zinc-100">
           Premium
         </h1>
-        <p className="text-sm text-zinc-400 font-sans max-w-lg mx-auto">
-          Priority directory placement, elevated advertising channels, and creator perks.
+        <p className="text-sm text-zinc-400">
+          Upgrade {serverName} using your server credit balance.
         </p>
       </div>
 
-      {/* ── ACTIVE PREMIUM COMMUNITIES (Clean Empty State) ── */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-white font-sans uppercase tracking-wider">
-            Premium Communities
-          </h2>
-          <span className="text-xs text-zinc-500 font-sans">0 active</span>
+      {/* Active Status Bar if Premium */}
+      {isPremium && premiumExpiresAt && (
+        <div className="px-4 py-3 rounded-2xl border border-white/[0.08] bg-[var(--bg-elevated,#121215)] flex flex-wrap items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-2 text-zinc-200 font-medium">
+            <Check className="size-4 text-[var(--accent)]" />
+            <span>Premium is active for {serverName}</span>
+          </div>
+          <div className="text-zinc-400 flex items-center gap-1.5">
+            <Clock className="size-3.5" />
+            <span>
+              Expires {new Date(premiumExpiresAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+            </span>
+          </div>
         </div>
+      )}
 
-        <Card className="bg-[#121215] border-white/[0.08] p-10 text-center flex flex-col items-center justify-center space-y-3">
-          <div className="size-12 rounded-full bg-white/[0.03] border border-white/[0.08] flex items-center justify-center text-zinc-400">
-            <Crown className="size-5 text-zinc-500" />
-          </div>
-          <div className="space-y-1">
-            <p className="text-sm font-semibold text-white font-sans">
-              No active premium communities yet
-            </p>
-            <p className="text-xs text-zinc-400 font-sans max-w-md">
-              Featured communities and verified partners with active Premium tiers will be showcased here. Tell us below what perks you want to see!
-            </p>
-          </div>
-        </Card>
-      </div>
-
-      {/* ── SHAPE THE FUTURE OF PREMIUM: SUGGESTION BOX ── */}
-      <Card className="bg-[#121215] border-white/[0.08] p-6 space-y-6">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <MessageSquare className="size-4 text-emerald-400" />
-            <h2 className="text-base font-semibold text-white font-sans">
-              What would you like to see in Premium?
-            </h2>
-          </div>
-          <p className="text-xs text-zinc-400 font-sans">
-            We are building the next generation of server growth tools. Share what features, perks, or tools would make Premium most valuable to your community. Your suggestions go straight to the founder.
-          </p>
+      {loading ? (
+        <div className="py-16 text-center text-xs text-zinc-500">
+          Loading Premium plan…
         </div>
-
-        {submitted ? (
-          <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-6 text-center space-y-3">
-            <div className="size-10 rounded-full bg-emerald-500/10 text-emerald-400 flex items-center justify-center mx-auto">
-              <CheckCircle2 className="size-5" />
-            </div>
-            <div className="space-y-1">
-              <h3 className="text-sm font-semibold text-white font-sans">Thank you for your suggestion!</h3>
-              <p className="text-xs text-zinc-400 font-sans max-w-md mx-auto">
-                Your feedback has been logged and sent to the platform leadership team. Once accepted, it will appear in the Community Ideas upvote board below.
+      ) : (
+        /* Two-card pricing slider layout rebuilt with theme variables */
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
+          {/* Left Card: Duration Slider */}
+          <div className="rounded-2xl border border-white/[0.08] bg-[var(--bg-elevated,#121215)] p-6 sm:p-8 flex flex-col justify-between space-y-8">
+            <div className="space-y-2">
+              <h2 className="text-lg font-semibold text-zinc-100">
+                Choose duration
+              </h2>
+              <p className="text-xs text-zinc-400 leading-relaxed">
+                Slide to select how many months of Premium to add to {serverName}. Purchasing while active extends your current expiry date.
               </p>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setSubmitted(false)}
-              className="text-xs border-white/[0.08] text-zinc-300 hover:text-white cursor-pointer"
-            >
-              Send another suggestion
-            </Button>
-          </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Suggestion Textarea */}
-            <div className="space-y-2">
-              <label className="text-xs font-medium text-zinc-300 font-sans block">
-                Your Suggestion
-              </label>
-              <Textarea
-                value={suggestionText}
-                onChange={(e) => setSuggestionText(e.target.value)}
-                placeholder="Example: I would love an automated bump scheduler every 2 hours, or custom embed colors for our advertising broadcasts..."
-                rows={4}
-                className="bg-[#0E0E11] border-white/[0.08] text-xs font-sans placeholder:text-zinc-600 focus-visible:ring-emerald-500/20"
-              />
-              <span className="text-[11px] text-zinc-500 font-sans block text-right">
-                {suggestionText.length} / 2000
+
+            <div className="space-y-5">
+              <div className="flex items-baseline justify-between">
+                <span className="text-3xl font-semibold text-zinc-100 tabular-nums">
+                  {selectedMonths} {selectedMonths === 1 ? 'month' : 'months'}
+                </span>
+                <span className="text-xs text-zinc-400 tabular-nums">
+                  {selectedMonths * 30} days total
+                </span>
+              </div>
+
+              <div className="space-y-3">
+                <input
+                  type="range"
+                  min={0}
+                  max={DURATION_STEPS.length - 1}
+                  step={1}
+                  value={stepIndex}
+                  onChange={(e) => setStepIndex(Number(e.target.value))}
+                  aria-label="Premium duration in months"
+                  className="w-full h-2 rounded-lg appearance-none cursor-pointer bg-zinc-800 accent-[var(--accent)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
+                  style={{
+                    background: `linear-gradient(to right, var(--accent) 0%, var(--accent) ${sliderProgressPct}%, rgba(255,255,255,0.1) ${sliderProgressPct}%, rgba(255,255,255,0.1) 100%)`
+                  }}
+                />
+
+                <div className="flex items-center justify-between text-xs text-zinc-500 px-0.5">
+                  {DURATION_STEPS.map((m, idx) => (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={() => setStepIndex(idx)}
+                      className={`px-2 py-1 rounded-full transition-colors cursor-pointer ${
+                        idx === stepIndex
+                          ? 'text-zinc-100 font-semibold bg-white/[0.06]'
+                          : 'hover:text-zinc-300'
+                      }`}
+                    >
+                      {m}m
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-4 border-t border-white/[0.06] flex items-center justify-between text-xs text-zinc-400">
+              <span>Monthly rate</span>
+              <span className="text-zinc-200 font-medium tabular-nums">
+                {isPriceSet ? `${pricePerMonth} credits / month` : 'Price not set'}
               </span>
             </div>
+          </div>
 
-            {/* Checkbox for contact permission */}
-            <div className="flex items-center gap-2 pt-1">
-              <input
-                type="checkbox"
-                id="contactOk"
-                checked={contactOk}
-                onChange={(e) => setContactOk(e.target.checked)}
-                className="rounded border-white/20 bg-zinc-900 text-emerald-500 focus:ring-emerald-500/30 size-4 cursor-pointer"
-              />
-              <label htmlFor="contactOk" className="text-xs text-zinc-400 font-sans cursor-pointer select-none">
-                Notify me on Discord when this feature or update is shipped
-              </label>
+          {/* Right Card: Plan Summary, Total, Balance, Perks & Buy Button */}
+          <div className="rounded-2xl border border-white/[0.08] bg-[#0E0E11] p-6 sm:p-8 flex flex-col justify-between space-y-6">
+            <div className="space-y-6">
+              <div className="flex items-start justify-between gap-4 pb-5 border-b border-white/[0.06]">
+                <div>
+                  <div className="text-xs text-zinc-400">Selected plan</div>
+                  <div className="text-lg font-semibold text-zinc-100 mt-0.5">
+                    Server Premium ({selectedMonths} {selectedMonths === 1 ? 'month' : 'months'})
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-xs text-zinc-400">Total</div>
+                  {isPriceSet && totalPrice !== null ? (
+                    <div className="text-2xl font-semibold text-zinc-100 tabular-nums mt-0.5">
+                      {totalPrice.toLocaleString()} <span className="text-xs font-normal text-zinc-400">credits</span>
+                    </div>
+                  ) : (
+                    <div className="text-sm font-semibold text-amber-400 mt-1">
+                      Price not set
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Server Balance Row */}
+              <div className="flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-zinc-900/70 border border-white/[0.06] text-xs">
+                <span className="text-zinc-400 flex items-center gap-1.5">
+                  <Coins className="size-3.5 text-[var(--accent)]" />
+                  <span>Server balance</span>
+                </span>
+                <span className="font-semibold text-zinc-100 tabular-nums">
+                  {serverBalance.toLocaleString()} credits
+                </span>
+              </div>
+
+              {/* Perks from Settings */}
+              <div className="space-y-2.5">
+                <div className="text-xs font-medium text-zinc-300">Included perks</div>
+                <ul className="space-y-2">
+                  {perks.map((perk, idx) => (
+                    <li key={idx} className="flex items-start gap-2.5 text-xs text-zinc-300">
+                      <Check className="size-3.5 text-[var(--accent)] shrink-0 mt-0.5" />
+                      <span>{perk}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             </div>
 
-            {/* Submit Button */}
-            <div className="flex justify-end pt-2">
+            <div className="pt-4 border-t border-white/[0.06] space-y-2.5">
+              {!isPriceSet ? (
+                <div className="text-xs text-amber-400 flex items-center gap-1.5">
+                  <AlertCircle className="size-3.5 shrink-0" />
+                  <span>Price not set in admin settings.</span>
+                </div>
+              ) : !canAfford && totalPrice !== null ? (
+                <div className="text-xs text-amber-400">
+                  Need {(totalPrice - serverBalance).toLocaleString()} more credits in your server balance.
+                </div>
+              ) : null}
+
               <Button
-                type="submit"
-                disabled={submitting || !suggestionText.trim()}
-                className="bg-emerald-500 hover:bg-emerald-600 text-black font-semibold text-xs h-9 px-4 font-sans flex items-center gap-2 cursor-pointer shadow-sm disabled:opacity-50"
+                type="button"
+                disabled={!isPriceSet || !canAfford || purchasing}
+                onClick={() => setConfirmOpen(true)}
+                className="w-full h-10 rounded-full text-xs font-semibold bg-[var(--accent)] text-[var(--accent-foreground)] hover:opacity-90 disabled:opacity-40 cursor-pointer"
               >
-                <Send className="size-3.5" />
-                {submitting ? 'Sending idea...' : 'Submit Suggestion'}
+                {!isPriceSet
+                  ? 'Price not set'
+                  : isPremium
+                  ? `Extend Premium (${selectedMonths} ${selectedMonths === 1 ? 'month' : 'months'})`
+                  : `Buy Premium (${selectedMonths} ${selectedMonths === 1 ? 'month' : 'months'})`}
               </Button>
             </div>
-          </form>
-        )}
-      </Card>
-
-      {/* ── ACCEPTED COMMUNITY FEATURE REQUESTS (UPVOTE BOARD AT THE BOTTOM) ── */}
-      <div className="space-y-3 pt-2">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Sparkles className="size-4 text-emerald-400" />
-            <h2 className="text-sm font-semibold text-white font-sans uppercase tracking-wider">
-              Community Ideas & Roadmap
-            </h2>
           </div>
-          <span className="text-xs text-zinc-400 font-sans">
-            {communityIdeas.length} accepted {communityIdeas.length === 1 ? 'idea' : 'ideas'}
-          </span>
         </div>
+      )}
 
-        {communityIdeas.length === 0 ? (
-          <Card className="bg-[#121215] border-white/[0.08] p-8 text-center space-y-2">
-            <p className="text-xs text-zinc-400 font-sans">
-              No accepted community ideas yet. Submit a suggestion above — once accepted, it appears here for community upvoting!
-            </p>
-          </Card>
-        ) : (
-          <div className="grid grid-cols-1 gap-3">
-            {communityIdeas.map((idea) => {
-              const displayName = idea.user?.displayName || idea.user?.username || 'Community Member';
-              const username = idea.user?.username;
-              const hasDistinctUsername = username && username.toLowerCase() !== displayName.toLowerCase();
-              const userInitial = (displayName || username || 'U')[0].toUpperCase();
-              const isShipped = idea.status === 'shipped';
+      {/* Confirmation Dialog */}
+      {confirmOpen && isPriceSet && totalPrice !== null && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs"
+        >
+          <div className="w-full max-w-sm rounded-2xl border border-white/[0.12] bg-[#121215] p-6 space-y-5 shadow-2xl">
+            <div className="space-y-1">
+              <h3 className="text-base font-semibold text-zinc-100">Confirm Premium Purchase</h3>
+              <p className="text-xs text-zinc-400">
+                Deduct credits from {serverName}'s server balance to activate Premium.
+              </p>
+            </div>
 
-              return (
-                <div
-                  key={idea.id}
-                  className="rounded-xl border border-white/[0.08] bg-[#121215] p-4 flex items-start justify-between gap-4 transition-colors hover:border-white/[0.14]"
-                >
-                  <div className="flex items-start gap-3 min-w-0 flex-1">
-                    {idea.user?.avatarUrl ? (
-                      <img
-                        src={idea.user.avatarUrl}
-                        alt=""
-                        className="size-9 rounded-full object-cover shrink-0 border border-white/10"
-                      />
-                    ) : (
-                      <div className="size-9 rounded-full bg-zinc-800 text-zinc-300 font-semibold text-xs flex items-center justify-center shrink-0 border border-white/10">
-                        {userInitial}
-                      </div>
-                    )}
+            <div className="p-3.5 rounded-xl bg-zinc-900/80 border border-white/[0.06] space-y-2 text-xs">
+              <div className="flex justify-between">
+                <span className="text-zinc-400">Duration</span>
+                <span className="text-zinc-100 font-medium">
+                  {selectedMonths} {selectedMonths === 1 ? 'month' : 'months'} ({selectedMonths * 30} days)
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-zinc-400">Total cost</span>
+                <span className="text-zinc-100 font-semibold tabular-nums">{totalPrice} credits</span>
+              </div>
+              <div className="pt-2 border-t border-white/[0.06] flex justify-between">
+                <span className="text-zinc-400">Balance after</span>
+                <span className="text-zinc-100 font-semibold tabular-nums">
+                  {Math.max(0, serverBalance - totalPrice)} credits
+                </span>
+              </div>
+            </div>
 
-                    <div className="space-y-1.5 min-w-0 flex-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-xs font-semibold text-white font-sans">
-                          {displayName}
-                        </span>
-                        {hasDistinctUsername && (
-                          <span className="text-[11px] text-zinc-400 font-sans">
-                            @{username}
-                          </span>
-                        )}
-                        {isShipped && (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold uppercase bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-                            <Check className="size-3" />
-                            Shipped
-                          </span>
-                        )}
-                      </div>
-
-                      <p className="text-xs text-zinc-300 font-sans leading-relaxed break-words">
-                        {idea.suggestion}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Upvote Button Pill */}
-                  <button
-                    type="button"
-                    onClick={() => handleToggleUpvote(idea.id)}
-                    disabled={upvotingIds[idea.id]}
-                    className={`flex flex-col items-center justify-center min-w-[52px] h-14 rounded-lg border transition-all cursor-pointer px-2 shrink-0 ${
-                      idea.hasUpvoted
-                        ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40 shadow-sm'
-                        : 'bg-[#18181C] text-zinc-400 border-white/[0.08] hover:text-white hover:bg-white/[0.06]'
-                    }`}
-                    title={idea.hasUpvoted ? 'Remove upvote' : 'Upvote this idea'}
-                  >
-                    <ChevronUp className={`size-4 ${idea.hasUpvoted ? 'text-emerald-400' : 'text-zinc-400'}`} />
-                    <span className="text-xs font-bold font-mono">
-                      {idea.upvotes}
-                    </span>
-                  </button>
-                </div>
-              );
-            })}
+            <div className="flex items-center justify-end gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                disabled={purchasing}
+                onClick={() => setConfirmOpen(false)}
+                className="h-9 px-3.5 rounded-full text-xs text-zinc-400 hover:text-zinc-200"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                disabled={purchasing}
+                onClick={handleConfirmPurchase}
+                className="h-9 px-4 rounded-full text-xs font-semibold bg-[var(--accent)] text-[var(--accent-foreground)] hover:opacity-90"
+              >
+                {purchasing ? 'Processing…' : 'Confirm purchase'}
+              </Button>
+            </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
+
 export default PremiumTab;

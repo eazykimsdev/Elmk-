@@ -336,24 +336,60 @@ export function buildPartnershipRequesterNotificationV2({
   toGuildId = '',
   fromServerName = 'Your Server',
   toServerName = 'Partner Server',
+  targetServerName = null,
   serverIconUrl = null,
+  targetServerIconUrl = null,
   slug = '',
-  action = 'accepted'
+  action = 'accepted',
+  status = null
 } = {}) {
-  const isAccepted = action === 'accepted' || action === 'accept';
+  const effectiveAction = status || action;
+  const isAccepted = effectiveAction === 'accepted' || effectiveAction === 'accept';
+  const effectiveServerName = targetServerName || toServerName;
+  const effectiveIconUrl = targetServerIconUrl || serverIconUrl;
   const meta = resolveServerDisplayMeta({
     guildId: toGuildId || fromGuildId,
-    serverName: toServerName,
-    serverIconUrl,
+    serverName: effectiveServerName,
+    serverIconUrl: effectiveIconUrl,
     slug
   });
   const serverUrl = siteUrl(meta.slug ? `/s/${meta.slug}` : '/servers');
-  const statusTitle = isAccepted
-    ? `### Partnership Proposal Accepted: ${meta.name}`
-    : `### Partnership Proposal Declined: ${meta.name}`;
-  const statusBody = isAccepted
-    ? `Your partnership proposal from **${fromServerName}** to **${meta.name}** was accepted. Mutual cross-promotion is now active.`
-    : `Your partnership proposal from **${fromServerName}** to **${meta.name}** was declined. Any reserved credits have been returned.`;
+  const browseUrl = siteUrl(fromGuildId ? `/dashboard/${fromGuildId}/partnerships` : '/servers');
+  const smallIconUrl = meta.iconUrl
+    ? (meta.iconUrl.includes('?') ? (meta.iconUrl.includes('size=') ? meta.iconUrl.replace(/size=\d+/, 'size=32') : `${meta.iconUrl}&size=32`) : `${meta.iconUrl}?size=32`)
+    : null;
+
+  if (!isAccepted) {
+    return {
+      flags: 32768,
+      components: [
+        {
+          type: 17, // Container (No accent_color = no color on the side)
+          components: [
+            buildV2HeaderComponent(
+              `### ${meta.name}\n${meta.name} declined your partnership request.`,
+              smallIconUrl
+            ),
+            {
+              type: 14, // Separator
+              divider: true
+            },
+            {
+              type: 1, // ActionRow
+              components: [
+                {
+                  type: 2, // Button
+                  style: 5, // Link
+                  label: 'Browse other servers',
+                  url: browseUrl
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    };
+  }
 
   return {
     flags: 32768,
@@ -361,14 +397,14 @@ export function buildPartnershipRequesterNotificationV2({
       {
         type: 17, // Container (No accent_color = no color on the side)
         components: [
-          buildV2HeaderComponent(statusTitle, meta.iconUrl),
+          buildV2HeaderComponent(`### Partnership Proposal Accepted: ${meta.name}`, meta.iconUrl),
           {
             type: 14, // Separator
             divider: true
           },
           {
             type: 10, // TextDisplay
-            content: statusBody
+            content: `Your partnership proposal from **${fromServerName}** to **${meta.name}** was accepted. Mutual cross-promotion is now active.`
           },
           {
             type: 1, // ActionRow

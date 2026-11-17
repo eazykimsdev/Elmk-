@@ -23,9 +23,18 @@ const DEFAULT_SETTINGS = {
   daily_bump_cap_per_server: 24,
   bug_report_reward_credits: 50,
   join_reward_credits: 2,
+  premium_join_reward_credits: 5,
+  daily_join_reward_cap_per_server: 50,
+  daily_checkin_reward_credits: 10,
   join_minimum_stay_seconds: 120,
   join_retention_window_hours: 72,
-  recruiter_reward_credits: 4
+  recruiter_reward_credits: 4,
+  premium_perks: [
+    'Members earn 5 credits per verified join (instead of 2)',
+    'Animated GIF banners on your public server page and directory listing',
+    'Priority directory placement and Premium community badge',
+    'Broadcast announcements to the Premium Ads channel every 6 hours'
+  ]
 };
 
 function safeRead(filePath, fallback) {
@@ -102,8 +111,15 @@ export async function buyServerPremium(serverId, userId, options = {}) {
     }
 
     const settings = getAdminSettings();
-    const price = Number(settings.premium_price_credits) || 500;
-    const durationDays = Number(settings.premium_duration_days) || 30;
+    const rawPricePerMonth = Number(settings.premium_price_credits);
+    if (!Number.isFinite(rawPricePerMonth) || rawPricePerMonth <= 0) {
+      throw new Error('Price not set');
+    }
+    const validMonths = [1, 2, 3, 6, 12];
+    const months = validMonths.includes(Number(options.months)) ? Number(options.months) : 1;
+    const price = rawPricePerMonth * months;
+    const baseDurationDays = Number(settings.premium_duration_days) || 30;
+    const durationDays = baseDurationDays * months;
     const durationMs = durationDays * 24 * 3600 * 1000;
 
     // Check server balance

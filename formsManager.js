@@ -176,7 +176,7 @@ export function validateQuestions(questions) {
       throw new Error(`Question ${idx + 1} has an invalid type "${type}".`);
     }
 
-    const label = sanitizeText(String(q.label || '').slice(0, 300));
+    const label = sanitizeText(String(q.label || q.title || '').slice(0, 300));
     if (!label) throw new Error(`Question ${idx + 1} must have question text.`);
 
     const description = sanitizeText(String(q.description || '').slice(0, 500));
@@ -196,6 +196,7 @@ export function validateQuestions(questions) {
     return {
       id: q.id || `q_${Date.now()}_${randomBytes(3).toString('hex')}`,
       label,
+      title: label,
       description,
       type,
       required,
@@ -237,16 +238,19 @@ export async function createOrUpdateForm(serverId, formData, userId) {
 
   const name = sanitizeText(String(formData.name || 'Application Form').slice(0, 100));
   const introText = sanitizeText(String(formData.introText || '').slice(0, 2000));
-  const closingMessage = sanitizeText(String(formData.closingMessage || 'Thank you for your application! We will review it shortly.').slice(0, 1000));
+  const closingMessage = sanitizeText(String(formData.closingMessage || formData.closingText || 'Thank you for your application! We will review it shortly.').slice(0, 1000));
   const submitButtonText = sanitizeText(String(formData.submitButtonText || 'Submit Application').slice(0, 50));
-  const extraButtons = validateButtons(formData.extraButtons || []);
+  const extraButtons = validateButtons(formData.extraButtons || formData.linkButtons || []);
   const questions = validateQuestions(formData.questions || []);
 
   const isOpen = formData.isOpen !== undefined ? Boolean(formData.isOpen) : true;
   const closeDate = formData.closeDate ? new Date(formData.closeDate).toISOString() : null;
-  const maxSubmissions = typeof formData.maxSubmissions === 'number' && formData.maxSubmissions > 0 ? Math.floor(formData.maxSubmissions) : null;
-  const denyCooldownDays = typeof formData.denyCooldownDays === 'number' && formData.denyCooldownDays >= 0 ? Math.floor(formData.denyCooldownDays) : 7;
-  const roleRewardId = formData.roleRewardId ? String(formData.roleRewardId).trim() : null;
+  const rawMaxSub = formData.maxSubmissions ?? formData.submissionLimit;
+  const maxSubmissions = Number(rawMaxSub) > 0 ? Math.floor(Number(rawMaxSub)) : null;
+  const rawCooldown = formData.denyCooldownDays ?? formData.cooldownDays;
+  const denyCooldownDays = Number.isFinite(Number(rawCooldown)) && Number(rawCooldown) >= 0 ? Math.floor(Number(rawCooldown)) : 7;
+  const rawRole = formData.roleRewardId || formData.autoRoleId;
+  const roleRewardId = rawRole ? String(rawRole).trim() : null;
   const isPartnershipForm = Boolean(formData.isPartnershipForm);
 
   if (existingForm) {
@@ -254,17 +258,24 @@ export async function createOrUpdateForm(serverId, formData, userId) {
     existingForm.slug = cleanSlug;
     existingForm.introText = introText;
     existingForm.closingMessage = closingMessage;
+    existingForm.closingText = closingMessage;
     existingForm.submitButtonText = submitButtonText;
     existingForm.extraButtons = extraButtons;
+    existingForm.linkButtons = extraButtons;
     existingForm.questions = questions;
     existingForm.isOpen = isOpen;
     existingForm.closeDate = closeDate;
     existingForm.maxSubmissions = maxSubmissions;
+    existingForm.submissionLimit = maxSubmissions;
     existingForm.denyCooldownDays = denyCooldownDays;
+    existingForm.cooldownDays = denyCooldownDays;
     existingForm.roleRewardId = roleRewardId;
+    existingForm.autoRoleId = roleRewardId;
     existingForm.isPartnershipForm = isPartnershipForm;
     existingForm.updatedAt = new Date(now).toISOString();
     saveForms(forms);
+    deleteFormDraft(sid, existingForm.id);
+    deleteFormDraft(sid, 'new');
     return existingForm;
   }
 
@@ -276,14 +287,19 @@ export async function createOrUpdateForm(serverId, formData, userId) {
     slug: cleanSlug,
     introText,
     closingMessage,
+    closingText: closingMessage,
     submitButtonText,
     extraButtons,
+    linkButtons: extraButtons,
     questions,
     isOpen,
     closeDate,
     maxSubmissions,
+    submissionLimit: maxSubmissions,
     denyCooldownDays,
+    cooldownDays: denyCooldownDays,
     roleRewardId,
+    autoRoleId: roleRewardId,
     isPartnershipForm,
     submissionCount: 0,
     disabledByAdmin: false,
@@ -294,7 +310,59 @@ export async function createOrUpdateForm(serverId, formData, userId) {
 
   forms.unshift(newForm);
   saveForms(forms);
+  deleteFormDraft(sid, 'new');
   return newForm;
+}
+
+const DRAFTS_FILE = path.join(DATA_DIR, 'form_drafts.json');
+
+function loadDrafts() {
+  try {
+    if (fs.existsSync(DRAFTS_FILE)) {
+      return JSON.parse(fs.readFileSync(DRAFTS_FILE, 'utf8') || '{}');
+    }
+  } catch {}
+  return {};
+}
+
+function saveDrafts(data) {
+  try {
+    fs.writeFileSync(DRAFTS_FILE, JSON.stringify(data, null, 2), 'utf8');
+  } catch {}
+}
+
+export function getFormDraft(serverId, formId = 'new') {
+  const sid = String(serverId || '');
+  const fid = String(formId || 'new');
+  const drafts = loadDrafts();
+  return drafts[`${sid}:${fid}`] || null;
+}
+
+export function saveFormDraft(serverId, formId = 'new', draftData = {}, userId = null) {
+  const sid = String(serverId || '');
+  const fid = String(formId || 'new');
+  const drafts = loadDrafts();
+  const entry = {
+    serverId: sid,
+    formId: fid,
+    userId: userId ? String(userId) : null,
+    draft: draftData,
+    updatedAt: new Date().toISOString()
+  };
+  drafts[`${sid}:${fid}`] = entry;
+  saveDrafts(drafts);
+  return entry;
+}
+
+export function deleteFormDraft(serverId, formId = 'new') {
+  const sid = String(serverId || '');
+  const fid = String(formId || 'new');
+  const drafts = loadDrafts();
+  if (drafts[`${sid}:${fid}`]) {
+    delete drafts[`${sid}:${fid}`];
+    saveDrafts(drafts);
+  }
+  return true;
 }
 
 /**

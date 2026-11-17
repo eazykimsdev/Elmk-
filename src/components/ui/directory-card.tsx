@@ -20,6 +20,8 @@ export interface DirectoryServerData {
   memberCount?: number;
   verified?: boolean;
   is_premium?: boolean;
+  isFeaturedSpot?: boolean;
+  isHighlighted?: boolean;
   premiumUntil?: number | string | null;
   bot_in_guild?: boolean;
   inviteUrl?: string;
@@ -112,6 +114,7 @@ export function DirectoryCard({
         '@container relative rounded-[16px] border border-[#19191D] bg-[#0E0E11] p-3.5 sm:p-4 overflow-hidden transition-all duration-150 text-left w-full outline-hidden',
         'ring-1 ring-white/[0.06] shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_0_0_3px_rgba(255,255,255,0.02)]',
         'hover:border-white/20 hover:ring-white/10',
+        safeServer.isHighlighted && 'border-[var(--accent)]/60 ring-[var(--accent)]/30',
         !previewOnly && 'cursor-pointer focus-visible:ring-2 focus-visible:ring-[var(--accent)]',
         isExpired && 'opacity-60 grayscale-[0.25]',
         className
@@ -176,7 +179,12 @@ export function DirectoryCard({
             )}
             {safeServer.is_premium && (
               <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-[var(--accent)]/15 text-[var(--accent)] border border-[var(--accent)]/30 tracking-wider shrink-0 select-none">
-                PREMIUM
+                Premium
+              </span>
+            )}
+            {safeServer.isFeaturedSpot && (
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-white/[0.06] text-zinc-200 border border-white/15 shrink-0 select-none">
+                Featured
               </span>
             )}
             {safeServer.bot_in_guild === false && (
@@ -377,7 +385,7 @@ export function DirectoryCard({
                 className="h-8 px-3 rounded-lg bg-[var(--accent)] hover:brightness-110 text-[var(--accent-foreground)] font-medium text-xs flex items-center gap-1 cursor-pointer shadow-xs transition-transform active:scale-95 shrink-0"
               >
                 <Coins className="size-3.5 shrink-0" />
-                <span>Join (+{reward})</span>
+                <span>Join (+{reward} credits)</span>
               </Button>
             )
           )}

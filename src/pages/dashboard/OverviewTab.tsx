@@ -15,8 +15,10 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/auth';
+import { apiFetch } from '@/lib/api';
 import { BumpDialog } from '@/components/BumpDialog';
 import { UserAvatar } from '@/components/ui/UserAvatar';
 import { formatRelative, formatDateTime, parseDateSafe } from '@/lib/format';
@@ -273,10 +275,23 @@ export function OverviewTab({
   // Real per-server bot presence (from the Discord REST check on the backend)
   const [botInGuild, setBotInGuild] = useState<boolean | null>(null);
 
-  // Daily Check-in status (Phase F1)
+  // Daily Check-in status (Item 7)
   const [checkinStreak, setCheckinStreak] = useState<number>(0);
   const [checkinClaimedToday, setCheckinClaimedToday] = useState<boolean>(false);
   const [checkinClaiming, setCheckinClaiming] = useState<boolean>(false);
+  const [checkinReward, setCheckinReward] = useState<number>(10);
+  const [checkinNextResetUtc, setCheckinNextResetUtc] = useState<string>('');
+  const [checkinReminder, setCheckinReminder] = useState<boolean>(false);
+
+  // Real Owner Analytics (Item 8: page views, join clicks, bumps for last 7 and 30 days)
+  const [analyticsWindow, setAnalyticsWindow] = useState<'7d' | '30d'>('7d');
+  const [ownerAnalytics, setOwnerAnalytics] = useState<{
+    last7Days: { pageViews: number; joinClicks: number; bumps: number };
+    last30Days: { pageViews: number; joinClicks: number; bumps: number };
+  }>({
+    last7Days: { pageViews: 0, joinClicks: 0, bumps: 0 },
+    last30Days: { pageViews: 0, joinClicks: 0, bumps: 0 }
+  });
 
   const fetchCheckinStatus = async () => {
     try {
@@ -285,6 +300,13 @@ export function OverviewTab({
         const data = await res.json();
         setCheckinStreak(Number(data.streak) || 0);
         setCheckinClaimedToday(Boolean(data.claimedToday));
+        if (typeof data.reward === 'number' && data.reward > 0) {
+          setCheckinReward(data.reward);
+        }
+        if (data.nextResetUtc) {
+          setCheckinNextResetUtc(data.nextResetUtc);
+        }
+        setCheckinReminder(Boolean(data.reminderEnabled));
       }
     } catch {}
   };
@@ -293,22 +315,44 @@ export function OverviewTab({
     fetchCheckinStatus();
   }, []);
 
+  useEffect(() => {
+    if (!guildId) return;
+    let active = true;
+    fetch(`/api/servers/${guildId}/analytics`, { credentials: 'include' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (active && data?.last7Days && data?.last30Days) {
+          setOwnerAnalytics({
+            last7Days: data.last7Days,
+            last30Days: data.last30Days
+          });
+        }
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [guildId]);
+
   const handleClaimDailyCheckin = async () => {
     if (checkinClaimedToday || checkinClaiming) return;
     setCheckinClaiming(true);
     try {
-      const res = await fetch('/api/user/daily-checkin', {
+      const res = await apiFetch('/api/user/daily-checkin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include'
+        body: JSON.stringify({ guildId })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to claim daily reward.');
       setCheckinClaimedToday(true);
-      setCheckinStreak(data.userAchievements?.streak || checkinStreak + 1);
+      const nextStreak = data.streak ?? data.userAchievements?.streak ?? checkinStreak + 1;
+      const earned = data.reward ?? checkinReward;
+      setCheckinStreak(nextStreak);
+      if (data.nextResetUtc) setCheckinNextResetUtc(data.nextResetUtc);
       window.dispatchEvent(new Event('balance_updated'));
       if (addToast) {
-        addToast('success', 'Daily Reward Claimed', `Earned +10 credits! Current streak: ${data.userAchievements?.streak || checkinStreak + 1} days.`);
+        addToast('success', 'Daily Reward Claimed', `Earned +${earned} credits. Current streak: ${nextStreak} days.`);
       }
     } catch (err: any) {
       if (addToast) {
@@ -317,6 +361,17 @@ export function OverviewTab({
     } finally {
       setCheckinClaiming(false);
     }
+  };
+
+  const handleToggleCheckinReminder = async (enabled: boolean) => {
+    setCheckinReminder(enabled);
+    try {
+      await apiFetch('/api/user/daily-checkin/reminder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled })
+      });
+    } catch {}
   };
   useEffect(() => {
     let mounted = true;
@@ -549,47 +604,108 @@ export function OverviewTab({
         </div>
       </div>
 
-      {/* ── DAILY CHECK-IN CARD (Phase F1) ────────────────────────────────── */}
-      <div className="rounded-[16px] border border-[rgba(255,255,255,0.07)] bg-[#0E0E11] p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="flex items-center gap-3.5">
-          <div className="p-3 rounded-xl bg-white/[0.04] border border-white/[0.06] text-amber-400">
-            <CalendarCheck className="size-5" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h3 className="text-sm font-medium text-zinc-100">Daily check-in</h3>
-              <span className="text-[11px] px-2 py-0.5 rounded-full bg-white/[0.06] text-zinc-300 font-mono">
-                {checkinStreak} {checkinStreak === 1 ? 'day' : 'days'} streak
-              </span>
+      {/* ── DAILY CHECK-IN & OWNER ANALYTICS CARDS (Items 7 & 8) ────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        {/* Daily Check-In Card */}
+        <div className="rounded-[16px] border border-[rgba(255,255,255,0.07)] bg-[#0E0E11] p-5 sm:p-6 flex flex-col justify-between gap-4">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <CalendarCheck className="size-4 text-[var(--accent)]" />
+                <h3 className="text-sm font-medium text-zinc-100">Daily check-in</h3>
+                <span className="text-[11px] px-2 py-0.5 rounded-full bg-white/[0.06] text-zinc-300 tabular-nums">
+                  {checkinStreak} {checkinStreak === 1 ? 'day' : 'days'} streak
+                </span>
+              </div>
+              <p className="text-xs text-zinc-400 mt-1">
+                Claim once per UTC day (+{checkinReward} credits).
+                {checkinNextResetUtc
+                  ? ` Next reset: ${new Date(checkinNextResetUtc).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}.`
+                  : ''}
+              </p>
             </div>
-            <p className="text-xs text-zinc-400 mt-0.5">
-              Claim your daily reward of 10 credits to build your streak and grow your community.
-            </p>
+
+            <Button
+              onClick={handleClaimDailyCheckin}
+              disabled={checkinClaimedToday || checkinClaiming}
+              size="sm"
+              className={`text-xs h-9 px-4 rounded-full font-medium shrink-0 transition-colors ${
+                checkinClaimedToday
+                  ? 'bg-white/[0.06] text-zinc-400 border border-white/[0.08] cursor-default'
+                  : 'bg-[var(--accent)] hover:opacity-90 text-[var(--accent-foreground)] border-0 cursor-pointer'
+              }`}
+            >
+              {checkinClaimedToday ? (
+                <>
+                  <Check className="size-3.5 mr-1.5 text-emerald-400" />
+                  Claimed today
+                </>
+              ) : (
+                <>
+                  <Coins className="size-3.5 mr-1.5" />
+                  {checkinClaiming ? 'Claiming…' : `Claim +${checkinReward} credits`}
+                </>
+              )}
+            </Button>
+          </div>
+
+          <div className="pt-3 border-t border-white/[0.06] flex items-center justify-between text-xs text-zinc-400">
+            <span>Daily check-in reminder</span>
+            <Switch
+              checked={checkinReminder}
+              onCheckedChange={handleToggleCheckinReminder}
+              aria-label="Daily check-in reminder"
+            />
           </div>
         </div>
-        <div className="flex items-center gap-3 shrink-0">
-          <Button
-            onClick={handleClaimDailyCheckin}
-            disabled={checkinClaimedToday || checkinClaiming}
-            size="sm"
-            className={`text-xs h-9 px-4 font-medium transition-colors ${
-              checkinClaimedToday
-                ? 'bg-white/[0.06] text-zinc-400 border border-white/[0.08] cursor-default'
-                : 'bg-[var(--accent)] hover:opacity-90 text-white border-0'
-            }`}
-          >
-            {checkinClaimedToday ? (
-              <>
-                <Check className="size-3.5 mr-1.5 text-emerald-400" />
-                Claimed today
-              </>
-            ) : (
-              <>
-                <Coins className="size-3.5 mr-1.5 text-amber-300" />
-                {checkinClaiming ? 'Claiming…' : 'Claim 10 cr'}
-              </>
-            )}
-          </Button>
+
+        {/* Owner Analytics Card (Item 8: Real page views, join clicks, and bumps for last 7 & 30 days) */}
+        <div className="rounded-[16px] border border-[rgba(255,255,255,0.07)] bg-[#0E0E11] p-5 sm:p-6 flex flex-col justify-between gap-4">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-medium text-zinc-100">Owner analytics</h3>
+              <p className="text-xs text-zinc-400 mt-0.5">
+                Page views, join clicks, and bumps from real server logs.
+              </p>
+            </div>
+            <div className="inline-flex items-center rounded-full bg-[#141417] border border-white/[0.08] p-0.5">
+              {(['7d', '30d'] as const).map((w) => (
+                <button
+                  key={w}
+                  type="button"
+                  onClick={() => setAnalyticsWindow(w)}
+                  className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors cursor-pointer ${
+                    analyticsWindow === w
+                      ? 'bg-white text-zinc-950 font-semibold'
+                      : 'text-zinc-400 hover:text-zinc-200'
+                  }`}
+                >
+                  {w === '7d' ? '7 days' : '30 days'}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-3 pt-2 border-t border-white/[0.06]">
+            <div>
+              <div className="text-[11px] text-zinc-400">Page views</div>
+              <div className="text-xl font-semibold text-zinc-100 tabular-nums mt-0.5">
+                {(analyticsWindow === '7d' ? ownerAnalytics.last7Days.pageViews : ownerAnalytics.last30Days.pageViews).toLocaleString()}
+              </div>
+            </div>
+            <div>
+              <div className="text-[11px] text-zinc-400">Join clicks</div>
+              <div className="text-xl font-semibold text-zinc-100 tabular-nums mt-0.5">
+                {(analyticsWindow === '7d' ? ownerAnalytics.last7Days.joinClicks : ownerAnalytics.last30Days.joinClicks).toLocaleString()}
+              </div>
+            </div>
+            <div>
+              <div className="text-[11px] text-zinc-400">Bumps</div>
+              <div className="text-xl font-semibold text-zinc-100 tabular-nums mt-0.5">
+                {(analyticsWindow === '7d' ? ownerAnalytics.last7Days.bumps : ownerAnalytics.last30Days.bumps).toLocaleString()}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 

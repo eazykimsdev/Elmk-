@@ -68,6 +68,7 @@ export function DirectoryRow({
       }}
       className={cn(
         'group flex flex-col sm:flex-row items-start sm:items-center justify-between p-3.5 sm:px-4 min-h-[80px] sm:h-[72px] rounded-xl border border-white/[0.06] bg-[#0E0E11] hover:bg-[#141417] hover:border-white/15 transition-all text-left w-full outline-hidden cursor-pointer gap-3 sm:gap-4 select-none',
+        server?.isHighlighted && 'border-[var(--accent)]/60 ring-1 ring-[var(--accent)]/30',
         isExpired && 'opacity-60 grayscale-[0.25]',
         className
       )}
@@ -107,7 +108,14 @@ export function DirectoryRow({
             {/* Premium badge */}
             {server.is_premium && (
               <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-[var(--accent)]/15 text-[var(--accent)] border border-[var(--accent)]/30 tracking-wider shrink-0 select-none">
-                PREMIUM
+                Premium
+              </span>
+            )}
+
+            {/* Featured badge */}
+            {server.isFeaturedSpot && (
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-white/[0.06] text-zinc-200 border border-white/15 shrink-0 select-none">
+                Featured
               </span>
             )}
 
@@ -157,7 +165,7 @@ export function DirectoryRow({
 
           {/* Reward pill */}
           <span className="px-2 py-0.5 rounded-full bg-[var(--accent-soft)] text-[var(--accent)] border border-[var(--accent-border)] text-xs font-semibold tabular-nums">
-            +{rewardCoins} cr
+            +{server.rewardCoins ?? rewardCoins} credits
           </span>
         </div>
 
@@ -210,3 +218,4 @@ export function DirectoryRow({
     </div>
   );
 }
+

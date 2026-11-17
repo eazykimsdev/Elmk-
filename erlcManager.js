@@ -4,7 +4,7 @@ import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const DATA_DIR = path.join(__dirname, '..', 'data');
+const DATA_DIR = process.env.DATA_DIR || path.join(process.cwd(), 'data');
 const CONNECTIONS_FILE = path.join(DATA_DIR, 'erlc_connections.json');
 const AUDIT_FILE = path.join(DATA_DIR, 'erlc_audit.json');
 

@@ -418,8 +418,12 @@ export function ServerProfileModal({
 
   const handleOpenFullPage = () => {
     onClose();
-    const slug = server.slug || (server.name && server.name.toLowerCase().replace(/[^a-z0-9_-]/g, '-')) || server.id || activeSlug;
-    navigate(`/s/${slug}`);
+    if (server.customSlug) {
+      navigate(`/${server.customSlug}`);
+      return;
+    }
+    const targetId = server.id || activeSlug;
+    navigate(`/servers/${targetId}`);
   };
 
   const handleSendReport = async () => {
@@ -1003,6 +1007,7 @@ export function ServerProfileModal({
                       <UserAvatar
                         userId={owner.id}
                         avatarHash={owner.avatar}
+                        avatarUrl={typeof owner.avatar === 'string' && owner.avatar.startsWith('http') ? owner.avatar : undefined}
                         name={owner.name}
                         size={40}
                         className="size-10 rounded-full"
@@ -1070,6 +1075,18 @@ export function ServerProfileModal({
                     </span>
                   </div>
 
+                  {server.showCredits !== false && (stats.serverCredits !== null && stats.serverCredits !== undefined || server.serverCredits !== null && server.serverCredits !== undefined) && (
+                    <div className="flex items-center justify-between py-1 border-b border-white/[0.04]">
+                      <span className="text-zinc-400 flex items-center gap-2">
+                        <Coins className="size-3.5 text-zinc-500" />
+                        <span>Server credits</span>
+                      </span>
+                      <span className="text-white font-medium tabular-nums">
+                        {Number(stats.serverCredits ?? server.serverCredits ?? 0).toLocaleString()}
+                      </span>
+                    </div>
+                  )}
+
                   <div className="flex items-center justify-between py-1 border-b border-white/[0.04]">
                     <span className="text-zinc-400 flex items-center gap-2">
                       <Clock className="size-3.5 text-zinc-500" />
@@ -1127,7 +1144,7 @@ export function ServerProfileModal({
                       className="w-full h-11 bg-[var(--accent)] hover:opacity-90 text-[var(--accent-foreground)] font-semibold text-sm rounded-xl cursor-pointer shadow-md"
                     >
                       <Coins className="size-4 mr-2" />
-                      <span>Join server (+{reward} cr)</span>
+                      <span>Join (+{reward} credits)</span>
                     </Button>
                   )}
 

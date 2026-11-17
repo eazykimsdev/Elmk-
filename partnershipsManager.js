@@ -5,6 +5,7 @@ import { fileURLToPath } from 'url';
 import { getPromotedServers, loadUserBalances, saveUserBalances, getUserCredits } from './directoryManager.js';
 import { recordLedgerTransaction, appendServerActivity, getServerLedgerSummary, getUserLedgerSummary } from './ledgerManager.js';
 import { sendPartnershipRequestDM, sendDirectNotificationV2 } from './discordNotificationManager.js';
+import { getAdminSettings } from './premiumManager.js';
 
 function addServerCreditTransaction(guildId, { amount, category, description, idempotencyKey }) {
   try {
@@ -755,14 +756,20 @@ export async function respondToPartnershipRequest({ requestId, action, guildId, 
 
     savePartnershipsData(data);
 
-    // Notify requester of outcome if DMs are enabled
-    if (process.env.PARTNERSHIP_DMS_ENABLED === 'true' && req.fromOwnerId) {
+    // Notify requester of outcome once per request (closed DMs never fail)
+    const targetOwnerId = req.fromOwnerId || serverA.ownerId || serverA.owner_discord_id;
+    if (process.env.PARTNERSHIP_DMS_ENABLED !== 'false' && targetOwnerId && !data.requests[reqIndex].dmSent) {
+      data.requests[reqIndex].dmSent = true;
+      savePartnershipsData(data);
       try {
         await sendDirectNotificationV2({
-          targetUserId: req.fromOwnerId,
+          targetUserId: targetOwnerId,
           type: 'partnership_result',
+          fromGuildId: req.fromGuildId,
+          toGuildId: req.toGuildId,
           serverName: serverA.name,
           proposingServer: serverB.name,
+          serverIconUrl: serverB.iconUrl || serverB.icon || null,
           guildId: req.toGuildId,
           action: 'accepted'
         });
@@ -791,23 +798,30 @@ export async function respondToPartnershipRequest({ requestId, action, guildId, 
       } catch {}
     }
 
-    savePartnershipsData(data);
-
-    // Notify requester of decline if DMs are enabled
-    if (process.env.PARTNERSHIP_DMS_ENABLED === 'true' && req.fromOwnerId) {
+    // Notify requester of decline once per request (closed DMs never fail)
+    const targetOwnerId = req.fromOwnerId || serverA.ownerId || serverA.owner_discord_id;
+    let dmResult = null;
+    if (process.env.PARTNERSHIP_DMS_ENABLED !== 'false' && targetOwnerId && !data.requests[reqIndex].dmSent) {
+      data.requests[reqIndex].dmSent = true;
+      savePartnershipsData(data);
       try {
-        await sendDirectNotificationV2({
-          targetUserId: req.fromOwnerId,
+        dmResult = await sendDirectNotificationV2({
+          targetUserId: targetOwnerId,
           type: 'partnership_result',
+          fromGuildId: req.fromGuildId,
+          toGuildId: req.toGuildId,
           serverName: serverA.name,
           proposingServer: serverB.name,
+          serverIconUrl: serverB.iconUrl || serverB.icon || null,
           guildId: req.toGuildId,
           action: 'declined'
         });
       } catch {}
+    } else {
+      savePartnershipsData(data);
     }
 
-    return { success: true, status: 'declined' };
+    return { success: true, status: 'declined', dmSent: Boolean(dmResult?.ok) };
   }
 }
 
@@ -957,13 +971,15 @@ export function claimPartnershipMilestone({ milestoneId, guildId, userId }) {
 }
 
 /** Claim daily check-in reward (Truly Daily UTC calendar rule) */
-export function claimDailyReward(userId, guildId = null) {
+export function claimDailyReward(userId, guildIdOrOptions = null, options = {}) {
   if (!userId) throw new Error('User not authenticated.');
+  const opts = (guildIdOrOptions && typeof guildIdOrOptions === 'object') ? guildIdOrOptions : (options || {});
+  const guildId = (guildIdOrOptions && typeof guildIdOrOptions === 'string') ? guildIdOrOptions : (opts.guildId || null);
   const data = loadPartnershipsData();
   const balances = loadUserBalances();
 
   const userAch = data.achievements[userId] || { lastCheckin: 0, streak: 0, lastClaimDate: null };
-  const now = new Date();
+  const now = opts.now ? new Date(opts.now) : new Date();
   const todayUtc = now.toISOString().slice(0, 10);
   const yesterdayUtc = new Date(now.getTime() - 86400000).toISOString().slice(0, 10);
 
@@ -983,8 +999,9 @@ export function claimDailyReward(userId, guildId = null) {
   userAch.lastClaimDate = todayUtc;
   userAch.lastCheckin = now.getTime();
 
-  // Consistent daily reward set in settings (10 credits)
-  const rewardAmount = 10;
+  // Consistent daily reward set in settings (default 10 credits)
+  const settings = getAdminSettings();
+  const rewardAmount = Number(settings.daily_checkin_reward_credits) || 10;
   balances[userId] = (balances[userId] || 0) + rewardAmount;
 
   const allServers = getPromotedServers(true);
@@ -1026,6 +1043,7 @@ export function claimDailyReward(userId, guildId = null) {
   return {
     success: true,
     amount: rewardAmount,
+    reward: rewardAmount,
     newBalance: balances[userId],
     streak: userAch.streak,
     lastClaimDate: todayUtc

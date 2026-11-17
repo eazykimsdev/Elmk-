@@ -162,9 +162,12 @@ export async function addServerAdvertiser(serverId, targetUserId, ownerUserId, o
   const server = data.servers.find(s => String(s.id) === sid || String(s.guildId) === sid);
   if (!server) throw new Error('Server not found in directory');
 
-  // Must be premium
-  if (!isServerPremium(server)) {
-    throw new Error('Only Premium servers can add advertisers.');
+  const extraBoost = server.boosts?.extra_advertiser;
+  const extraSeats = (extraBoost && Number(extraBoost.activeUntil || 0) > Date.now()) ? Number(extraBoost.seats || 1) : 0;
+  const isPrem = isServerPremium(server);
+
+  if (!isPrem && extraSeats <= 0) {
+    throw new Error('Only Premium servers or servers with an Extra Advertiser Seat boost can add advertisers.');
   }
 
   // Caller must be server owner
@@ -179,9 +182,10 @@ export async function addServerAdvertiser(serverId, targetUserId, ownerUserId, o
     throw new Error('User is blacklisted.');
   }
 
-  // Limit check
+  // Limit check (including active extra_advertiser boost seats)
   const settings = getAdminSettings();
-  const maxAdvertisers = Number(settings.max_advertisers_per_server) || 5;
+  const baseMax = isPrem ? (Number(settings.max_advertisers_per_server) || 5) : 0;
+  const maxAdvertisers = baseMax + extraSeats;
   server.advertisers = Array.isArray(server.advertisers) ? server.advertisers : [];
 
   if (server.advertisers.length >= maxAdvertisers) {

@@ -21,7 +21,8 @@ import {
   Server,
   X,
   Volume2,
-  Sparkles
+  Sparkles,
+  Wrench
 } from 'lucide-react';
 
 import { useTheme } from '@/components/library/theme-provider';
@@ -859,6 +860,44 @@ export function SettingsTab({
                 </Button>
               </DialogContent>
             </Dialog>
+
+            {/* System Status & Maintenance Controls */}
+            <div className="rounded-xl border border-white/[0.06] bg-[#0E0E11] p-5 space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <Wrench className="size-4 text-zinc-400" />
+                    <h3 className="text-sm font-semibold text-white">Emergency maintenance controls</h3>
+                  </div>
+                  <p className="text-zinc-400 text-xs mt-1">
+                    Control public under construction screens for the whole site or specific features if something goes wrong.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-sans">
+                    <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    Operational
+                  </span>
+                </div>
+              </div>
+
+              <div className="pt-2 border-t border-white/[0.06] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <span className="text-[11px] text-zinc-500">
+                  Selectively take down Boosts, Forms, Server Pages, or the entire website anytime from the Admin Portal.
+                </span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    window.location.href = '/admin-portal';
+                  }}
+                  className="text-xs border-white/10 hover:bg-white/5 cursor-pointer text-zinc-300 shrink-0"
+                >
+                  Manage maintenance &rarr;
+                </Button>
+              </div>
+            </div>
 
             {/* DANGER ZONE (Visible ONLY on General and Appearance tabs, Owner only) */}
             <DangerZone
