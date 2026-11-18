@@ -27,7 +27,8 @@ export const QUESTION_TYPES = new Set([
   'multiple_choice',
   'checkboxes',
   'number',
-  'yes_no'
+  'yes_no',
+  'page_break'
 ]);
 
 function ensureFiles() {
@@ -176,6 +177,18 @@ export function validateQuestions(questions) {
       throw new Error(`Question ${idx + 1} has an invalid type "${type}".`);
     }
 
+    if (type === 'page_break') {
+      const pageTitle = sanitizeText(String(q.label || q.title || 'Page Break').slice(0, 100));
+      return {
+        id: q.id || `pb_${Date.now()}_${randomBytes(3).toString('hex')}`,
+        label: pageTitle,
+        title: pageTitle,
+        type: 'page_break',
+        required: false,
+        options: []
+      };
+    }
+
     const label = sanitizeText(String(q.label || q.title || '').slice(0, 300));
     if (!label) throw new Error(`Question ${idx + 1} must have question text.`);
 
@@ -272,6 +285,10 @@ export async function createOrUpdateForm(serverId, formData, userId) {
     existingForm.roleRewardId = roleRewardId;
     existingForm.autoRoleId = roleRewardId;
     existingForm.isPartnershipForm = isPartnershipForm;
+    existingForm.bannerUrl = formData.bannerUrl ? String(formData.bannerUrl).trim() : null;
+    existingForm.startButtonText = formData.startButtonText ? sanitizeText(String(formData.startButtonText).slice(0, 50)) : 'Start Application';
+    existingForm.allowPrevious = formData.allowPrevious !== undefined ? Boolean(formData.allowPrevious) : true;
+    existingForm.infoLines = Array.isArray(formData.infoLines) ? formData.infoLines : [];
     existingForm.updatedAt = new Date(now).toISOString();
     saveForms(forms);
     deleteFormDraft(sid, existingForm.id);
@@ -301,6 +318,10 @@ export async function createOrUpdateForm(serverId, formData, userId) {
     roleRewardId,
     autoRoleId: roleRewardId,
     isPartnershipForm,
+    bannerUrl: formData.bannerUrl ? String(formData.bannerUrl).trim() : null,
+    startButtonText: formData.startButtonText ? sanitizeText(String(formData.startButtonText).slice(0, 50)) : 'Start Application',
+    allowPrevious: formData.allowPrevious !== undefined ? Boolean(formData.allowPrevious) : true,
+    infoLines: Array.isArray(formData.infoLines) ? formData.infoLines : [],
     submissionCount: 0,
     disabledByAdmin: false,
     disabledReason: null,
@@ -361,6 +382,56 @@ export function deleteFormDraft(serverId, formId = 'new') {
   if (drafts[`${sid}:${fid}`]) {
     delete drafts[`${sid}:${fid}`];
     saveDrafts(drafts);
+  }
+  return true;
+}
+
+const APPLICANT_DRAFTS_FILE = path.join(DATA_DIR, 'form_applicant_drafts.json');
+
+function loadApplicantDrafts() {
+  try {
+    if (fs.existsSync(APPLICANT_DRAFTS_FILE)) {
+      return JSON.parse(fs.readFileSync(APPLICANT_DRAFTS_FILE, 'utf8') || '{}');
+    }
+  } catch {}
+  return {};
+}
+
+function saveApplicantDrafts(data) {
+  try {
+    fs.writeFileSync(APPLICANT_DRAFTS_FILE, JSON.stringify(data, null, 2), 'utf8');
+  } catch {}
+}
+
+export function getApplicantDraft(formId, userId) {
+  if (!formId || !userId) return null;
+  const drafts = loadApplicantDrafts();
+  return drafts[`${formId}:${userId}`] || null;
+}
+
+export function saveApplicantDraft(formId, userId, answers = {}, currentStep = 0) {
+  if (!formId || !userId) return null;
+  const drafts = loadApplicantDrafts();
+  const key = `${formId}:${userId}`;
+  const entry = {
+    formId: String(formId),
+    userId: String(userId),
+    answers,
+    currentStep,
+    updatedAt: new Date().toISOString()
+  };
+  drafts[key] = entry;
+  saveApplicantDrafts(drafts);
+  return entry;
+}
+
+export function deleteApplicantDraft(formId, userId) {
+  if (!formId || !userId) return true;
+  const drafts = loadApplicantDrafts();
+  const key = `${formId}:${userId}`;
+  if (drafts[key]) {
+    delete drafts[key];
+    saveApplicantDrafts(drafts);
   }
   return true;
 }
@@ -525,6 +596,7 @@ export async function submitApplication(formId, applicantUser, answers) {
   // Validate and sanitize answers
   const sanitizedAnswers = {};
   for (const q of form.questions) {
+    if (q.type === 'page_break') continue;
     const rawAns = answers[q.id];
 
     if (q.required && (rawAns === undefined || rawAns === null || rawAns === '')) {
@@ -576,6 +648,9 @@ export async function submitApplication(formId, applicantUser, answers) {
   // Increment submissionCount on form
   form.submissionCount = (form.submissionCount || 0) + 1;
   saveForms(forms);
+
+  // Clear applicant draft on successful submission
+  deleteApplicantDraft(form.id, uid);
 
   return submissionRecord;
 }

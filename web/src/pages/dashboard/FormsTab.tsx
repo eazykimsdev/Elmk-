@@ -25,7 +25,7 @@ interface Question {
   id: string;
   label?: string;
   title: string;
-  type: 'short_text' | 'long_text' | 'dropdown' | 'multiple_choice' | 'checkboxes' | 'number' | 'yes_no';
+  type: 'short_text' | 'long_text' | 'dropdown' | 'multiple_choice' | 'checkboxes' | 'number' | 'yes_no' | 'page_break';
   required: boolean;
   options?: string[];
   placeholder?: string;
@@ -47,6 +47,9 @@ interface FormConfig {
   closeDate?: string | null;
   submissionLimit?: number | null;
   introText?: string;
+  bannerUrl?: string | null;
+  startButtonText?: string;
+  allowPrevious?: boolean;
   closingText?: string;
   thankYouText?: string;
   submitButtonText?: string;
@@ -108,6 +111,9 @@ export function FormsTab({ currentGuildId, serverName, customUrl, addToast }: Fo
   const [isOpen, setIsOpen] = useState(true);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [introText, setIntroText] = useState('');
+  const [bannerUrl, setBannerUrl] = useState('');
+  const [startButtonText, setStartButtonText] = useState('Start Application');
+  const [allowPrevious, setAllowPrevious] = useState(true);
   const [closingText, setClosingText] = useState('');
   const [submitButtonText, setSubmitButtonText] = useState('Submit Application');
   const [linkButtons, setLinkButtons] = useState<LinkButton[]>([]);
@@ -195,6 +201,9 @@ export function FormsTab({ currentGuildId, serverName, customUrl, addToast }: Fo
               : [{ id: 'q_' + Date.now(), title: 'Why do you want to join our team?', label: 'Why do you want to join our team?', type: 'long_text', required: true }]
           );
           setIntroText(d.introText || '');
+          setBannerUrl(d.bannerUrl || '');
+          setStartButtonText(d.startButtonText || 'Start Application');
+          setAllowPrevious(d.allowPrevious !== false);
           setClosingText(d.closingText || '');
           setSubmitButtonText(d.submitButtonText || 'Submit Application');
           setLinkButtons(Array.isArray(d.linkButtons) ? d.linkButtons : []);
@@ -223,6 +232,9 @@ export function FormsTab({ currentGuildId, serverName, customUrl, addToast }: Fo
       }
     ]);
     setIntroText('Please answer the following questions honestly.');
+    setBannerUrl('');
+    setStartButtonText('Start Application');
+    setAllowPrevious(true);
     setClosingText('Thank you! Our staff will review your application soon.');
     setSubmitButtonText('Submit Application');
     setLinkButtons([]);
@@ -264,6 +276,9 @@ export function FormsTab({ currentGuildId, serverName, customUrl, addToast }: Fo
           ]
     );
     setIntroText(form.introText || '');
+    setBannerUrl(form.bannerUrl || '');
+    setStartButtonText(form.startButtonText || 'Start Application');
+    setAllowPrevious(form.allowPrevious !== false);
     setClosingText(form.closingText || form.thankYouText || '');
     setSubmitButtonText(form.submitButtonText || form.submitLabel || 'Submit Application');
     setLinkButtons(Array.isArray(form.linkButtons) ? form.linkButtons : []);
@@ -375,6 +390,7 @@ export function FormsTab({ currentGuildId, serverName, customUrl, addToast }: Fo
 
     for (let i = 0; i < questions.length; i++) {
       const q = questions[i];
+      if (q.type === 'page_break') continue;
       const text = (q.title || q.label || '').trim();
       if (!text) {
         const msg = `Question #${i + 1} is missing its question text.`;
@@ -417,6 +433,9 @@ export function FormsTab({ currentGuildId, serverName, customUrl, addToast }: Fo
         status: isOpen ? 'open' : 'closed',
         questions: normalizedQuestions,
         introText: introText.trim(),
+        bannerUrl: bannerUrl.trim() || null,
+        startButtonText: startButtonText.trim() || 'Start Application',
+        allowPrevious: Boolean(allowPrevious),
         closingText: closingText.trim(),
         thankYouText: closingText.trim(),
         submitButtonText: submitButtonText.trim() || 'Submit Application',
@@ -491,6 +510,21 @@ export function FormsTab({ currentGuildId, serverName, customUrl, addToast }: Fo
       required: true
     };
     setQuestions((prev) => [...prev, newQ]);
+  };
+
+  const handleAddPageBreak = () => {
+    if (questions.length >= 25) {
+      addToast?.('warning', 'Limit Reached', 'Maximum 25 questions per form.');
+      return;
+    }
+    const newPb: Question = {
+      id: 'pb_' + Date.now(),
+      title: 'Page Break',
+      label: 'Page Break',
+      type: 'page_break',
+      required: false
+    };
+    setQuestions((prev) => [...prev, newPb]);
   };
 
   const handleMoveQuestion = (index: number, direction: 'up' | 'down') => {
@@ -707,18 +741,72 @@ export function FormsTab({ currentGuildId, serverName, customUrl, addToast }: Fo
                   <h2 className="text-sm font-semibold text-zinc-100">Questions</h2>
                   <p className="text-xs text-zinc-400">{questions.length} of 25 questions</p>
                 </div>
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={handleAddQuestion}
-                  className="h-9 px-3.5 text-xs rounded-full bg-zinc-900 hover:bg-zinc-800 text-zinc-100 border border-white/[0.1]"
-                >
-                  <Plus className="size-3.5 mr-1" /> Add question
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={handleAddPageBreak}
+                    className="h-9 px-3 text-xs rounded-full bg-zinc-900 hover:bg-zinc-800 text-zinc-100 border border-white/[0.1] cursor-pointer"
+                  >
+                    <Plus className="size-3.5 mr-1" /> Add page break
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={handleAddQuestion}
+                    className="h-9 px-3.5 text-xs rounded-full bg-zinc-900 hover:bg-zinc-800 text-zinc-100 border border-white/[0.1] cursor-pointer"
+                  >
+                    <Plus className="size-3.5 mr-1" /> Add question
+                  </Button>
+                </div>
               </div>
 
               <div className="space-y-4">
                 {questions.map((q, idx) => {
+                  if (q.type === 'page_break') {
+                    return (
+                      <div
+                        key={q.id}
+                        className="p-4 bg-zinc-900/60 border border-dashed border-white/10 rounded-xl flex items-center justify-between gap-4"
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
+                            ─── Page Break ───
+                          </span>
+                          <span className="text-[11px] text-zinc-500">
+                            Splits questions into a new page for applicants
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            disabled={idx === 0}
+                            onClick={() => handleMoveQuestion(idx, 'up')}
+                            className="size-7 rounded-lg bg-zinc-800/80 border border-white/[0.08] flex items-center justify-center text-zinc-400 hover:text-white disabled:opacity-40 cursor-pointer"
+                          >
+                            <ChevronUp className="size-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            disabled={idx === questions.length - 1}
+                            onClick={() => handleMoveQuestion(idx, 'down')}
+                            className="size-7 rounded-lg bg-zinc-800/80 border border-white/[0.08] flex items-center justify-center text-zinc-400 hover:text-white disabled:opacity-40 cursor-pointer"
+                          >
+                            <ChevronDown className="size-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteQuestion(q.id)}
+                            className="size-7 rounded-lg bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400 hover:text-rose-300 cursor-pointer"
+                          >
+                            <Trash2 className="size-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  }
+
                   const isChoice = CHOICE_TYPES.has(q.type);
                   const opts = Array.isArray(q.options) ? q.options : [];
 
@@ -808,6 +896,7 @@ export function FormsTab({ currentGuildId, serverName, customUrl, addToast }: Fo
                             <option value="dropdown">Dropdown</option>
                             <option value="number">Number</option>
                             <option value="yes_no">Yes / No</option>
+                            <option value="page_break">Page break</option>
                           </select>
                         </div>
 
@@ -918,14 +1007,44 @@ export function FormsTab({ currentGuildId, serverName, customUrl, addToast }: Fo
               {showMoreOptions && (
                 <div className="space-y-4 pt-4 border-t border-white/[0.06]">
                   <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-zinc-200 block">Banner image URL</label>
+                    <Input
+                      value={bannerUrl}
+                      onChange={(e) => setBannerUrl(e.target.value)}
+                      placeholder="https://..."
+                      className="h-11 bg-[#0E0E11] border-white/[0.08] text-xs text-zinc-100 rounded-xl"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
                     <label className="text-xs font-medium text-zinc-200 block">Intro text</label>
                     <textarea
                       value={introText}
                       onChange={(e) => setIntroText(e.target.value)}
                       rows={2}
-                      placeholder="Instructions shown at the top of the application form"
+                      placeholder="Instructions shown on the welcome page of the application form"
                       className="w-full p-3 text-xs bg-[#0E0E11] border border-white/[0.08] rounded-xl text-zinc-200 focus:outline-none"
                     />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-medium text-zinc-200 block">Start button text</label>
+                      <Input
+                        value={startButtonText}
+                        onChange={(e) => setStartButtonText(e.target.value)}
+                        placeholder="Start Application"
+                        className="h-11 bg-[#0E0E11] border-white/[0.08] text-xs text-zinc-100 rounded-xl"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-medium text-zinc-200 block">Allow previous button</label>
+                      <div className="h-11 px-3.5 bg-[#0E0E11] border border-white/[0.08] rounded-xl flex items-center justify-between">
+                        <span className="text-xs text-zinc-400">Enable Previous button</span>
+                        <Switch checked={allowPrevious} onCheckedChange={setAllowPrevious} />
+                      </div>
+                    </div>
                   </div>
 
                   <div className="space-y-1.5">

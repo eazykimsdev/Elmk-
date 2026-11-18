@@ -12,6 +12,7 @@ import {
   ChevronLeft,
   ChevronRight,
   CalendarCheck,
+  Clock,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -279,9 +280,16 @@ export function OverviewTab({
   const [checkinStreak, setCheckinStreak] = useState<number>(0);
   const [checkinClaimedToday, setCheckinClaimedToday] = useState<boolean>(false);
   const [checkinClaiming, setCheckinClaiming] = useState<boolean>(false);
-  const [checkinReward, setCheckinReward] = useState<number>(10);
+  const [checkinReward, setCheckinReward] = useState<number>(3);
   const [checkinNextResetUtc, setCheckinNextResetUtc] = useState<string>('');
   const [checkinReminder, setCheckinReminder] = useState<boolean>(false);
+
+  const isResetNear = useMemo(() => {
+    if (!checkinNextResetUtc) return false;
+    const resetMs = new Date(checkinNextResetUtc).getTime();
+    const diffMs = resetMs - Date.now();
+    return diffMs > 0 && diffMs <= 2 * 3600 * 1000;
+  }, [checkinNextResetUtc]);
 
   // Real Owner Analytics (Item 8: page views, join clicks, bumps for last 7 and 30 days)
   const [analyticsWindow, setAnalyticsWindow] = useState<'7d' | '30d'>('7d');
@@ -295,14 +303,13 @@ export function OverviewTab({
 
   const fetchCheckinStatus = async () => {
     try {
-      const res = await fetch('/api/user/daily-checkin', { credentials: 'include' });
+      const res = await fetch('/api/user/daily-checkin' + (guildId ? `?guildId=${encodeURIComponent(guildId)}` : ''), { credentials: 'include' });
       if (res.ok) {
         const data = await res.json();
         setCheckinStreak(Number(data.streak) || 0);
         setCheckinClaimedToday(Boolean(data.claimedToday));
-        if (typeof data.reward === 'number' && data.reward > 0) {
-          setCheckinReward(data.reward);
-        }
+        const r = typeof data.reward === 'number' ? data.reward : typeof data.rewardAmount === 'number' ? data.rewardAmount : 3;
+        setCheckinReward(r);
         if (data.nextResetUtc) {
           setCheckinNextResetUtc(data.nextResetUtc);
         }
@@ -648,6 +655,13 @@ export function OverviewTab({
               )}
             </Button>
           </div>
+
+          {isResetNear && !checkinClaimedToday && (
+            <div className="flex items-center gap-2 p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs">
+              <Clock className="size-3.5 shrink-0 text-amber-400" />
+              <span>UTC reset is in less than 2 hours. Claim today's credits before streak resets!</span>
+            </div>
+          )}
 
           <div className="pt-3 border-t border-white/[0.06] flex items-center justify-between text-xs text-zinc-400">
             <span>Daily check-in reminder</span>

@@ -7,7 +7,8 @@ import {
   Clock,
   Compass,
   Coins,
-  ChevronDown
+  ChevronDown,
+  Sparkles
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -338,8 +339,13 @@ export function EarnCoinsTab({
     return filteredServers.slice(startIndex, startIndex + pageSize);
   }, [filteredServers, currentPage, pageSize]);
 
+  // Featured servers with active Featured boost
+  const featuredServers = useMemo(() => {
+    return promotedServers.filter((s: any) => Boolean(s.isFeaturedSpot));
+  }, [promotedServers]);
+
   return (
-    <div className="flex flex-col min-h-[calc(100dvh-12rem)] space-y-6 w-full max-w-[1120px] mx-auto pb-8 font-sans">
+    <div className="flex flex-col min-h-[calc(100dvh-12rem)] space-y-6 w-full max-w-[1240px] mx-auto pb-8 font-sans">
       {/* Top Banner mounted globally by AppShell on all dashboard tabs: <BugReportBanner /> */}
       {/* ── LIST 1: YOUR JOINED COMMUNITIES (Point B1: Collapsible section, closed by default, remember choice) ── */}
       {joinedServersList.length > 0 && (
@@ -498,137 +504,167 @@ export function EarnCoinsTab({
         </div>
       </div>
 
-      {/* Directory List or Skeleton */}
-      {loading ? (
-        <EarnCreditsSkeleton />
-      ) : filteredServers.length === 0 ? (
-        <div className="rounded-xl border border-white/[0.06] bg-[#0E0E11] p-12 text-center">
-          <p className="text-sm font-medium text-white mb-1">No servers found in this category</p>
-          <p className="text-xs text-zinc-400 mb-4">No communities match your current search and category filters.</p>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => {
-              setSearch('');
-              setSelectedCategory('All');
-            }}
-            className="bg-[#272727] text-zinc-200 border-white/10 text-xs h-8 px-3 rounded-lg cursor-pointer"
-          >
-            Clear filters
-          </Button>
-        </div>
-      ) : (
-        <div className="space-y-6">
-          {/* Featured spot row */}
-          {filteredServers.some((s) => (s as any).isFeaturedSpot) && (
-            <div className="space-y-2.5">
-              <div className="flex items-center justify-between">
-                <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                  Featured
-                </h2>
+      {/* ── TWO-COLUMN WRAPPER: Main List on Left, Sticky Featured Panel on Right (Above on Mobile) ── */}
+      <div className="flex flex-col lg:flex-row items-start gap-6 w-full">
+        {/* Main Left Column */}
+        <div className="flex-1 w-full min-w-0 space-y-6">
+          {loading ? (
+            <EarnCreditsSkeleton />
+          ) : filteredServers.length === 0 ? (
+            <div className="rounded-xl border border-white/[0.06] bg-[#0E0E11] p-12 text-center">
+              <p className="text-sm font-medium text-white mb-1">No servers found in this category</p>
+              <p className="text-xs text-zinc-400 mb-4">No communities match your current search and category filters.</p>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  setSearch('');
+                  setSelectedCategory('All');
+                }}
+                className="bg-[#272727] text-zinc-200 border-white/10 text-xs h-8 px-3 rounded-lg cursor-pointer"
+              >
+                Clear filters
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {/* Restored 2-column Grid (1 column on mobile, 2 on tablet/desktop) */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {paginatedServers.map((server) => {
+                  const isOwnServer = currentGuildId && String(server.id) === String(currentGuildId);
+                  const userJoin = userJoins[server.id];
+                  const isVerifying = Boolean(userJoin && userJoin.status === 'verifying');
+                  const isVerified = Boolean(userJoin && (userJoin.status === 'verified' || userJoin.status === 'joined'));
+                  const iconUrl = getResolvedServerIcon(server);
+
+                  const cardData: DirectoryServerData = {
+                    id: server.id,
+                    name: server.name,
+                    icon: iconUrl,
+                    iconUrl: iconUrl,
+                    category: server.category,
+                    description: server.description,
+                    summary: server.summary,
+                    tags: server.tags,
+                    bannerUrl: server.bannerUrl,
+                    memberCount: server.memberCount,
+                    verified: server.verified,
+                    is_premium: (server as any).is_premium,
+                    isFeaturedSpot: (server as any).isFeaturedSpot,
+                    isHighlighted: (server as any).isHighlighted,
+                    invite_status: (server as any).invite_status,
+                    bot_in_guild: (server as any).bot_in_guild,
+                    inviteUrl: server.inviteUrl,
+                    rewardCoins: server.rewardCoins,
+                    erlc: (server as any).erlc || null,
+                  };
+
+                  return (
+                    <DirectoryCard
+                      key={server.id}
+                      server={cardData}
+                      rewardCoins={server.rewardCoins || 2}
+                      isOwnServer={Boolean(isOwnServer)}
+                      isJoined={isVerified}
+                      isVerifying={isVerifying}
+                      onJoin={handleJoinServer}
+                      onClick={() => openServerProfile(server.id, server)}
+                    />
+                  );
+                })}
               </div>
-              <div className="grid grid-cols-1 min-[900px]:grid-cols-2 gap-4">
-                {filteredServers
-                  .filter((s) => (s as any).isFeaturedSpot)
-                  .map((server) => {
-                    const isOwnServer = currentGuildId && String(server.id) === String(currentGuildId);
-                    const userJoin = userJoins[server.id];
-                    const isVerifying = Boolean(userJoin && userJoin.status === 'verifying');
-                    const isVerified = Boolean(userJoin && (userJoin.status === 'verified' || userJoin.status === 'joined'));
-                    const iconUrl = getResolvedServerIcon(server);
-                    const cardData: DirectoryServerData = {
-                      id: server.id,
-                      name: server.name,
-                      icon: iconUrl,
-                      iconUrl: iconUrl,
-                      category: server.category,
-                      description: server.description,
-                      summary: server.summary,
-                      tags: server.tags,
-                      bannerUrl: server.bannerUrl,
-                      memberCount: server.memberCount,
-                      verified: server.verified,
-                      is_premium: (server as any).is_premium,
-                      isFeaturedSpot: true,
-                      isHighlighted: (server as any).isHighlighted,
-                      invite_status: (server as any).invite_status,
-                      bot_in_guild: (server as any).bot_in_guild,
-                      inviteUrl: server.inviteUrl,
-                      rewardCoins: server.rewardCoins,
-                      erlc: (server as any).erlc || null,
-                    };
-                    return (
-                      <DirectoryCard
-                        key={`featured-${server.id}`}
-                        server={cardData}
-                        rewardCoins={server.rewardCoins || 2}
-                        isOwnServer={Boolean(isOwnServer)}
-                        isJoined={isVerified}
-                        isVerifying={isVerifying}
-                        onJoin={handleJoinServer}
-                        onClick={() => openServerProfile(server.id, server)}
-                      />
-                    );
-                  })}
-              </div>
+
+              {/* Pagination: Always visible outside and below list */}
+              <Pagination
+                page={currentPage}
+                pageSize={pageSize}
+                total={filteredServers.length}
+                onPageChange={setCurrentPage}
+              />
             </div>
           )}
-
-          {/* Restored 2-column Grid (1 column on mobile, 2 from 900px) - 10 rows per page */}
-          <div className="grid grid-cols-1 min-[900px]:grid-cols-2 gap-4">
-            {paginatedServers.map((server) => {
-              const isOwnServer = currentGuildId && String(server.id) === String(currentGuildId);
-              const userJoin = userJoins[server.id];
-              const isVerifying = Boolean(userJoin && userJoin.status === 'verifying');
-              const isVerified = Boolean(userJoin && (userJoin.status === 'verified' || userJoin.status === 'joined'));
-              const iconUrl = getResolvedServerIcon(server);
-
-              const cardData: DirectoryServerData = {
-                id: server.id,
-                name: server.name,
-                icon: iconUrl,
-                iconUrl: iconUrl,
-                category: server.category,
-                description: server.description,
-                summary: server.summary,
-                tags: server.tags,
-                bannerUrl: server.bannerUrl,
-                memberCount: server.memberCount,
-                verified: server.verified,
-                is_premium: (server as any).is_premium,
-                isFeaturedSpot: (server as any).isFeaturedSpot,
-                isHighlighted: (server as any).isHighlighted,
-                invite_status: (server as any).invite_status,
-                bot_in_guild: (server as any).bot_in_guild,
-                inviteUrl: server.inviteUrl,
-                rewardCoins: server.rewardCoins,
-                erlc: (server as any).erlc || null,
-              };
-
-              return (
-                <DirectoryCard
-                  key={server.id}
-                  server={cardData}
-                  rewardCoins={server.rewardCoins || 2}
-                  isOwnServer={Boolean(isOwnServer)}
-                  isJoined={isVerified}
-                  isVerifying={isVerifying}
-                  onJoin={handleJoinServer}
-                  onClick={() => openServerProfile(server.id, server)}
-                />
-              );
-            })}
-          </div>
-
-          {/* Pagination: Always visible outside and below list */}
-          <Pagination
-            page={currentPage}
-            pageSize={pageSize}
-            total={filteredServers.length}
-            onPageChange={setCurrentPage}
-          />
         </div>
-      )}
+
+        {/* Right Column: Featured Panel (Sticky on Desktop, Above List on Mobile) */}
+        <div className="w-full lg:w-[320px] lg:sticky lg:top-6 shrink-0 order-first lg:order-last">
+          <div className="rounded-xl border border-white/10 bg-[#0E0E11] p-4 space-y-3 font-sans">
+            <div className="flex items-center justify-between pb-2 border-b border-white/5">
+              <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-300 flex items-center gap-1.5 font-sans">
+                <Sparkles className="size-3.5 text-amber-400" />
+                Featured
+              </h2>
+              {featuredServers.length > 0 && (
+                <span className="text-[11px] text-zinc-500 font-mono">
+                  {featuredServers.length} active
+                </span>
+              )}
+            </div>
+
+            {featuredServers.length === 0 ? (
+              <div className="py-8 px-4 text-center rounded-lg border border-dashed border-white/5 bg-[#141417]/50">
+                <p className="text-xs text-zinc-400 font-medium">No featured communities</p>
+                <p className="text-[11px] text-zinc-500 mt-1">Servers with an active Featured boost appear here.</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {featuredServers.map((server) => {
+                  const isOwnServer = currentGuildId && String(server.id) === String(currentGuildId);
+                  const userJoin = userJoins[server.id];
+                  const isVerifying = Boolean(userJoin && userJoin.status === 'verifying');
+                  const isVerified = Boolean(userJoin && (userJoin.status === 'verified' || userJoin.status === 'joined'));
+                  const iconUrl = getResolvedServerIcon(server);
+
+                  return (
+                    <div
+                      key={`featured-panel-${server.id}`}
+                      className="p-2.5 rounded-lg border border-white/5 bg-[#141417] hover:border-white/10 transition-colors flex items-center justify-between gap-3"
+                    >
+                      <div
+                        className="flex items-center gap-2.5 min-w-0 cursor-pointer"
+                        onClick={() => openServerProfile(server.id, server)}
+                      >
+                        <ServerIcon
+                          iconUrl={iconUrl}
+                          name={server.name}
+                          size="sm"
+                          className="shrink-0"
+                        />
+                        <div className="min-w-0">
+                          <p className="text-xs font-medium text-white truncate hover:underline">
+                            {server.name}
+                          </p>
+                          <p className="text-[11px] text-zinc-500 truncate">
+                            {server.category || 'Roleplay Server'}
+                          </p>
+                        </div>
+                      </div>
+                      <Button
+                        size="sm"
+                        disabled={Boolean(isOwnServer) || isVerifying || isVerified}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleJoinServer(server);
+                        }}
+                        className={`h-7 px-2.5 text-xs font-medium shrink-0 rounded-md cursor-pointer ${
+                          isVerified
+                            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                            : isVerifying
+                            ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                            : isOwnServer
+                            ? 'bg-zinc-800 text-zinc-500 cursor-not-allowed'
+                            : 'bg-white text-black hover:bg-zinc-200'
+                        }`}
+                      >
+                        {isVerified ? 'Joined' : isVerifying ? 'Verifying' : isOwnServer ? 'Your Server' : `Join +${server.rewardCoins || 2}`}
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

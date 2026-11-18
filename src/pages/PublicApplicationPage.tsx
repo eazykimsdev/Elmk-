@@ -1,34 +1,45 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import {
   FileText,
   Shield,
   CheckCircle2,
-  XCircle,
   Clock,
-  AlertTriangle,
   ExternalLink,
   Flag,
   Trash2,
   ArrowLeft,
+  ArrowRight,
   Send,
-  HelpCircle
+  HelpCircle,
+  Edit3,
+  UserCheck,
+  Award
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { TopBanner } from '@/components/TopBanner';
 
+interface Question {
+  id: string;
+  label: string;
+  title?: string;
+  description?: string;
+  type: string;
+  required: boolean;
+  options?: string[];
+  min?: number | null;
+  max?: number | null;
+}
+
 export function PublicApplicationPage() {
-  const { serverSlug, formSlug, customSlug } = useParams<{
+  const { serverSlug, formSlug } = useParams<{
     serverSlug?: string;
     formSlug?: string;
-    customSlug?: string;
   }>();
 
-  // If matched via /:serverSlug/:formSlug or /apply/:serverSlug/:formSlug
   const resolvedServerId = serverSlug || '';
   const resolvedFormSlug = formSlug || '';
 
@@ -38,7 +49,10 @@ export function PublicApplicationPage() {
   const [serverData, setServerData] = useState<any | null>(null);
   const [userApp, setUserApp] = useState<any | null>(null);
 
-  // Form filling state
+  // Form filling flow state
+  // stages: 'intro' | 'questions' | 'review' | 'submitted'
+  const [stage, setStage] = useState<'intro' | 'questions' | 'review' | 'submitted'>('intro');
+  const [currentQuestionPageIndex, setCurrentQuestionPageIndex] = useState<number>(0);
   const [answers, setAnswers] = useState<Record<string, any>>({});
   const [submitting, setSubmitting] = useState(false);
   const [submittedApp, setSubmittedApp] = useState<any | null>(null);
@@ -51,6 +65,9 @@ export function PublicApplicationPage() {
   const [submittingReport, setSubmittingReport] = useState(false);
   const [reportSuccess, setReportSuccess] = useState(false);
 
+  // Draft autosave debounce ref
+  const autosaveTimerRef = useRef<any>(null);
+
   useEffect(() => {
     if (!resolvedServerId || !resolvedFormSlug) return;
 
@@ -62,7 +79,16 @@ export function PublicApplicationPage() {
         if (!res.ok) throw new Error(data.error || 'Form not found');
         setFormData(data.form);
         setServerData(data.server);
-        setUserApp(data.userApplication || null);
+        if (data.userApplication) {
+          setUserApp(data.userApplication);
+          setStage('submitted');
+        } else if (data.applicantDraft?.answers) {
+          setAnswers(data.applicantDraft.answers);
+          if (data.applicantDraft.currentStep > 0) {
+            setStage('questions');
+            setCurrentQuestionPageIndex(Math.max(0, data.applicantDraft.currentStep - 1));
+          }
+        }
       })
       .catch((err) => {
         setError(err.message || 'Could not load application form.');
@@ -72,34 +98,131 @@ export function PublicApplicationPage() {
       });
   }, [resolvedServerId, resolvedFormSlug]);
 
-  const handleInputChange = (questionId: string, value: any) => {
-    setAnswers((prev) => ({ ...prev, [questionId]: value }));
+  // Group questions by page_break
+  const questionPages: Question[][] = useMemo(() => {
+    if (!formData?.questions || formData.questions.length === 0) return [[]];
+    const pages: Question[][] = [];
+    let curPage: Question[] = [];
+    for (const q of formData.questions) {
+      if (q.type === 'page_break') {
+        if (curPage.length > 0) {
+          pages.push(curPage);
+          curPage = [];
+        }
+      } else {
+        curPage.push(q);
+      }
+    }
+    if (curPage.length > 0 || pages.length === 0) {
+      pages.push(curPage);
+    }
+    return pages;
+  }, [formData?.questions]);
+
+  // Autosave draft answers to server
+  const triggerAutosave = (newAnswers: Record<string, any>, stepNumber: number) => {
+    if (!formData?.id) return;
+    if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
+
+    autosaveTimerRef.current = setTimeout(async () => {
+      try {
+        await fetch(`/api/public/forms/${formData.id}/draft`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ answers: newAnswers, currentStep: stepNumber })
+        });
+      } catch {}
+    }, 800);
   };
 
-  const handleCheckboxToggle = (questionId: string, option: string) => {
+  const handleInputChange = (questionId: string, value: any) => {
+    setValidationError(null);
     setAnswers((prev) => {
-      const currentList: string[] = Array.isArray(prev[questionId]) ? prev[questionId] : [];
-      if (currentList.includes(option)) {
-        return { ...prev, [questionId]: currentList.filter((item) => item !== option) };
-      } else {
-        return { ...prev, [questionId]: [...currentList, option] };
-      }
+      const next = { ...prev, [questionId]: value };
+      triggerAutosave(next, currentQuestionPageIndex + 1);
+      return next;
     });
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleCheckboxToggle = (questionId: string, option: string) => {
     setValidationError(null);
+    setAnswers((prev) => {
+      const currentList: string[] = Array.isArray(prev[questionId]) ? prev[questionId] : [];
+      const updated = currentList.includes(option)
+        ? currentList.filter((item) => item !== option)
+        : [...currentList, option];
+      const next = { ...prev, [questionId]: updated };
+      triggerAutosave(next, currentQuestionPageIndex + 1);
+      return next;
+    });
+  };
 
-    if (!formData?.id) return;
-
-    // Validate required questions
-    for (const q of formData.questions || []) {
-      const ans = answers[q.id];
+  // Validate the current page before going to next page or review
+  const validateCurrentPage = (): boolean => {
+    const currentPageQuestions = questionPages[currentQuestionPageIndex] || [];
+    for (const q of currentPageQuestions) {
       if (q.required) {
+        const ans = answers[q.id];
         if (ans === undefined || ans === null || ans === '' || (Array.isArray(ans) && ans.length === 0)) {
           setValidationError(`Please answer the required question: "${q.label}"`);
-          return;
+          return false;
+        }
+      }
+    }
+    setValidationError(null);
+    return true;
+  };
+
+  const handleNextPage = () => {
+    if (!validateCurrentPage()) return;
+
+    if (currentQuestionPageIndex < questionPages.length - 1) {
+      const nextIdx = currentQuestionPageIndex + 1;
+      setCurrentQuestionPageIndex(nextIdx);
+      triggerAutosave(answers, nextIdx + 1);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      setStage('review');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  const handlePrevPage = () => {
+    setValidationError(null);
+    if (stage === 'review') {
+      setStage('questions');
+      setCurrentQuestionPageIndex(questionPages.length - 1);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
+    if (currentQuestionPageIndex > 0) {
+      const prevIdx = currentQuestionPageIndex - 1;
+      setCurrentQuestionPageIndex(prevIdx);
+      triggerAutosave(answers, prevIdx + 1);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      setStage('intro');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  const handleFinalSubmit = async () => {
+    setValidationError(null);
+    if (!formData?.id) return;
+
+    // Validate all questions across all pages
+    for (let pIdx = 0; pIdx < questionPages.length; pIdx++) {
+      for (const q of questionPages[pIdx]) {
+        if (q.required) {
+          const ans = answers[q.id];
+          if (ans === undefined || ans === null || ans === '' || (Array.isArray(ans) && ans.length === 0)) {
+            setValidationError(`Please answer the required question: "${q.label}"`);
+            setCurrentQuestionPageIndex(pIdx);
+            setStage('questions');
+            return;
+          }
         }
       }
     }
@@ -117,6 +240,8 @@ export function PublicApplicationPage() {
 
       setSubmittedApp(data.submission);
       setUserApp(data.submission);
+      setStage('submitted');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err: any) {
       setValidationError(err.message || 'Could not submit application.');
     } finally {
@@ -134,6 +259,8 @@ export function PublicApplicationPage() {
       if (res.ok) {
         setUserApp(null);
         setSubmittedApp(null);
+        setStage('intro');
+        setAnswers({});
       }
     } catch {}
   };
@@ -181,7 +308,7 @@ export function PublicApplicationPage() {
           </div>
           <h1 className="text-lg font-bold text-white mb-1">Form Not Found</h1>
           <p className="text-xs text-zinc-400 max-w-sm mb-5">{error || 'This application form does not exist or has been removed.'}</p>
-          <Link to="/" className="inline-flex items-center text-xs text-[var(--accent)] hover:underline gap-1">
+          <Link to="/" className="inline-flex items-center text-xs text-zinc-400 hover:text-white gap-1 transition-colors">
             <ArrowLeft className="size-3" /> Return to ConnectingERLC
           </Link>
         </div>
@@ -190,342 +317,634 @@ export function PublicApplicationPage() {
   }
 
   const activeApp = submittedApp || userApp;
+  const totalPagesCount = questionPages.length;
+  const currentStepNumber = stage === 'intro' ? 1 : stage === 'review' ? totalPagesCount + 2 : stage === 'submitted' ? totalPagesCount + 3 : currentQuestionPageIndex + 2;
+  const totalStepsCount = totalPagesCount + 2; // Intro + Pages + Review
 
   return (
-    <div className="min-h-screen bg-[#09090b] text-white flex flex-col font-sans">
+    <div className="min-h-screen bg-[#09090b] text-white flex flex-col font-sans antialiased">
       <TopBanner />
 
-      <main className="flex-1 max-w-3xl w-full mx-auto px-4 py-8 sm:py-12">
-        {/* Community Identity & Header */}
-        <div className="p-6 rounded-2xl border border-white/[0.08] bg-[#121215] mb-6">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="size-10 rounded-full bg-zinc-800 flex items-center justify-center text-xs font-semibold text-white overflow-hidden shrink-0 border border-white/[0.08]">
-              {serverData?.iconUrl ? (
-                <img src={serverData.iconUrl} alt={serverData.name} className="size-full object-cover" />
-              ) : (
-                serverData?.name?.slice(0, 2).toUpperCase() || 'RP'
+      <main className="flex-1 max-w-[1040px] w-full mx-auto px-4 py-8 sm:py-12">
+        {/* Banner image if configured */}
+        {formData.bannerUrl && (
+          <div className="w-full h-36 sm:h-48 rounded-xl overflow-hidden mb-6 border border-white/10 bg-zinc-900">
+            <img src={formData.bannerUrl} alt="Form Banner" className="w-full h-full object-cover" />
+          </div>
+        )}
+
+        {/* ── STAGE 1: SUBMITTED VIEW ── */}
+        {activeApp ? (
+          <div className="max-w-2xl mx-auto space-y-6">
+            <div className="p-8 rounded-xl border border-white/10 bg-[#0E0E11] text-center space-y-6">
+              {/* Status Stepper Line */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between max-w-md mx-auto pt-2">
+                  {/* Step 1: Submitted */}
+                  <div className="flex flex-col items-center gap-1.5 flex-1">
+                    <div className="size-7 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center justify-center text-xs font-semibold">
+                      <CheckCircle2 className="size-4" />
+                    </div>
+                    <span className="text-[11px] font-medium text-emerald-400">Submitted</span>
+                  </div>
+
+                  <div className={cn('h-0.5 flex-1 transition-colors', activeApp.status === 'pending' || activeApp.status === 'needs_info' || activeApp.status === 'accepted' || activeApp.status === 'denied' ? 'bg-emerald-500/40' : 'bg-white/10')} />
+
+                  {/* Step 2: In Review */}
+                  <div className="flex flex-col items-center gap-1.5 flex-1">
+                    <div className={cn(
+                      'size-7 rounded-full flex items-center justify-center text-xs font-semibold border',
+                      activeApp.status === 'needs_info'
+                        ? 'bg-amber-500/20 text-amber-400 border-amber-500/40 animate-pulse'
+                        : activeApp.status === 'accepted' || activeApp.status === 'denied'
+                        ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
+                        : 'bg-white/10 text-white border-white/20'
+                    )}>
+                      {activeApp.status === 'accepted' || activeApp.status === 'denied' ? <CheckCircle2 className="size-4" /> : <Clock className="size-3.5" />}
+                    </div>
+                    <span className="text-[11px] font-medium text-zinc-300">In Review</span>
+                  </div>
+
+                  <div className={cn('h-0.5 flex-1 transition-colors', activeApp.status === 'accepted' || activeApp.status === 'denied' ? 'bg-emerald-500/40' : 'bg-white/10')} />
+
+                  {/* Step 3: Decision */}
+                  <div className="flex flex-col items-center gap-1.5 flex-1">
+                    <div className={cn(
+                      'size-7 rounded-full flex items-center justify-center text-xs font-semibold border',
+                      activeApp.status === 'accepted'
+                        ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
+                        : activeApp.status === 'denied'
+                        ? 'bg-rose-500/20 text-rose-400 border-rose-500/40'
+                        : 'bg-white/5 text-zinc-500 border-white/10'
+                    )}>
+                      {activeApp.status === 'accepted' ? '✓' : activeApp.status === 'denied' ? '✕' : '3'}
+                    </div>
+                    <span className="text-[11px] font-medium capitalize text-zinc-400">
+                      {activeApp.status === 'accepted' ? 'Accepted' : activeApp.status === 'denied' ? 'Denied' : 'Decision'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-2">
+                <h2 className="text-xl font-bold text-white tracking-tight">{formData.name}</h2>
+                <p className="text-xs text-zinc-400 mt-1.5 max-w-md mx-auto leading-relaxed">
+                  {formData.closingMessage || 'Thank you for your application! Server staff will review your submission shortly.'}
+                </p>
+              </div>
+
+              {/* Staff message if present */}
+              {activeApp.staffNotes?.length > 0 && (
+                <div className="max-w-md mx-auto text-left p-3.5 rounded-lg border border-white/10 bg-[#141417] text-xs space-y-2">
+                  <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider block">Staff Updates</span>
+                  {activeApp.staffNotes.map((note: any) => (
+                    <div key={note.id} className="text-zinc-300">
+                      <p className="text-[10px] text-zinc-500">{note.author} • {new Date(note.createdAt).toLocaleDateString()}</p>
+                      <p className="mt-0.5 leading-relaxed">{note.content}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Quiet one-line note (no yellow warning box) */}
+              <div className="py-2 text-[11px] text-zinc-500 border-t border-b border-white/5">
+                Your submission is recorded securely. You will be notified in Discord when a decision is made.
+              </div>
+
+              {/* Withdraw Button */}
+              {['pending', 'needs_info'].includes(activeApp.status) && (
+                <div className="pt-2">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => handleDeleteApplication(activeApp.id)}
+                    className="text-xs text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 h-8 gap-1.5 cursor-pointer"
+                  >
+                    <Trash2 className="size-3.5" />
+                    Withdraw Application
+                  </Button>
+                </div>
               )}
             </div>
-            <div>
-              <div className="flex items-center gap-1.5">
-                <h2 className="text-sm font-semibold text-white">{serverData?.name || 'Community'}</h2>
-                {serverData?.verified && (
-                  <Badge variant="outline" className="text-[10px] bg-sky-500/10 text-sky-400 border-sky-500/20">
-                    Verified
-                  </Badge>
-                )}
-              </div>
-              <p className="text-xs text-zinc-500">Official Community Application</p>
-            </div>
           </div>
-
-          <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">{formData.name}</h1>
-          {formData.introText && (
-            <p className="text-xs sm:text-sm text-zinc-400 mt-2 leading-relaxed whitespace-pre-line">
-              {formData.introText}
-            </p>
-          )}
-
-          {/* Security Notice */}
-          <div className="mt-4 p-3 rounded-xl border border-amber-500/20 bg-amber-500/5 text-amber-300 text-xs flex items-start gap-2.5">
-            <Shield className="size-4 shrink-0 mt-0.5 text-amber-400" />
-            <div>
-              <span className="font-semibold block">Security Notice</span>
-              <span className="text-[11px] text-amber-300/90">
-                Never share passwords, two-factor authentication codes, Discord bot tokens, or private sensitive credentials in any community application.
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Existing Submission or Confirmation View */}
-        {activeApp ? (
-          <div className="p-8 rounded-2xl border border-white/[0.08] bg-[#121215] text-center space-y-4">
-            <div className="size-12 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mx-auto">
-              <CheckCircle2 className="size-6 text-emerald-400" />
-            </div>
-
-            <div>
-              <h2 className="text-lg font-bold text-white">Application Submitted</h2>
-              <p className="text-xs text-zinc-400 mt-1 max-w-md mx-auto">
-                {formData.closingMessage || 'Thank you for your application! We will review it shortly.'}
-              </p>
-            </div>
-
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-white/[0.08] bg-black/20 text-xs text-zinc-300">
-              <span>Status:</span>
-              <span className="font-semibold capitalize text-[var(--accent)]">{activeApp.status?.replace('_', ' ') || 'Pending'}</span>
-            </div>
-
-            {activeApp.staffNotes?.length > 0 && (
-              <div className="max-w-md mx-auto text-left p-3.5 rounded-xl border border-white/[0.06] bg-black/30 text-xs space-y-2 mt-4">
-                <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider block">Staff Updates</span>
-                {activeApp.staffNotes.map((note: any) => (
-                  <div key={note.id} className="text-zinc-300">
-                    <p className="text-[10px] text-zinc-500">{note.author} • {new Date(note.createdAt).toLocaleDateString()}</p>
-                    <p className="mt-0.5">{note.content}</p>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            <div className="pt-4 flex items-center justify-center gap-3">
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => handleDeleteApplication(activeApp.id)}
-                className="text-xs text-rose-400 hover:text-rose-300 h-8 gap-1.5"
-              >
-                <Trash2 className="size-3.5" />
-                Withdraw Application
-              </Button>
-            </div>
-          </div>
-        ) : formData.isClosed ? (
+        ) : formData.isOpen === false ? (
           /* Closed State */
-          <div className="p-8 rounded-2xl border border-white/[0.08] bg-[#121215] text-center space-y-3">
+          <div className="max-w-md mx-auto p-8 rounded-xl border border-white/10 bg-[#0E0E11] text-center space-y-3">
             <Clock className="size-8 text-zinc-600 mx-auto" />
             <h3 className="text-sm font-semibold text-white">This Form is Currently Closed</h3>
-            <p className="text-xs text-zinc-400 max-w-sm mx-auto">
+            <p className="text-xs text-zinc-400 leading-relaxed">
               This application form is no longer accepting new responses. Please check back later or contact server staff.
             </p>
           </div>
         ) : (
-          /* Active Application Form */
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="p-6 rounded-2xl border border-white/[0.08] bg-[#121215] space-y-6">
+          /* ── ACTIVE APPLICANT FLOW ── */
+          <div className="grid grid-cols-1 lg:grid-cols-[220px_1fr] gap-8 items-start">
+            {/* Slim Step Rail on Desktop (Progress bar on Mobile) */}
+            <aside className="w-full lg:sticky lg:top-8">
+              {/* Mobile Progress Bar */}
+              <div className="block lg:hidden mb-6 p-4 rounded-xl border border-white/10 bg-[#0E0E11] space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-semibold text-white">
+                    {stage === 'intro' ? 'Welcome' : stage === 'review' ? 'Review & Submit' : `Page ${currentQuestionPageIndex + 1} of ${totalPagesCount}`}
+                  </span>
+                  <span className="text-zinc-500 font-mono">
+                    Step {currentStepNumber} of {totalStepsCount}
+                  </span>
+                </div>
+                <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-white transition-all duration-300"
+                    style={{ width: `${(currentStepNumber / totalStepsCount) * 100}%` }}
+                  />
+                </div>
+              </div>
+
+              {/* Desktop Slim Step Rail */}
+              <div className="hidden lg:flex flex-col space-y-1.5 p-3 rounded-xl border border-white/10 bg-[#0E0E11]">
+                {/* Intro step */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStage('intro');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  className={cn(
+                    'flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium text-left transition-colors cursor-pointer',
+                    stage === 'intro' ? 'bg-white/10 text-white font-semibold' : 'text-zinc-400 hover:text-white hover:bg-white/5'
+                  )}
+                >
+                  <span className={cn('size-5 rounded-full flex items-center justify-center text-[10px] border', stage === 'intro' ? 'border-white bg-white text-black font-bold' : 'border-white/20 text-zinc-400')}>
+                    1
+                  </span>
+                  <span className="truncate">Overview</span>
+                </button>
+
+                {/* Question pages */}
+                {questionPages.map((_, pIdx) => {
+                  const stepNum = pIdx + 2;
+                  const isCurrent = stage === 'questions' && currentQuestionPageIndex === pIdx;
+                  return (
+                    <button
+                      key={`rail-page-${pIdx}`}
+                      type="button"
+                      disabled={stage === 'intro'}
+                      onClick={() => {
+                        if (stage !== 'intro') {
+                          setCurrentQuestionPageIndex(pIdx);
+                          setStage('questions');
+                          window.scrollTo({ top: 0, behavior: 'smooth' });
+                        }
+                      }}
+                      className={cn(
+                        'flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium text-left transition-colors',
+                        stage === 'intro' ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer',
+                        isCurrent ? 'bg-white/10 text-white font-semibold' : 'text-zinc-400 hover:text-white hover:bg-white/5'
+                      )}
+                    >
+                      <span className={cn('size-5 rounded-full flex items-center justify-center text-[10px] border', isCurrent ? 'border-white bg-white text-black font-bold' : 'border-white/20 text-zinc-400')}>
+                        {stepNum}
+                      </span>
+                      <span className="truncate">
+                        {questionPages.length > 1 ? `Questions ${pIdx + 1}` : 'Questions'}
+                      </span>
+                    </button>
+                  );
+                })}
+
+                {/* Review step */}
+                <button
+                  type="button"
+                  disabled={stage === 'intro'}
+                  onClick={() => {
+                    if (stage !== 'intro' && validateCurrentPage()) {
+                      setStage('review');
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }
+                  }}
+                  className={cn(
+                    'flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium text-left transition-colors',
+                    stage === 'intro' ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer',
+                    stage === 'review' ? 'bg-white/10 text-white font-semibold' : 'text-zinc-400 hover:text-white hover:bg-white/5'
+                  )}
+                >
+                  <span className={cn('size-5 rounded-full flex items-center justify-center text-[10px] border', stage === 'review' ? 'border-white bg-white text-black font-bold' : 'border-white/20 text-zinc-400')}>
+                    {totalStepsCount}
+                  </span>
+                  <span className="truncate">Review</span>
+                </button>
+              </div>
+            </aside>
+
+            {/* Main Stage Content */}
+            <div className="w-full space-y-6">
+              {/* Validation alert banner */}
               {validationError && (
-                <div className="p-3 rounded-xl border border-rose-500/20 bg-rose-500/10 text-rose-300 text-xs">
-                  {validationError}
+                <div className="p-3.5 rounded-lg border border-rose-500/20 bg-rose-500/10 text-rose-300 text-xs flex items-center gap-2">
+                  <HelpCircle className="size-4 shrink-0 text-rose-400" />
+                  <span>{validationError}</span>
                 </div>
               )}
 
-              {formData.questions?.map((q: any, idx: number) => (
-                <div key={q.id} className="space-y-2">
-                  <label className="text-xs font-semibold text-zinc-200 block">
-                    {idx + 1}. {q.label} {q.required && <span className="text-rose-400">*</span>}
-                  </label>
-                  {q.description && <p className="text-[11px] text-zinc-500">{q.description}</p>}
-
-                  {/* Short Text */}
-                  {q.type === 'short_text' && (
-                    <Input
-                      value={answers[q.id] || ''}
-                      onChange={(e) => handleInputChange(q.id, e.target.value)}
-                      placeholder="Your answer"
-                      className="bg-black/20 border-white/[0.08] text-xs h-9 text-white"
-                    />
-                  )}
-
-                  {/* Long Text */}
-                  {q.type === 'long_text' && (
-                    <textarea
-                      rows={4}
-                      value={answers[q.id] || ''}
-                      onChange={(e) => handleInputChange(q.id, e.target.value)}
-                      placeholder="Your detailed response (max 2000 characters)..."
-                      maxLength={2000}
-                      className="w-full bg-black/20 border border-white/[0.08] rounded-lg p-2.5 text-xs text-white focus:outline-none leading-relaxed"
-                    />
-                  )}
-
-                  {/* Number */}
-                  {q.type === 'number' && (
-                    <Input
-                      type="number"
-                      min={q.min ?? undefined}
-                      max={q.max ?? undefined}
-                      value={answers[q.id] ?? ''}
-                      onChange={(e) => handleInputChange(q.id, e.target.value === '' ? '' : Number(e.target.value))}
-                      placeholder="Enter a number"
-                      className="bg-black/20 border-white/[0.08] text-xs h-9 text-white"
-                    />
-                  )}
-
-                  {/* Yes / No */}
-                  {q.type === 'yes_no' && (
-                    <div className="flex items-center gap-3">
-                      {(['Yes', 'No'] as const).map((choice) => (
-                        <button
-                          key={choice}
-                          type="button"
-                          onClick={() => handleInputChange(q.id, choice)}
-                          className={cn(
-                            'px-4 py-1.5 rounded-lg border text-xs font-medium transition-all',
-                            answers[q.id] === choice
-                              ? 'bg-[var(--accent-soft)] text-[var(--accent)] border-[var(--accent-border)]'
-                              : 'border-white/[0.08] text-zinc-400 hover:text-white bg-black/20'
-                          )}
-                        >
-                          {choice}
-                        </button>
-                      ))}
+              {/* ── STAGE A: INTRO PAGE ── */}
+              {stage === 'intro' && (
+                <div className="p-6 sm:p-8 rounded-xl border border-white/10 bg-[#0E0E11] space-y-6">
+                  {/* Community Header */}
+                  <div className="flex items-center gap-3">
+                    <div className="size-11 rounded-xl bg-zinc-900 border border-white/10 overflow-hidden flex items-center justify-center text-xs font-bold text-white shrink-0">
+                      {serverData?.iconUrl ? (
+                        <img src={serverData.iconUrl} alt={serverData.name} className="size-full object-cover" />
+                      ) : (
+                        serverData?.name?.slice(0, 2).toUpperCase() || 'RP'
+                      )}
                     </div>
-                  )}
-
-                  {/* Dropdown */}
-                  {q.type === 'dropdown' && (
-                    <select
-                      value={answers[q.id] || ''}
-                      onChange={(e) => handleInputChange(q.id, e.target.value)}
-                      className="w-full bg-black/20 border border-white/[0.08] rounded-lg p-2 text-xs text-white focus:outline-none h-9"
-                    >
-                      <option value="">Select an option...</option>
-                      {q.options?.map((opt: string, oIdx: number) => (
-                        <option key={oIdx} value={opt}>
-                          {opt}
-                        </option>
-                      ))}
-                    </select>
-                  )}
-
-                  {/* Multiple Choice (Radio) */}
-                  {q.type === 'multiple_choice' && (
-                    <div className="space-y-1.5 pt-1">
-                      {q.options?.map((opt: string, oIdx: number) => (
-                        <label key={oIdx} className="flex items-center gap-2.5 text-xs text-zinc-300 cursor-pointer p-1.5 rounded-md hover:bg-white/[0.02]">
-                          <input
-                            type="radio"
-                            name={`radio_${q.id}`}
-                            checked={answers[q.id] === opt}
-                            onChange={() => handleInputChange(q.id, opt)}
-                            className="accent-[var(--accent)]"
-                          />
-                          <span>{opt}</span>
-                        </label>
-                      ))}
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h2 className="text-sm font-semibold text-white">{serverData?.name || 'Community'}</h2>
+                        {serverData?.verified && (
+                          <Badge variant="outline" className="text-[10px] bg-sky-500/10 text-sky-400 border-sky-500/20">
+                            Verified
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-xs text-zinc-500">Official Community Application</p>
                     </div>
-                  )}
+                  </div>
 
-                  {/* Checkboxes (Multi-select) */}
-                  {q.type === 'checkboxes' && (
-                    <div className="space-y-1.5 pt-1">
-                      {q.options?.map((opt: string, oIdx: number) => {
-                        const checked = Array.isArray(answers[q.id]) && answers[q.id].includes(opt);
+                  <div>
+                    <h1 className="text-2xl font-bold text-white tracking-tight">{formData.name}</h1>
+                    {formData.introText && (
+                      <p className="text-xs sm:text-sm text-zinc-400 mt-2.5 leading-relaxed whitespace-pre-line">
+                        {formData.introText}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Info Lines (Profile shared, Role reward, Security) */}
+                  <div className="space-y-2.5 pt-2">
+                    <div className="flex items-center gap-2.5 text-xs text-zinc-400 p-2.5 rounded-lg bg-[#141417] border border-white/5">
+                      <UserCheck className="size-4 text-zinc-300 shrink-0" />
+                      <span>Your Discord profile is shared with reviewers.</span>
+                    </div>
+
+                    {formData.roleRewardId && (
+                      <div className="flex items-center gap-2.5 text-xs text-zinc-400 p-2.5 rounded-lg bg-[#141417] border border-white/5">
+                        <Award className="size-4 text-emerald-400 shrink-0" />
+                        <span>If approved, you will automatically receive the assigned role in Discord.</span>
+                      </div>
+                    )}
+
+                    {Array.isArray(formData.infoLines) && formData.infoLines.map((line: any, idx: number) => {
+                      if (line && line.enabled !== false && line.text) {
                         return (
-                          <label key={oIdx} className="flex items-center gap-2.5 text-xs text-zinc-300 cursor-pointer p-1.5 rounded-md hover:bg-white/[0.02]">
-                            <input
-                              type="checkbox"
-                              checked={checked}
-                              onChange={() => handleCheckboxToggle(q.id, opt)}
-                              className="accent-[var(--accent)] rounded"
-                            />
-                            <span>{opt}</span>
-                          </label>
+                          <div key={idx} className="flex items-center gap-2.5 text-xs text-zinc-400 p-2.5 rounded-lg bg-[#141417] border border-white/5">
+                            <Shield className="size-4 text-zinc-300 shrink-0" />
+                            <span>{line.text}</span>
+                          </div>
                         );
-                      })}
+                      }
+                      return null;
+                    })}
+                  </div>
+
+                  <div className="pt-4 border-t border-white/5 flex items-center justify-between">
+                    <div className="text-xs text-zinc-500">
+                      {questionPages.flat().length} question{questionPages.flat().length !== 1 ? 's' : ''} total
                     </div>
-                  )}
+                    <Button
+                      onClick={() => {
+                        setStage('questions');
+                        setCurrentQuestionPageIndex(0);
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                      }}
+                      className="bg-white text-black hover:bg-zinc-200 text-xs font-semibold h-9 px-5 gap-1.5 cursor-pointer"
+                    >
+                      <span>{formData.startButtonText || 'Start Application'}</span>
+                      <ArrowRight className="size-3.5" />
+                    </Button>
+                  </div>
                 </div>
-              ))}
+              )}
 
-              <div className="pt-4 border-t border-white/[0.08] space-y-3">
-                <Button
-                  type="submit"
-                  disabled={submitting}
-                  className="w-full bg-[var(--accent)] hover:opacity-90 text-white font-medium text-xs h-9 gap-1.5"
-                >
-                  <Send className="size-3.5" />
-                  {submitting ? 'Submitting Application...' : formData.submitButtonText || 'Submit Application'}
-                </Button>
+              {/* ── STAGE B: QUESTION PAGES ── */}
+              {stage === 'questions' && (
+                <div className="p-6 sm:p-8 rounded-xl border border-white/10 bg-[#0E0E11] space-y-6">
+                  {/* Question page header */}
+                  <div className="flex items-center justify-between pb-4 border-b border-white/5">
+                    <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
+                      Page {currentQuestionPageIndex + 1} of {totalPagesCount}
+                    </span>
+                    <span className="text-xs text-zinc-500">
+                      Draft autosaved
+                    </span>
+                  </div>
 
-                {formData.extraButtons?.map((btn: any, bIdx: number) => (
-                  <a
-                    key={bIdx}
-                    href={btn.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="w-full inline-flex items-center justify-center gap-1.5 text-xs text-zinc-300 hover:text-white p-2 rounded-lg border border-white/[0.08] bg-black/20 hover:bg-white/[0.02] transition-colors"
-                  >
-                    {btn.label}
-                    <ExternalLink className="size-3" />
-                  </a>
-                ))}
-              </div>
+                  {/* Questions on current page */}
+                  <div className="space-y-6">
+                    {(questionPages[currentQuestionPageIndex] || []).map((q, idx) => (
+                      <div key={q.id} className="space-y-2.5">
+                        <label className="text-sm font-medium text-white block leading-snug">
+                          {q.label} {q.required && <span className="text-rose-400 font-bold">*</span>}
+                        </label>
+                        {q.description && <p className="text-xs text-zinc-400 leading-relaxed">{q.description}</p>}
+
+                        {/* Short Text */}
+                        {q.type === 'short_text' && (
+                          <Input
+                            value={answers[q.id] || ''}
+                            onChange={(e) => handleInputChange(q.id, e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                handleNextPage();
+                              }
+                            }}
+                            placeholder="Your answer"
+                            className="bg-[#141417] border-white/10 text-xs h-10 text-white rounded-lg focus:border-white/20"
+                          />
+                        )}
+
+                        {/* Long Text (Paragraph) */}
+                        {q.type === 'long_text' && (
+                          <textarea
+                            rows={4}
+                            value={answers[q.id] || ''}
+                            onChange={(e) => handleInputChange(q.id, e.target.value)}
+                            placeholder="Your detailed response (max 2000 characters)..."
+                            maxLength={2000}
+                            className="w-full bg-[#141417] border border-white/10 rounded-lg p-3 text-xs text-white focus:outline-none focus:border-white/20 leading-relaxed"
+                          />
+                        )}
+
+                        {/* Number */}
+                        {q.type === 'number' && (
+                          <Input
+                            type="number"
+                            min={q.min ?? undefined}
+                            max={q.max ?? undefined}
+                            value={answers[q.id] ?? ''}
+                            onChange={(e) => handleInputChange(q.id, e.target.value === '' ? '' : Number(e.target.value))}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                handleNextPage();
+                              }
+                            }}
+                            placeholder="Enter a number"
+                            className="bg-[#141417] border-white/10 text-xs h-10 text-white rounded-lg"
+                          />
+                        )}
+
+                        {/* Yes / No */}
+                        {q.type === 'yes_no' && (
+                          <div className="flex items-center gap-3">
+                            {(['Yes', 'No'] as const).map((choice) => (
+                              <button
+                                key={choice}
+                                type="button"
+                                onClick={() => handleInputChange(q.id, choice)}
+                                className={cn(
+                                  'px-5 py-2 rounded-lg border text-xs font-medium transition-all cursor-pointer',
+                                  answers[q.id] === choice
+                                    ? 'bg-white text-black border-white font-semibold'
+                                    : 'border-white/10 text-zinc-400 hover:text-white bg-[#141417]'
+                                )}
+                              >
+                                {choice}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Dropdown */}
+                        {q.type === 'dropdown' && (
+                          <select
+                            value={answers[q.id] || ''}
+                            onChange={(e) => handleInputChange(q.id, e.target.value)}
+                            className="w-full bg-[#141417] border border-white/10 rounded-lg p-2.5 text-xs text-white focus:outline-none focus:border-white/20 h-10 cursor-pointer"
+                          >
+                            <option value="">Select an option...</option>
+                            {q.options?.map((opt: string, oIdx: number) => (
+                              <option key={oIdx} value={opt} className="bg-[#141417] text-white">
+                                {opt}
+                              </option>
+                            ))}
+                          </select>
+                        )}
+
+                        {/* Multiple Choice (Radio) */}
+                        {q.type === 'multiple_choice' && (
+                          <div className="space-y-2 pt-1">
+                            {q.options?.map((opt: string, oIdx: number) => (
+                              <label key={oIdx} className="flex items-center gap-3 text-xs text-zinc-300 cursor-pointer p-2 rounded-lg hover:bg-white/[0.03] border border-white/5 bg-[#141417]">
+                                <input
+                                  type="radio"
+                                  name={`radio_${q.id}`}
+                                  checked={answers[q.id] === opt}
+                                  onChange={() => handleInputChange(q.id, opt)}
+                                  className="accent-white"
+                                />
+                                <span>{opt}</span>
+                              </label>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Checkboxes (Multi-select) */}
+                        {q.type === 'checkboxes' && (
+                          <div className="space-y-2 pt-1">
+                            {q.options?.map((opt: string, oIdx: number) => {
+                              const checked = Array.isArray(answers[q.id]) && answers[q.id].includes(opt);
+                              return (
+                                <label key={oIdx} className="flex items-center gap-3 text-xs text-zinc-300 cursor-pointer p-2 rounded-lg hover:bg-white/[0.03] border border-white/5 bg-[#141417]">
+                                  <input
+                                    type="checkbox"
+                                    checked={checked}
+                                    onChange={() => handleCheckboxToggle(q.id, opt)}
+                                    className="accent-white rounded"
+                                  />
+                                  <span>{opt}</span>
+                                </label>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Navigation Buttons: Previous & Next */}
+                  <div className="pt-6 border-t border-white/5 flex items-center justify-between gap-3">
+                    {formData.allowPrevious !== false ? (
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        onClick={handlePrevPage}
+                        className="bg-[#141417] text-zinc-300 hover:text-white border-white/10 text-xs h-9 px-4 gap-1.5 cursor-pointer"
+                      >
+                        <ArrowLeft className="size-3.5" />
+                        <span>Previous</span>
+                      </Button>
+                    ) : <div />}
+
+                    <Button
+                      type="button"
+                      onClick={handleNextPage}
+                      className="bg-white text-black hover:bg-zinc-200 text-xs font-semibold h-9 px-5 gap-1.5 cursor-pointer"
+                    >
+                      <span>{currentQuestionPageIndex < totalPagesCount - 1 ? 'Next' : 'Review Answers'}</span>
+                      <ArrowRight className="size-3.5" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* ── STAGE C: REVIEW & SUBMIT PAGE ── */}
+              {stage === 'review' && (
+                <div className="p-6 sm:p-8 rounded-xl border border-white/10 bg-[#0E0E11] space-y-6">
+                  <div>
+                    <h2 className="text-lg font-bold text-white tracking-tight">Review Your Answers</h2>
+                    <p className="text-xs text-zinc-400 mt-1 leading-relaxed">
+                      Please double-check all your responses before submitting your application.
+                    </p>
+                  </div>
+
+                  {/* Answers summary list with Edit link for each */}
+                  <div className="divide-y divide-white/5 border border-white/10 rounded-xl overflow-hidden bg-[#141417]">
+                    {questionPages.map((pageQuestions, pIdx) =>
+                      pageQuestions.map((q) => {
+                        const ans = answers[q.id];
+                        const displayAns = Array.isArray(ans)
+                          ? ans.join(', ')
+                          : ans !== undefined && ans !== null && ans !== ''
+                          ? String(ans)
+                          : 'Not answered';
+
+                        return (
+                          <div key={q.id} className="p-4 flex items-start justify-between gap-4 hover:bg-white/[0.01]">
+                            <div className="min-w-0 space-y-1">
+                              <p className="text-xs font-medium text-zinc-400">{q.label}</p>
+                              <p className={cn('text-xs break-words leading-relaxed', ans ? 'text-white' : 'text-zinc-500 italic')}>
+                                {displayAns}
+                              </p>
+                            </div>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => {
+                                setCurrentQuestionPageIndex(pIdx);
+                                setStage('questions');
+                                window.scrollTo({ top: 0, behavior: 'smooth' });
+                              }}
+                              className="text-xs text-zinc-400 hover:text-white h-7 px-2.5 gap-1 shrink-0 cursor-pointer"
+                            >
+                              <Edit3 className="size-3" />
+                              <span>Edit</span>
+                            </Button>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+
+                  {/* Final Submit and Back button */}
+                  <div className="pt-4 border-t border-white/5 flex items-center justify-between gap-3">
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={handlePrevPage}
+                      className="bg-[#141417] text-zinc-300 hover:text-white border-white/10 text-xs h-9 px-4 gap-1.5 cursor-pointer"
+                    >
+                      <ArrowLeft className="size-3.5" />
+                      <span>Back to Questions</span>
+                    </Button>
+
+                    <Button
+                      type="button"
+                      disabled={submitting}
+                      onClick={handleFinalSubmit}
+                      className="bg-white text-black hover:bg-zinc-200 text-xs font-semibold h-9 px-5 gap-1.5 cursor-pointer"
+                    >
+                      <Send className="size-3.5" />
+                      <span>{submitting ? 'Submitting...' : formData.submitButtonText || 'Submit Application'}</span>
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
-          </form>
+          </div>
         )}
 
         {/* Footer actions: Report form */}
-        <div className="mt-8 flex items-center justify-between text-xs text-zinc-500 border-t border-white/[0.06] pt-4">
-          <span>Powered by ConnectingERLC</span>
+        <div className="mt-8 flex items-center justify-between text-xs text-zinc-500 border-t border-white/5 pt-4">
+          <span>Official Community Application • ConnectingERLC</span>
           <button
+            type="button"
             onClick={() => setShowReportModal(true)}
-            className="flex items-center gap-1 text-zinc-500 hover:text-zinc-300 transition-colors"
+            className="inline-flex items-center gap-1.5 text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer"
           >
-            <Flag className="size-3" /> Report Form
+            <Flag className="size-3" />
+            <span>Report application</span>
           </button>
         </div>
-      </main>
 
-      {/* Safety Report Modal */}
-      {showReportModal && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-[#121215] border border-white/[0.08] rounded-2xl w-full max-w-md p-5 space-y-4 shadow-2xl">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-white flex items-center gap-2">
-                <Flag className="size-4 text-rose-400" />
-                Report Application Form
-              </h3>
-              <Button size="sm" variant="ghost" onClick={() => setShowReportModal(false)} className="h-6 w-6 p-0 text-zinc-400">
-                ✕
-              </Button>
+        {/* Report Modal */}
+        {showReportModal && (
+          <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
+            <div className="bg-[#0E0E11] border border-white/10 rounded-xl p-6 max-w-md w-full space-y-4">
+              <h3 className="text-sm font-semibold text-white">Report Application Form</h3>
+              {reportSuccess ? (
+                <p className="text-xs text-emerald-400 py-4">Report submitted. Thank you for helping keep the community safe.</p>
+              ) : (
+                <>
+                  <div className="space-y-2">
+                    <label className="text-xs text-zinc-400 block">Reason</label>
+                    <select
+                      value={reportReason}
+                      onChange={(e) => setReportReason(e.target.value)}
+                      className="w-full bg-[#141417] border border-white/10 rounded-lg p-2 text-xs text-white"
+                    >
+                      <option value="Phishing / Credential harvesting">Phishing / Credential harvesting</option>
+                      <option value="Malicious links">Malicious links</option>
+                      <option value="Harassment or hate speech">Harassment or hate speech</option>
+                      <option value="Spam / Commercial advertising">Spam / Commercial advertising</option>
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs text-zinc-400 block">Additional Details</label>
+                    <textarea
+                      rows={3}
+                      value={reportDetails}
+                      onChange={(e) => setReportDetails(e.target.value)}
+                      placeholder="Explain what is suspicious about this form..."
+                      className="w-full bg-[#141417] border border-white/10 rounded-lg p-2.5 text-xs text-white"
+                    />
+                  </div>
+                  <div className="flex items-center justify-end gap-2 pt-2">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setShowReportModal(false)}
+                      className="text-xs text-zinc-400"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      size="sm"
+                      disabled={submittingReport}
+                      onClick={handleSubmitReport}
+                      className="text-xs bg-rose-600 hover:bg-rose-500 text-white"
+                    >
+                      {submittingReport ? 'Submitting...' : 'Submit Report'}
+                    </Button>
+                  </div>
+                </>
+              )}
             </div>
-
-            <p className="text-xs text-zinc-400">
-              Help maintain community safety. Reports are strictly reviewed by platform administrators.
-            </p>
-
-            {reportSuccess ? (
-              <div className="p-4 rounded-xl border border-emerald-500/20 bg-emerald-500/10 text-emerald-300 text-xs text-center font-medium">
-                ✓ Report submitted. Thank you for keeping our community safe.
-              </div>
-            ) : (
-              <div className="space-y-3">
-                <div>
-                  <label className="text-[11px] text-zinc-400 block mb-1">Reason</label>
-                  <select
-                    value={reportReason}
-                    onChange={(e) => setReportReason(e.target.value)}
-                    className="w-full bg-black/30 border border-white/[0.08] rounded-md p-2 text-xs text-white focus:outline-none"
-                  >
-                    <option value="Phishing / Credential harvesting">Phishing / Asking for passwords or tokens</option>
-                    <option value="Scam / Fraud">Scam or financial fraud</option>
-                    <option value="Harassment / Hate speech">Harassment or hate speech</option>
-                    <option value="Malicious content">Malicious or illegal content</option>
-                    <option value="Other">Other violation</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="text-[11px] text-zinc-400 block mb-1">Details (optional)</label>
-                  <textarea
-                    rows={3}
-                    value={reportDetails}
-                    onChange={(e) => setReportDetails(e.target.value)}
-                    placeholder="Describe why this form violates community safety guidelines..."
-                    className="w-full bg-black/30 border border-white/[0.08] rounded-md p-2 text-xs text-white focus:outline-none"
-                  />
-                </div>
-
-                <div className="flex items-center justify-end gap-2 pt-2">
-                  <Button size="sm" variant="ghost" onClick={() => setShowReportModal(false)} className="text-xs text-zinc-400">
-                    Cancel
-                  </Button>
-                  <Button
-                    size="sm"
-                    disabled={submittingReport}
-                    onClick={handleSubmitReport}
-                    className="bg-rose-600 hover:bg-rose-500 text-white text-xs h-8 px-4"
-                  >
-                    {submittingReport ? 'Submitting...' : 'Submit Report'}
-                  </Button>
-                </div>
-              </div>
-            )}
           </div>
-        </div>
-      )}
+        )}
+      </main>
     </div>
   );
 }
+
+export default PublicApplicationPage;

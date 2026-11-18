@@ -1,26 +1,19 @@
 import * as React from 'react';
 import { useState, useEffect, useRef } from 'react';
 import {
-  ArrowUp,
-  ArrowDown,
   GripVertical,
-  KeyRound,
   ExternalLink,
   Save,
   Check,
   Copy,
   AlertCircle,
   Link as LinkIcon,
-  Globe,
-  Tag,
-  Shield,
-  Users,
-  Image as ImageIcon,
   Upload,
   Trash2,
   ChevronDown,
   ChevronRight,
-  Search
+  Search,
+  FileText
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -59,6 +52,12 @@ interface PartnerEntry {
   icon?: string | null;
   customUrl?: string | null;
   link?: string;
+}
+
+interface RealFormItem {
+  id: string;
+  name: string;
+  slug?: string;
 }
 
 const DEFAULT_SECTIONS: SectionItem[] = [
@@ -105,7 +104,10 @@ export function ServerDetailsTab({
   const [claimingCustomUrl, setClaimingCustomUrl] = useState<boolean>(false);
   const [copiedUrl, setCopiedUrl] = useState<boolean>(false);
 
-  // Page sections order & visibility
+  // Real forms for this server (never show fake or example form links)
+  const [realForms, setRealForms] = useState<RealFormItem[]>([]);
+
+  // Page sections order & visibility (simple list with drag handle & Show switch only)
   const [sections, setSections] = useState<SectionItem[]>(DEFAULT_SECTIONS);
   const [dragIdx, setDragIdx] = useState<number | null>(null);
 
@@ -141,10 +143,11 @@ export function ServerDetailsTab({
     if (!guildId) return;
     try {
       setLoading(true);
-      const [serverRes, rolesRes, partnersRes] = await Promise.all([
+      const [serverRes, rolesRes, partnersRes, formsRes] = await Promise.all([
         fetch(`/api/servers/${guildId}`),
         fetch(`/api/workspace/${guildId}/roles`).catch(() => null),
-        fetch(`/api/partnerships/${guildId}`).catch(() => null)
+        fetch(`/api/partnerships/${guildId}`).catch(() => null),
+        fetch(`/api/workspace/${guildId}/forms`).catch(() => null)
       ]);
 
       if (serverRes.ok) {
@@ -247,6 +250,16 @@ export function ServerDetailsTab({
         }).filter((p: PartnerEntry) => Boolean(p.id && p.name));
         setAvailablePartners(mappedPartners);
       }
+
+      if (formsRes && formsRes.ok) {
+        const fData = await formsRes.json().catch(() => ({}));
+        const rawForms = Array.isArray(fData.forms) ? fData.forms : [];
+        setRealForms(rawForms.map((f: any) => ({
+          id: String(f.id),
+          name: f.name || f.title || 'Application',
+          slug: f.slug || f.id
+        })));
+      }
     } catch (err) {
       console.warn('Failed to load server details:', err);
     } finally {
@@ -300,83 +313,74 @@ export function ServerDetailsTab({
         roleId: candidate.roleId || null
       }
     ]);
-    setShowStaffList(true);
-    setSections(prev => prev.map(s => (s.id === 'staff' ? { ...s, enabled: true } : s)));
     setHasChanges(true);
   };
 
-  const handleRemoveStaff = (idx: number) => {
-    setStaffList(prev => prev.filter((_, i) => i !== idx));
+  const handleRemoveStaff = (index: number) => {
+    setStaffList(prev => prev.filter((_, i) => i !== index));
     setHasChanges(true);
   };
 
   const handleTogglePartnerSelection = (partner: PartnerEntry) => {
-    const exists = partnerList.some(p => String(p.id || p.name) === String(partner.id || partner.name));
+    const exists = partnerList.some(p => String(p.id) === String(partner.id));
     if (exists) {
-      setPartnerList(prev => prev.filter(p => String(p.id || p.name) !== String(partner.id || partner.name)));
+      setPartnerList(prev => prev.filter(p => String(p.id) !== String(partner.id)));
     } else {
       setPartnerList(prev => [...prev, partner]);
-      setShowPartnerList(true);
-      setSections(prev => prev.map(s => (s.id === 'partners' ? { ...s, enabled: true } : s)));
     }
     setHasChanges(true);
   };
 
-  // Banner file selection with local preview before saving
+  // Banner file selection & upload
   const handleSelectBannerFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setBannerError(null);
-    const lowerName = file.name.toLowerCase();
-    if (lowerName.endsWith('.svg') || file.type === 'image/svg+xml') {
-      setBannerError('SVG files are not allowed. Please upload a PNG, JPG, WebP, or GIF image.');
+
+    if (!['image/png', 'image/jpeg', 'image/webp', 'image/gif'].includes(file.type)) {
+      setBannerError('File must be PNG, JPG, WebP, or GIF.');
       return;
     }
     if (file.size > 8 * 1024 * 1024) {
-      setBannerError('Banner file exceeds the maximum size limit.');
+      setBannerError('Banner file size must be under 8MB.');
       return;
     }
-    const reader = new FileReader();
-    reader.onload = () => {
-      setPendingBannerPreview(typeof reader.result === 'string' ? reader.result : null);
-      setPendingBannerFile(file);
-    };
-    reader.readAsDataURL(file);
+
+    setBannerError(null);
+    setPendingBannerFile(file);
+    const objectUrl = URL.createObjectURL(file);
+    setPendingBannerPreview(objectUrl);
+    setHasChanges(true);
   };
 
-  const handleConfirmBannerUpload = async () => {
-    if (!pendingBannerFile || !pendingBannerPreview || !guildId) return;
+  const handleUploadBanner = async (): Promise<string | null> => {
+    if (!pendingBannerFile || !guildId) return bannerUrl;
     setUploadingBanner(true);
     setBannerError(null);
     try {
-      const res = await apiFetch(`/api/servers/${guildId}/banner`, {
+      const formData = new FormData();
+      formData.append('banner', pendingBannerFile);
+      const res = await apiFetch(`/api/workspace/${guildId}/banner`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          imageData: pendingBannerPreview,
-          fileName: pendingBannerFile.name
-        })
+        body: formData
       });
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.error || 'Banner upload rejected.');
+        throw new Error(data.error || 'Failed to upload banner.');
       }
       setBannerUrl(data.bannerUrl);
-      setPendingBannerPreview(null);
       setPendingBannerFile(null);
-      setHasChanges(true);
-      addToast('success', 'Banner Uploaded', 'Banner verified and re-encoded. Click Save changes to publish.');
+      setPendingBannerPreview(null);
+      return data.bannerUrl;
     } catch (err: any) {
-      setBannerError(err.message || 'Could not upload banner.');
-      addToast('error', 'Banner Rejected', err.message || 'Could not upload banner.');
+      setBannerError(err.message || 'Banner upload failed.');
+      throw err;
     } finally {
       setUploadingBanner(false);
     }
   };
 
-  // Tag chip helpers
   const handleAddTag = () => {
-    const cleaned = tagInput.trim().toLowerCase().replace(/^#/, '').replace(/[^a-z0-9-_ ]/g, '');
+    const cleaned = tagInput.trim().replace(/^#/, '').toLowerCase().replace(/[^a-z0-9-]/g, '');
     if (!cleaned) return;
     if (!tagList.includes(cleaned) && tagList.length < 12) {
       setTagList(prev => [...prev, cleaned]);
@@ -390,17 +394,7 @@ export function ServerDetailsTab({
     setHasChanges(true);
   };
 
-  // Section reordering
-  const moveSection = (index: number, direction: 'up' | 'down') => {
-    const targetIndex = direction === 'up' ? index - 1 : index + 1;
-    if (targetIndex < 0 || targetIndex >= sections.length) return;
-    const updated = [...sections];
-    const [moved] = updated.splice(index, 1);
-    updated.splice(targetIndex, 0, moved);
-    setSections(updated);
-    setHasChanges(true);
-  };
-
+  // Section reordering via simple drag-and-drop
   const handleSectionDrop = (targetIndex: number) => {
     if (dragIdx === null || dragIdx === targetIndex) return;
     const updated = [...sections];
@@ -418,7 +412,7 @@ export function ServerDetailsTab({
     setHasChanges(true);
   };
 
-  // ER:LC Connection Handlers
+  // ER:LC Connection Handlers with plain-word error messages
   const handleConnectErlc = async () => {
     if (!erlcApiKey.trim() || !guildId) return;
     setErlcTesting(true);
@@ -431,15 +425,16 @@ export function ServerDetailsTab({
       });
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.error || 'Failed to connect ER:LC key.');
+        throw new Error(data.error || 'Invalid ER:LC API key. Check key and permissions.');
       }
       setErlcConnected(true);
       setMaskedKey(data.maskedKey || '••••••••' + erlcApiKey.trim().slice(-4));
       setErlcApiKey('');
-      addToast('success', 'ER:LC Key Saved', 'Live ER:LC status is now connected and shared with Promote Server.');
+      addToast('success', 'ER:LC Key Saved', 'Live ER:LC status is now connected.');
     } catch (err: any) {
-      setErlcError(err.message || 'ER:LC connection failed.');
-      addToast('error', 'Connection Failed', err.message || 'ER:LC connection failed.');
+      const cleanErr = err.message || 'Invalid ER:LC API key. Check key and permissions.';
+      setErlcError(cleanErr);
+      addToast('error', 'Connection Failed', cleanErr);
     } finally {
       setErlcTesting(false);
     }
@@ -457,12 +452,13 @@ export function ServerDetailsTab({
       });
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.error || 'ER:LC test failed.');
+        throw new Error(data.error || 'Server offline or ER:LC could not be reached.');
       }
       addToast('success', 'ER:LC Test Passed', 'Live telemetry responded normally.');
     } catch (err: any) {
-      setErlcError(err.message || 'ER:LC test failed.');
-      addToast('error', 'Test Failed', err.message || 'ER:LC test failed.');
+      const cleanErr = err.message || 'Server offline or ER:LC could not be reached.';
+      setErlcError(cleanErr);
+      addToast('error', 'Test Failed', cleanErr);
     } finally {
       setErlcTesting(false);
     }
@@ -496,14 +492,14 @@ export function ServerDetailsTab({
       });
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.error || 'Failed to claim custom URL.');
+        throw new Error(data.error || 'Could not claim custom link.');
       }
       setSavedCustomUrl(candidate);
       setIsEditingUrl(false);
       addToast('success', 'Public Link Claimed', `Your server is now live at ${domainHost}/${candidate}`);
       loadServerData();
     } catch (err: any) {
-      addToast('error', 'Claim Failed', err.message || 'Could not claim custom URL.');
+      addToast('error', 'Claim Failed', err.message || 'Could not claim custom link.');
     } finally {
       setClaimingCustomUrl(false);
     }
@@ -521,6 +517,12 @@ export function ServerDetailsTab({
     if (!guildId) return;
     setSaving(true);
     try {
+      let finalBannerUrl = bannerUrl;
+      if (pendingBannerFile) {
+        const uploaded = await handleUploadBanner();
+        if (uploaded) finalBannerUrl = uploaded;
+      }
+
       const pageSections = sections.map(s => s.id);
       const sectionVisibility = sections.reduce((acc, s) => {
         acc[s.id] = s.enabled;
@@ -528,7 +530,7 @@ export function ServerDetailsTab({
       }, {} as Record<string, boolean>);
 
       const payload = {
-        bannerUrl: bannerUrl.trim(),
+        bannerUrl: finalBannerUrl.trim(),
         description: description.trim(),
         tags: tagList,
         inviteUrl: discordInvite.trim(),
@@ -575,13 +577,12 @@ export function ServerDetailsTab({
   const publicPageUrl = savedCustomUrl
     ? `${window.location.origin}/${savedCustomUrl}`
     : `${window.location.origin}/servers/${guildId}`;
-  const previewBanner = pendingBannerPreview || bannerUrl;
   const filteredPartners = availablePartners.filter(p =>
     !partnerSearchQuery.trim() || p.name.toLowerCase().includes(partnerSearchQuery.trim().toLowerCase())
   );
 
   return (
-    <div className="w-full max-w-[1100px] mx-auto pb-28 font-sans text-zinc-200">
+    <div className="w-full max-w-[1280px] mx-auto px-4 sm:px-6 pb-36 font-sans text-zinc-200">
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-6 border-b border-white/[0.08]">
         <div>
@@ -607,812 +608,704 @@ export function ServerDetailsTab({
         </div>
       </div>
 
-      {/* Main Layout: Settings Rows on Left + Sticky Live Mini Preview on Right */}
-      <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_320px] gap-8 pt-6 items-start">
-        <div className="divide-y divide-white/[0.06]">
-          {/* Row 1: Public Link */}
-          <div className="py-6 first:pt-0 grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
-            <div className="md:col-span-5 pr-2">
-              <div className="text-sm font-medium text-zinc-100">Public link</div>
-              <p className="text-xs text-zinc-400 mt-1 leading-relaxed">
-                Claim a short link for your server. Application forms also use this link.
+      {/* Full Page Width 2-Column Layout: Labels and Help on Left, Wide Controls on Right */}
+      <div className="divide-y divide-white/[0.06] pt-2">
+        {/* Row 1: Public Link */}
+        <div className="py-8 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          <div className="lg:col-span-4 pr-4">
+            <div className="text-sm font-medium text-zinc-100">Public link</div>
+            <p className="text-xs text-zinc-400 mt-1.5 leading-relaxed">
+              Claim a short memorable link for your community page.
+            </p>
+            {customUrlCooldown && (
+              <p className="text-[11px] text-amber-400 mt-2">
+                Next change available after {customUrlCooldown}
               </p>
-              {customUrlCooldown && (
-                <p className="text-[11px] text-amber-400 mt-1.5">
-                  Next change available after {customUrlCooldown}
-                </p>
-              )}
-            </div>
-
-            <div className="md:col-span-7 space-y-2.5">
-              {savedCustomUrl && !isEditingUrl ? (
-                <div className="flex items-center justify-between gap-2 p-2.5 rounded-xl bg-zinc-900/70 border border-white/[0.08]">
-                  <span className="text-xs text-zinc-200 truncate font-medium px-1">
-                    {domainHost}/{savedCustomUrl}
-                  </span>
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={handleCopyPublicUrl}
-                      className="h-7 px-2.5 rounded-full text-xs border-white/[0.08] bg-zinc-950 text-zinc-200 hover:bg-zinc-800"
-                    >
-                      {copiedUrl ? <Check className="size-3 mr-1" /> : <Copy className="size-3 mr-1" />}
-                      {copiedUrl ? 'Copied' : 'Copy'}
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      disabled={Boolean(customUrlCooldown)}
-                      onClick={() => setIsEditingUrl(true)}
-                      className="h-7 px-2.5 rounded-full text-xs border-white/[0.08] bg-zinc-950 text-zinc-300 hover:bg-zinc-800"
-                    >
-                      Change
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex items-center gap-2">
-                  <div className="flex items-center flex-1 h-9 rounded-xl bg-zinc-900/70 border border-white/[0.08] overflow-hidden focus-within:border-white/[0.2]">
-                    <span className="px-3 text-xs text-zinc-500 bg-zinc-950/60 border-r border-white/[0.06] h-full flex items-center select-none shrink-0">
-                      {domainHost}/
-                    </span>
-                    <input
-                      type="text"
-                      value={customUrl}
-                      onChange={(e) => setCustomUrl(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
-                      placeholder="your-server"
-                      className="w-full h-full px-3 bg-transparent text-xs text-zinc-100 focus:outline-none"
-                    />
-                  </div>
-                  <Button
-                    type="button"
-                    size="sm"
-                    onClick={handleClaimCustomUrl}
-                    disabled={claimingCustomUrl || !customUrl.trim() || customUrl === savedCustomUrl}
-                    className="h-9 px-4 rounded-full text-xs bg-[var(--accent)] text-[var(--accent-foreground)] hover:opacity-90 shrink-0"
-                  >
-                    {claimingCustomUrl ? 'Claiming…' : 'Claim'}
-                  </Button>
-                  {savedCustomUrl && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        setCustomUrl(savedCustomUrl);
-                        setIsEditingUrl(false);
-                      }}
-                      className="h-9 px-3 rounded-full text-xs text-zinc-400 hover:text-zinc-200"
-                    >
-                      Cancel
-                    </Button>
-                  )}
-                </div>
-              )}
-
-              <div className="text-[11px] text-zinc-500">
-                Form link preview: <span className="text-zinc-300">{domainHost}/{activeSlug}/staff-application</span>
-              </div>
-            </div>
+            )}
           </div>
 
-          {/* Row 2: Banner */}
-          <div className="py-6 grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
-            <div className="md:col-span-5 pr-2">
-              <div className="text-sm font-medium text-zinc-100">Banner</div>
-              <p className="text-xs text-zinc-400 mt-1 leading-relaxed">
-                Upload a PNG, JPG, or WebP banner (GIF for Premium servers). Ratio 3:1, capped at 280px high.
-              </p>
-            </div>
-
-            <div className="md:col-span-7 space-y-3">
-              <div className="flex flex-wrap items-center gap-2">
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/png,image/jpeg,image/webp,image/gif"
-                  onChange={handleSelectBannerFile}
-                  className="hidden"
-                />
+          <div className="lg:col-span-8 space-y-3">
+            {savedCustomUrl && !isEditingUrl ? (
+              <div className="flex items-center justify-between gap-3 p-3 rounded-xl bg-zinc-900/70 border border-white/[0.08]">
+                <span className="text-xs text-zinc-200 truncate font-medium px-1">
+                  {domainHost}/{savedCustomUrl}
+                </span>
+                <div className="flex items-center gap-2 shrink-0">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleCopyPublicUrl}
+                    className="h-7 px-3 rounded-full text-xs border-white/[0.08] bg-zinc-950 text-zinc-200 hover:bg-zinc-800"
+                  >
+                    {copiedUrl ? <Check className="size-3 mr-1" /> : <Copy className="size-3 mr-1" />}
+                    {copiedUrl ? 'Copied' : 'Copy'}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={Boolean(customUrlCooldown)}
+                    onClick={() => setIsEditingUrl(true)}
+                    className="h-7 px-3 rounded-full text-xs border-white/[0.08] bg-zinc-950 text-zinc-300 hover:bg-zinc-800"
+                  >
+                    Change
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <div className="flex items-center flex-1 h-10 rounded-xl bg-zinc-900/70 border border-white/[0.08] overflow-hidden focus-within:border-white/[0.2]">
+                  <span className="px-3.5 text-xs text-zinc-500 bg-zinc-950/60 border-r border-white/[0.06] h-full flex items-center select-none shrink-0">
+                    {domainHost}/
+                  </span>
+                  <input
+                    type="text"
+                    value={customUrl}
+                    onChange={(e) => setCustomUrl(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
+                    placeholder="your-server"
+                    className="w-full h-full px-3.5 bg-transparent text-xs text-zinc-100 focus:outline-none"
+                  />
+                </div>
                 <Button
                   type="button"
-                  variant="outline"
                   size="sm"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="h-8 px-3.5 rounded-full text-xs border-white/[0.1] bg-zinc-900 hover:bg-zinc-800 text-zinc-200 flex items-center gap-1.5"
+                  onClick={handleClaimCustomUrl}
+                  disabled={claimingCustomUrl || !customUrl.trim() || customUrl === savedCustomUrl}
+                  className="h-10 px-5 rounded-full text-xs bg-[var(--accent)] text-[var(--accent-foreground)] hover:opacity-90 shrink-0 font-medium"
                 >
-                  <Upload className="size-3.5" />
-                  <span>Upload image</span>
+                  {claimingCustomUrl ? 'Claiming…' : 'Claim'}
                 </Button>
-                {bannerUrl && !pendingBannerPreview && (
+                {savedCustomUrl && (
                   <Button
                     type="button"
                     variant="ghost"
                     size="sm"
                     onClick={() => {
-                      setBannerUrl('');
-                      setHasChanges(true);
+                      setCustomUrl(savedCustomUrl);
+                      setIsEditingUrl(false);
                     }}
-                    className="h-8 px-3 rounded-full text-xs text-zinc-400 hover:text-red-400"
+                    className="h-10 px-4 rounded-full text-xs text-zinc-400 hover:text-zinc-200"
                   >
-                    Remove banner
+                    Cancel
                   </Button>
                 )}
               </div>
+            )}
 
-              {bannerError && (
-                <div className="text-xs text-red-400 flex items-center gap-1.5">
-                  <AlertCircle className="size-3.5 shrink-0" />
-                  <span>{bannerError}</span>
+            {/* If server has real forms, show their real links in a small list (never fake/example links) */}
+            {realForms.length > 0 && (
+              <div className="pt-2 border-t border-white/[0.06] space-y-1.5">
+                <div className="text-[11px] font-medium text-zinc-400 flex items-center gap-1.5">
+                  <FileText className="size-3" />
+                  <span>Server Forms</span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {realForms.map(form => {
+                    const formPath = `/${activeSlug}/${form.slug || form.id}`;
+                    return (
+                      <a
+                        key={form.id}
+                        href={formPath}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-zinc-900 border border-white/[0.06] text-xs text-zinc-300 hover:text-white hover:border-white/15 transition-colors"
+                      >
+                        <span>{form.name}</span>
+                        <ExternalLink className="size-3 text-zinc-500" />
+                      </a>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Row 2: Banner */}
+        <div className="py-8 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          <div className="lg:col-span-4 pr-4">
+            <div className="text-sm font-medium text-zinc-100">Banner</div>
+            <p className="text-xs text-zinc-400 mt-1.5 leading-relaxed">
+              Upload a PNG, JPG, or WebP banner (GIF for Premium servers). Displayed in 3:1 ratio capped at 300px.
+            </p>
+          </div>
+
+          <div className="lg:col-span-8 space-y-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/webp,image/gif"
+                onChange={handleSelectBannerFile}
+                className="hidden"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => fileInputRef.current?.click()}
+                className="h-9 px-4 rounded-full text-xs border-white/[0.1] bg-zinc-900 hover:bg-zinc-800 text-zinc-200 flex items-center gap-1.5"
+              >
+                <Upload className="size-3.5" />
+                <span>Upload banner</span>
+              </Button>
+              {bannerUrl && !pendingBannerPreview && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setBannerUrl('');
+                    setHasChanges(true);
+                  }}
+                  className="h-9 px-3 rounded-full text-xs text-zinc-400 hover:text-red-400"
+                >
+                  Remove banner
+                </Button>
+              )}
+            </div>
+
+            {bannerError && (
+              <div className="text-xs text-red-400 flex items-center gap-1.5">
+                <AlertCircle className="size-3.5 shrink-0" />
+                <span>{bannerError}</span>
+              </div>
+            )}
+
+            {(pendingBannerPreview || bannerUrl) && (
+              <div className="w-full aspect-[3/1] max-h-[220px] rounded-xl overflow-hidden bg-zinc-900 border border-white/[0.08] relative">
+                <img
+                  src={pendingBannerPreview || bannerUrl}
+                  alt="Banner preview"
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Row 3: About */}
+        <div className="py-8 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          <div className="lg:col-span-4 pr-4">
+            <div className="text-sm font-medium text-zinc-100">About</div>
+            <p className="text-xs text-zinc-400 mt-1.5 leading-relaxed">
+              Describe your roleplay community, lore, department opportunities, and requirements.
+            </p>
+          </div>
+
+          <div className="lg:col-span-8 space-y-2">
+            <textarea
+              value={description}
+              onChange={(e) => {
+                setDescription(e.target.value);
+                setHasChanges(true);
+              }}
+              rows={5}
+              maxLength={2000}
+              placeholder="Tell visitors about your server..."
+              className="w-full p-3.5 rounded-xl bg-zinc-900/70 border border-white/[0.08] text-xs text-zinc-100 focus:outline-none focus:border-white/[0.2] resize-y leading-relaxed font-sans"
+            />
+            <div className="flex justify-between text-[11px] text-zinc-500">
+              <span>Supports basic markdown paragraphs</span>
+              <span>{description.length} / 2000</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Row 4: Tags and Links */}
+        <div className="py-8 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          <div className="lg:col-span-4 pr-4">
+            <div className="text-sm font-medium text-zinc-100">Tags and links</div>
+            <p className="text-xs text-zinc-400 mt-1.5 leading-relaxed">
+              Add discovery tags and connect your official Roblox group, Discord invite, and social links.
+            </p>
+          </div>
+
+          <div className="lg:col-span-8 space-y-4">
+            {/* Tag input and list */}
+            <div>
+              <div className="text-xs text-zinc-400 mb-1.5">Discovery tags (up to 12)</div>
+              <div className="flex items-center gap-2">
+                <Input
+                  value={tagInput}
+                  onChange={(e) => setTagInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleAddTag();
+                    }
+                  }}
+                  placeholder="e.g. realistic, lapd, economy"
+                  className="h-10 text-xs bg-zinc-900/70 border-white/[0.08] text-zinc-200"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleAddTag}
+                  className="h-10 px-4 rounded-xl text-xs border-white/[0.08] bg-zinc-900 text-zinc-200 shrink-0"
+                >
+                  Add tag
+                </Button>
+              </div>
+
+              {tagList.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mt-2.5">
+                  {tagList.map(tag => (
+                    <span
+                      key={tag}
+                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs bg-zinc-900 border border-white/[0.08] text-zinc-300"
+                    >
+                      <span>#{tag}</span>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveTag(tag)}
+                        className="text-zinc-500 hover:text-red-400 ml-0.5"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
                 </div>
               )}
+            </div>
 
-              {pendingBannerPreview && (
-                <div className="space-y-2 p-3 rounded-xl border border-white/[0.1] bg-zinc-900/60">
-                  <div className="text-xs text-zinc-300 font-medium">Preview before saving</div>
-                  <div className="w-full aspect-[3/1] max-h-[160px] rounded-lg overflow-hidden bg-zinc-950 border border-white/[0.06]">
-                    <img src={pendingBannerPreview} alt="Pending banner preview" className="w-full h-full object-cover" />
+            {/* Official links */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+              <div>
+                <label className="text-[11px] text-zinc-400 mb-1 block">Discord Invite Link</label>
+                <Input
+                  value={discordInvite}
+                  onChange={(e) => {
+                    setDiscordInvite(e.target.value);
+                    setHasChanges(true);
+                  }}
+                  placeholder="https://discord.gg/yourserver"
+                  className="h-10 text-xs bg-zinc-900/70 border-white/[0.08] text-zinc-200"
+                />
+              </div>
+
+              <div>
+                <label className="text-[11px] text-zinc-400 mb-1 block">Roblox Group / Game</label>
+                <Input
+                  value={robloxLink}
+                  onChange={(e) => {
+                    setRobloxLink(e.target.value);
+                    setHasChanges(true);
+                  }}
+                  placeholder="https://roblox.com/groups/..."
+                  className="h-10 text-xs bg-zinc-900/70 border-white/[0.08] text-zinc-200"
+                />
+              </div>
+
+              <div>
+                <label className="text-[11px] text-zinc-400 mb-1 block">X / Twitter</label>
+                <Input
+                  value={twitterLink}
+                  onChange={(e) => {
+                    setTwitterLink(e.target.value);
+                    setHasChanges(true);
+                  }}
+                  placeholder="https://x.com/yourhandle"
+                  className="h-10 text-xs bg-zinc-900/70 border-white/[0.08] text-zinc-200"
+                />
+              </div>
+
+              <div>
+                <label className="text-[11px] text-zinc-400 mb-1 block">Official Website</label>
+                <Input
+                  value={websiteLink}
+                  onChange={(e) => {
+                    setWebsiteLink(e.target.value);
+                    setHasChanges(true);
+                  }}
+                  placeholder="https://yourserver.com"
+                  className="h-10 text-xs bg-zinc-900/70 border-white/[0.08] text-zinc-200"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Row 5: Staff Team */}
+        <div className="py-8 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          <div className="lg:col-span-4 pr-4">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-zinc-100">Staff team</span>
+              <Switch
+                checked={showStaffList}
+                onCheckedChange={(checked) => {
+                  setShowStaffList(checked);
+                  setSections(prev => prev.map(s => (s.id === 'staff' ? { ...s, enabled: checked } : s)));
+                  setHasChanges(true);
+                }}
+              />
+            </div>
+            <p className="text-xs text-zinc-400 mt-1.5 leading-relaxed">
+              Show verified staff members on your public page. Pick by Discord role or search by Discord ID/username.
+            </p>
+          </div>
+
+          <div className="lg:col-span-8 space-y-4">
+            {showStaffList ? (
+              <>
+                <div className="p-4 rounded-xl border border-white/[0.08] bg-zinc-900/40 space-y-3">
+                  <div className="text-xs font-medium text-zinc-200">Add Staff Member</div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-[11px] text-zinc-400 mb-1 block">Filter by Discord Role</label>
+                      <select
+                        value={selectedStaffRoleId}
+                        onChange={(e) => {
+                          setSelectedStaffRoleId(e.target.value);
+                          handleSearchDiscordStaff(e.target.value, staffSearchQuery);
+                        }}
+                        className="w-full h-10 px-3 rounded-xl bg-zinc-900/70 border border-white/[0.08] text-xs text-zinc-200 focus:outline-none focus:border-white/20"
+                      >
+                        <option value="">All Roles / Search directly</option>
+                        {guildRoles.map(r => (
+                          <option key={r.id} value={r.id}>{r.name}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="text-[11px] text-zinc-400 mb-1 block">Search Discord User / ID</label>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          value={staffSearchQuery}
+                          onChange={(e) => setStaffSearchQuery(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              handleSearchDiscordStaff();
+                            }
+                          }}
+                          placeholder="Username or Discord ID"
+                          className="h-10 text-xs bg-zinc-900/70 border-white/[0.08] text-zinc-200"
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          disabled={searchingStaff}
+                          onClick={() => handleSearchDiscordStaff()}
+                          className="h-10 px-3.5 rounded-xl text-xs border-white/[0.08] bg-zinc-900 text-zinc-200 shrink-0"
+                        >
+                          <Search className="size-3.5" />
+                        </Button>
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2 pt-1">
-                    <Button
-                      type="button"
-                      size="sm"
-                      disabled={uploadingBanner}
-                      onClick={handleConfirmBannerUpload}
-                      className="h-8 px-3.5 rounded-full text-xs bg-[var(--accent)] text-[var(--accent-foreground)]"
-                    >
-                      {uploadingBanner ? 'Uploading…' : 'Use this banner'}
-                    </Button>
+
+                  {staffCandidates.length > 0 && (
+                    <div className="pt-2 border-t border-white/[0.06] max-h-48 overflow-y-auto space-y-1">
+                      <div className="text-[11px] text-zinc-400 px-1 py-0.5">Found Discord members:</div>
+                      {staffCandidates.map(c => (
+                        <div
+                          key={c.id}
+                          className="flex items-center justify-between p-2 rounded-lg bg-zinc-900/70 hover:bg-zinc-800/70 transition-colors"
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <UserAvatar
+                              user={{ id: c.id, username: c.username, avatar: c.avatar }}
+                              size={28}
+                              className="size-7 rounded-full shrink-0"
+                            />
+                            <div className="truncate text-xs">
+                              <span className="font-medium text-zinc-200">{c.displayName || c.username}</span>
+                              <span className="text-zinc-500 ml-2">({c.role})</span>
+                            </div>
+                          </div>
+                          <Button
+                            type="button"
+                            size="sm"
+                            onClick={() => handleAddVerifiedStaff(c)}
+                            disabled={staffList.some(m => String(m.id) === String(c.id))}
+                            className="h-7 px-3 rounded-full text-[11px] bg-zinc-100 text-zinc-900 hover:bg-white shrink-0 font-medium disabled:opacity-40"
+                          >
+                            Add
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {staffList.length > 0 && (
+                  <div className="rounded-xl border border-white/[0.08] bg-zinc-900/30 divide-y divide-white/[0.05]">
+                    {staffList.map((member, idx) => (
+                      <div
+                        key={member.id || idx}
+                        className="p-3 flex items-center justify-between gap-3 text-xs"
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <UserAvatar
+                            user={{ id: member.id, username: member.username, avatar: member.avatar }}
+                            size={28}
+                            className="size-7 rounded-full shrink-0"
+                          />
+                          <div className="truncate">
+                            <span className="font-medium text-zinc-200">{member.displayName || member.username}</span>
+                            <span className="text-zinc-500 ml-2">{member.role}</span>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveStaff(idx)}
+                          className="text-zinc-500 hover:text-red-400 p-1 transition-colors"
+                          aria-label="Remove staff member"
+                        >
+                          <Trash2 className="size-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            ) : (
+              <p className="text-xs text-zinc-500">Staff team section is hidden.</p>
+            )}
+          </div>
+        </div>
+
+        {/* Row 6: Partners */}
+        <div className="py-8 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          <div className="lg:col-span-4 pr-4">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-zinc-100">Partners</span>
+              <Switch
+                checked={showPartnerList}
+                onCheckedChange={(checked) => {
+                  setShowPartnerList(checked);
+                  setSections(prev => prev.map(s => (s.id === 'partners' ? { ...s, enabled: checked } : s)));
+                  setHasChanges(true);
+                }}
+              />
+            </div>
+            <p className="text-xs text-zinc-400 mt-1.5 leading-relaxed">
+              Search and select accepted partnerships to showcase on your public page.
+            </p>
+          </div>
+
+          <div className="lg:col-span-8 space-y-3">
+            {showPartnerList ? (
+              availablePartners.length === 0 ? (
+                <div className="p-4 rounded-xl border border-white/[0.06] bg-zinc-900/30 text-xs text-zinc-400">
+                  No accepted partnerships yet. Communities you partner with in the Partnerships hub will appear here automatically.
+                </div>
+              ) : (
+                <div className="space-y-2.5">
+                  <div className="relative">
+                    <Search className="size-3.5 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    <Input
+                      value={partnerSearchQuery}
+                      onChange={(e) => setPartnerSearchQuery(e.target.value)}
+                      placeholder="Search accepted partners…"
+                      className="pl-8 h-10 text-xs bg-zinc-900/70 border-white/[0.08] text-zinc-200"
+                    />
+                  </div>
+                  <div className="rounded-xl border border-white/[0.08] bg-zinc-900/40 divide-y divide-white/[0.05] max-h-56 overflow-y-auto">
+                    {filteredPartners.map(partner => {
+                      const isSelected = partnerList.some(
+                        p => String(p.id || p.name) === String(partner.id || partner.name)
+                      );
+                      return (
+                        <button
+                          key={partner.id}
+                          type="button"
+                          onClick={() => handleTogglePartnerSelection(partner)}
+                          className="w-full px-3.5 py-3 flex items-center justify-between text-left text-xs hover:bg-white/[0.03] transition-colors cursor-pointer"
+                        >
+                          <div className="flex items-center gap-3 min-w-0">
+                            <ServerIcon
+                              guildId={partner.id}
+                              iconUrl={partner.icon}
+                              name={partner.name}
+                              size={28}
+                              className="size-7 rounded-lg shrink-0"
+                            />
+                            <span className="text-zinc-200 font-medium truncate">{partner.name}</span>
+                          </div>
+                          <span
+                            className={`px-3 py-1 rounded-full text-[11px] border ${
+                              isSelected
+                                ? 'bg-[var(--accent)]/15 text-[var(--accent)] border-[var(--accent)]/30 font-medium'
+                                : 'bg-zinc-900 text-zinc-400 border-white/[0.08]'
+                            }`}
+                          >
+                            {isSelected ? 'Selected' : 'Select'}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )
+            ) : (
+              <p className="text-xs text-zinc-500">Partners section is hidden.</p>
+            )}
+          </div>
+        </div>
+
+        {/* Row 7: Page Sections (Simple list: Show switch + drag handle only) */}
+        <div className="py-8 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          <div className="lg:col-span-4 pr-4">
+            <div className="text-sm font-medium text-zinc-100">Page sections</div>
+            <p className="text-xs text-zinc-400 mt-1.5 leading-relaxed">
+              Drag to reorder sections or toggle which sections appear on your public page.
+            </p>
+          </div>
+
+          <div className="lg:col-span-8 space-y-2">
+            {sections.map((section, idx) => (
+              <div
+                key={section.id}
+                draggable
+                onDragStart={() => setDragIdx(idx)}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={() => handleSectionDrop(idx)}
+                className="px-4 py-3 rounded-xl bg-zinc-900/60 border border-white/[0.08] flex items-center justify-between gap-3 select-none"
+              >
+                <div className="flex items-center gap-3">
+                  <span
+                    className="text-zinc-500 cursor-grab active:cursor-grabbing hover:text-zinc-300 transition-colors"
+                    title="Drag to reorder"
+                  >
+                    <GripVertical className="size-4" />
+                  </span>
+                  <span className="text-xs font-medium text-zinc-200">{section.label}</span>
+                </div>
+
+                <Switch
+                  checked={section.enabled}
+                  onCheckedChange={(checked) => toggleSection(section.id, checked)}
+                  aria-label={`Show ${section.label}`}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Row 8: Collapsed "Advanced" Section */}
+        <div className="py-8">
+          <button
+            type="button"
+            onClick={() => setAdvancedOpen(prev => !prev)}
+            className="w-full flex items-center justify-between text-left py-1 group cursor-pointer"
+          >
+            <div>
+              <div className="text-sm font-medium text-zinc-100 flex items-center gap-2">
+                {advancedOpen ? (
+                  <ChevronDown className="size-4 text-zinc-400" />
+                ) : (
+                  <ChevronRight className="size-4 text-zinc-400" />
+                )}
+                <span>Advanced</span>
+              </div>
+              <p className="text-xs text-zinc-400 mt-1 pl-6">
+                ER:LC Server-Key and public credit visibility.
+              </p>
+            </div>
+            <span className="text-xs text-zinc-500 group-hover:text-zinc-300">
+              {advancedOpen ? 'Hide' : 'Show'}
+            </span>
+          </button>
+
+          {advancedOpen && (
+            <div className="mt-6 pl-6 space-y-6 border-l border-white/[0.06]">
+              {/* Show server credits on my page */}
+              <div className="flex items-center justify-between gap-4 max-w-2xl">
+                <div>
+                  <div className="text-xs font-medium text-zinc-200">Show server credits on my page</div>
+                  <p className="text-xs text-zinc-400 mt-0.5">
+                    Display your server's total credit balance in the public stats card.
+                  </p>
+                </div>
+                <Switch
+                  checked={showCredits}
+                  onCheckedChange={(checked) => {
+                    setShowCredits(checked);
+                    setHasChanges(true);
+                  }}
+                />
+              </div>
+
+              {/* ER:LC Server-Key Integration */}
+              <div className="space-y-3 pt-4 border-t border-white/[0.06] max-w-2xl">
+                <div>
+                  <div className="text-xs font-medium text-zinc-200">ER:LC Server-Key (Police Roleplay Community)</div>
+                  <p className="text-xs text-zinc-400 mt-0.5 leading-relaxed">
+                    Connect your ER:LC private server API key to display live in-game player counts, staff presence, and queue length. Cached for 30–60 seconds.
+                  </p>
+                </div>
+
+                {erlcConnected && (
+                  <div className="flex items-center justify-between gap-3 p-3 rounded-xl bg-emerald-500/[0.06] border border-emerald-500/20 text-xs">
+                    <div className="flex items-center gap-2 text-emerald-400">
+                      <Check className="size-4 shrink-0" />
+                      <span>Connected with key: {maskedKey}</span>
+                    </div>
                     <Button
                       type="button"
                       variant="ghost"
                       size="sm"
-                      onClick={() => {
-                        setPendingBannerPreview(null);
-                        setPendingBannerFile(null);
-                      }}
-                      className="h-8 px-3 rounded-full text-xs text-zinc-400 hover:text-zinc-200"
+                      onClick={handleDisconnectErlc}
+                      className="h-7 px-2.5 rounded-full text-xs text-zinc-400 hover:text-red-400"
                     >
-                      Discard
+                      Disconnect
                     </Button>
                   </div>
-                </div>
-              )}
+                )}
 
-              {!pendingBannerPreview && bannerUrl && (
-                <div className="w-full aspect-[3/1] max-h-[140px] rounded-xl overflow-hidden border border-white/[0.08] bg-zinc-950">
-                  <img
-                    src={bannerUrl}
-                    alt="Current banner"
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      (e.target as HTMLElement).style.display = 'none';
-                    }}
-                  />
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Row 3: About */}
-          <div className="py-6 grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
-            <div className="md:col-span-5 pr-2">
-              <div className="text-sm font-medium text-zinc-100">About</div>
-              <p className="text-xs text-zinc-400 mt-1 leading-relaxed">
-                Describe your community, departments, and what new members should expect.
-              </p>
-            </div>
-
-            <div className="md:col-span-7">
-              <textarea
-                value={description}
-                onChange={(e) => {
-                  setDescription(e.target.value);
-                  setHasChanges(true);
-                }}
-                rows={5}
-                placeholder="Write a clear overview of your community…"
-                className="w-full text-xs p-3 bg-zinc-900/70 border border-white/[0.08] rounded-xl text-zinc-100 focus:outline-none focus:border-white/[0.2] resize-y leading-relaxed"
-              />
-            </div>
-          </div>
-
-          {/* Row 4: Tags & Official Links */}
-          <div className="py-6 grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
-            <div className="md:col-span-5 pr-2">
-              <div className="text-sm font-medium text-zinc-100">Tags & links</div>
-              <p className="text-xs text-zinc-400 mt-1 leading-relaxed">
-                Search tags and official links displayed on your server page.
-              </p>
-            </div>
-
-            <div className="md:col-span-7 space-y-4">
-              <div className="space-y-2">
-                <div className="flex gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <Input
-                    value={tagInput}
-                    onChange={(e) => setTagInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ',') {
-                        e.preventDefault();
-                        handleAddTag();
-                      }
+                    type="password"
+                    value={erlcApiKey}
+                    onChange={(e) => {
+                      setErlcApiKey(e.target.value);
+                      setErlcError(null);
                     }}
-                    placeholder="Add a tag and press Enter"
-                    className="h-9 text-xs bg-zinc-900/70 border-white/[0.08] text-zinc-200"
+                    placeholder={erlcConnected ? 'Enter new Server-Key to replace…' : 'Paste your PRC Server-Key…'}
+                    className="h-10 text-xs bg-zinc-900/70 border-white/[0.08] text-zinc-200 flex-1 min-w-[200px]"
                   />
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
-                    onClick={handleAddTag}
-                    className="h-9 px-3.5 rounded-full text-xs border-white/[0.08] bg-zinc-900 text-zinc-200 hover:bg-zinc-800"
+                    disabled={erlcTesting || (!erlcApiKey.trim() && !erlcConnected)}
+                    onClick={handleTestErlc}
+                    className="h-10 px-4 rounded-xl text-xs border-white/[0.08] bg-zinc-900 text-zinc-200"
                   >
-                    Add
+                    Test
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    disabled={erlcTesting || !erlcApiKey.trim()}
+                    onClick={handleConnectErlc}
+                    className="h-10 px-5 rounded-xl text-xs bg-zinc-100 text-zinc-900 hover:bg-white font-medium"
+                  >
+                    Save key
                   </Button>
                 </div>
-                {tagList.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5">
-                    {tagList.map(tag => (
-                      <span
-                        key={tag}
-                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs bg-zinc-900 border border-white/[0.08] text-zinc-300"
-                      >
-                        <span>#{tag}</span>
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveTag(tag)}
-                          className="text-zinc-500 hover:text-zinc-200"
-                          aria-label={`Remove ${tag}`}
-                        >
-                          ×
-                        </button>
-                      </span>
-                    ))}
+
+                {erlcError && (
+                  <div className="text-xs text-red-400 flex items-center gap-1.5">
+                    <AlertCircle className="size-3.5 shrink-0" />
+                    <span>{erlcError}</span>
                   </div>
                 )}
               </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="text-[11px] text-zinc-400 mb-1 block">Discord invite</label>
-                  <Input
-                    value={discordInvite}
-                    onChange={(e) => {
-                      setDiscordInvite(e.target.value);
-                      setHasChanges(true);
-                    }}
-                    placeholder="discord.gg/yourserver"
-                    className="h-9 text-xs bg-zinc-900/70 border-white/[0.08] text-zinc-200"
-                  />
-                </div>
-                <div>
-                  <label className="text-[11px] text-zinc-400 mb-1 block">Roblox group</label>
-                  <Input
-                    value={robloxLink}
-                    onChange={(e) => {
-                      setRobloxLink(e.target.value);
-                      setHasChanges(true);
-                    }}
-                    placeholder="https://www.roblox.com/groups/..."
-                    className="h-9 text-xs bg-zinc-900/70 border-white/[0.08] text-zinc-200"
-                  />
-                </div>
-                <div>
-                  <label className="text-[11px] text-zinc-400 mb-1 block">X / Twitter</label>
-                  <Input
-                    value={twitterLink}
-                    onChange={(e) => {
-                      setTwitterLink(e.target.value);
-                      setHasChanges(true);
-                    }}
-                    placeholder="https://x.com/..."
-                    className="h-9 text-xs bg-zinc-900/70 border-white/[0.08] text-zinc-200"
-                  />
-                </div>
-                <div>
-                  <label className="text-[11px] text-zinc-400 mb-1 block">Website</label>
-                  <Input
-                    value={websiteLink}
-                    onChange={(e) => {
-                      setWebsiteLink(e.target.value);
-                      setHasChanges(true);
-                    }}
-                    placeholder="https://..."
-                    className="h-9 text-xs bg-zinc-900/70 border-white/[0.08] text-zinc-200"
-                  />
-                </div>
-              </div>
             </div>
-          </div>
-
-          {/* Row 5: Staff Team (Verified Discord Picker) */}
-          <div className="py-6 grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
-            <div className="md:col-span-5 pr-2">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-zinc-100">Staff team</span>
-                <Switch
-                  checked={showStaffList}
-                  onCheckedChange={(checked) => {
-                    setShowStaffList(checked);
-                    setSections(prev => prev.map(s => (s.id === 'staff' ? { ...s, enabled: checked } : s)));
-                    setHasChanges(true);
-                  }}
-                />
-              </div>
-              <p className="text-xs text-zinc-400 mt-1 leading-relaxed">
-                Pick staff by Discord role or Discord ID. Names and avatars are verified directly from Discord.
-              </p>
-            </div>
-
-            <div className="md:col-span-7 space-y-3">
-              {showStaffList ? (
-                <>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    <select
-                      value={selectedStaffRoleId}
-                      onChange={(e) => {
-                        setSelectedStaffRoleId(e.target.value);
-                        handleSearchDiscordStaff(e.target.value, staffSearchQuery);
-                      }}
-                      className="h-9 px-3 rounded-xl bg-zinc-900/70 border border-white/[0.08] text-xs text-zinc-200 focus:outline-none"
-                    >
-                      <option value="">Filter by Discord role…</option>
-                      {guildRoles.map(r => (
-                        <option key={r.id} value={r.id}>
-                          {r.name}
-                        </option>
-                      ))}
-                    </select>
-
-                    <div className="flex gap-1.5">
-                      <Input
-                        value={staffSearchQuery}
-                        onChange={(e) => setStaffSearchQuery(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault();
-                            handleSearchDiscordStaff(selectedStaffRoleId, staffSearchQuery);
-                          }
-                        }}
-                        placeholder="Discord ID or username…"
-                        className="h-9 text-xs bg-zinc-900/70 border-white/[0.08] text-zinc-200"
-                      />
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        disabled={searchingStaff}
-                        onClick={() => handleSearchDiscordStaff(selectedStaffRoleId, staffSearchQuery)}
-                        className="h-9 px-3 rounded-xl border-white/[0.08] bg-zinc-900 text-zinc-200 text-xs shrink-0"
-                      >
-                        {searchingStaff ? '…' : 'Find'}
-                      </Button>
-                    </div>
-                  </div>
-
-                  {staffCandidates.length > 0 && (
-                    <div className="rounded-xl border border-white/[0.08] bg-zinc-950/70 divide-y divide-white/[0.05] max-h-44 overflow-y-auto">
-                      {staffCandidates.map(cand => {
-                        const alreadyAdded = staffList.some(m => String(m.id) === String(cand.id));
-                        return (
-                          <div key={cand.id} className="px-3 py-2 flex items-center justify-between gap-2 text-xs">
-                            <div className="flex items-center gap-2.5 min-w-0">
-                              <UserAvatar
-                                userId={cand.id}
-                                avatarUrl={cand.avatar || undefined}
-                                name={cand.displayName || cand.username}
-                                size={24}
-                                className="size-6 rounded-full shrink-0"
-                              />
-                              <div className="truncate">
-                                <span className="text-zinc-200 font-medium">{cand.displayName || cand.username}</span>
-                                <span className="text-zinc-500 ml-1.5">{cand.role}</span>
-                              </div>
-                            </div>
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="outline"
-                              disabled={alreadyAdded}
-                              onClick={() => handleAddVerifiedStaff(cand)}
-                              className="h-7 px-2.5 rounded-full text-[11px] border-white/[0.08] bg-zinc-900 text-zinc-200"
-                            >
-                              {alreadyAdded ? 'Added' : 'Add'}
-                            </Button>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-
-                  {staffList.length === 0 ? (
-                    <div className="p-4 rounded-xl border border-white/[0.06] bg-zinc-900/30 text-xs text-zinc-500">
-                      No staff members selected yet. Select a Discord role or enter a Discord ID above.
-                    </div>
-                  ) : (
-                    <div className="space-y-1.5">
-                      {staffList.map((member, idx) => (
-                        <div
-                          key={member.id || idx}
-                          className="px-3 py-2 rounded-xl bg-zinc-900/60 border border-white/[0.06] flex items-center justify-between text-xs"
-                        >
-                          <div className="flex items-center gap-2.5 min-w-0">
-                            <UserAvatar
-                              userId={member.id}
-                              avatarUrl={member.avatar || undefined}
-                              name={member.displayName || member.username}
-                              size={24}
-                              className="size-6 rounded-full shrink-0"
-                            />
-                            <div className="truncate">
-                              <span className="font-medium text-zinc-200">{member.displayName || member.username}</span>
-                              <span className="text-zinc-500 ml-2">{member.role}</span>
-                            </div>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveStaff(idx)}
-                            className="text-zinc-500 hover:text-red-400 p-1"
-                            aria-label="Remove staff member"
-                          >
-                            <Trash2 className="size-3.5" />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </>
-              ) : (
-                <p className="text-xs text-zinc-500">Staff team section is hidden.</p>
-              )}
-            </div>
-          </div>
-
-          {/* Row 6: Partners (Multi-select of real accepted partners) */}
-          <div className="py-6 grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
-            <div className="md:col-span-5 pr-2">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-zinc-100">Partners</span>
-                <Switch
-                  checked={showPartnerList}
-                  onCheckedChange={(checked) => {
-                    setShowPartnerList(checked);
-                    setSections(prev => prev.map(s => (s.id === 'partners' ? { ...s, enabled: checked } : s)));
-                    setHasChanges(true);
-                  }}
-                />
-              </div>
-              <p className="text-xs text-zinc-400 mt-1 leading-relaxed">
-                Choose from your accepted partnerships to display on your server page.
-              </p>
-            </div>
-
-            <div className="md:col-span-7 space-y-3">
-              {showPartnerList ? (
-                availablePartners.length === 0 ? (
-                  <div className="p-4 rounded-xl border border-white/[0.06] bg-zinc-900/30 text-xs text-zinc-400">
-                    No accepted partnerships yet. Accepted partners from the Partnerships hub will appear here automatically.
-                  </div>
-                ) : (
-                  <div className="space-y-2.5">
-                    <div className="relative">
-                      <Search className="size-3.5 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                      <Input
-                        value={partnerSearchQuery}
-                        onChange={(e) => setPartnerSearchQuery(e.target.value)}
-                        placeholder="Search accepted partners…"
-                        className="pl-8 h-9 text-xs bg-zinc-900/70 border-white/[0.08] text-zinc-200"
-                      />
-                    </div>
-                    <div className="rounded-xl border border-white/[0.08] bg-zinc-900/40 divide-y divide-white/[0.05] max-h-52 overflow-y-auto">
-                      {filteredPartners.map(partner => {
-                        const isSelected = partnerList.some(
-                          p => String(p.id || p.name) === String(partner.id || partner.name)
-                        );
-                        return (
-                          <button
-                            key={partner.id}
-                            type="button"
-                            onClick={() => handleTogglePartnerSelection(partner)}
-                            className="w-full px-3 py-2.5 flex items-center justify-between text-left text-xs hover:bg-white/[0.03] transition-colors"
-                          >
-                            <div className="flex items-center gap-2.5 min-w-0">
-                              <ServerIcon
-                                guildId={partner.id}
-                                iconUrl={partner.icon}
-                                name={partner.name}
-                                size={24}
-                                className="size-6 rounded-md shrink-0"
-                              />
-                              <span className="text-zinc-200 font-medium truncate">{partner.name}</span>
-                            </div>
-                            <span
-                              className={`px-2.5 py-0.5 rounded-full text-[11px] border ${
-                                isSelected
-                                  ? 'bg-[var(--accent)]/15 text-[var(--accent)] border-[var(--accent)]/30 font-medium'
-                                  : 'bg-zinc-900 text-zinc-400 border-white/[0.08]'
-                              }`}
-                            >
-                              {isSelected ? 'Selected' : 'Select'}
-                            </span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )
-              ) : (
-                <p className="text-xs text-zinc-500">Partners section is hidden.</p>
-              )}
-            </div>
-          </div>
-
-          {/* Row 7: Page Sections (Simple list: drag handle + Show switch only) */}
-          <div className="py-6 grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
-            <div className="md:col-span-5 pr-2">
-              <div className="text-sm font-medium text-zinc-100">Page sections</div>
-              <p className="text-xs text-zinc-400 mt-1 leading-relaxed">
-                Drag to reorder sections or toggle which sections appear on your public page.
-              </p>
-            </div>
-
-            <div className="md:col-span-7 space-y-2">
-              {sections.map((section, idx) => (
-                <div
-                  key={section.id}
-                  draggable
-                  onDragStart={() => setDragIdx(idx)}
-                  onDragOver={(e) => e.preventDefault()}
-                  onDrop={() => handleSectionDrop(idx)}
-                  className="px-3.5 py-2.5 rounded-xl bg-zinc-900/60 border border-white/[0.08] flex items-center justify-between gap-3"
-                >
-                  <div className="flex items-center gap-2.5">
-                    <span
-                      className="text-zinc-500 cursor-grab active:cursor-grabbing flex items-center gap-0.5"
-                      title="Drag to reorder"
-                    >
-                      <GripVertical className="size-4" />
-                    </span>
-                    <div className="flex items-center gap-1">
-                      <button
-                        type="button"
-                        disabled={idx === 0}
-                        onClick={() => moveSection(idx, 'up')}
-                        className="text-zinc-500 hover:text-zinc-200 disabled:opacity-25 p-0.5"
-                        aria-label={`Move ${section.label} up`}
-                      >
-                        <ArrowUp className="size-3" />
-                      </button>
-                      <button
-                        type="button"
-                        disabled={idx === sections.length - 1}
-                        onClick={() => moveSection(idx, 'down')}
-                        className="text-zinc-500 hover:text-zinc-200 disabled:opacity-25 p-0.5"
-                        aria-label={`Move ${section.label} down`}
-                      >
-                        <ArrowDown className="size-3" />
-                      </button>
-                    </div>
-                    <span className="text-xs font-medium text-zinc-200">{section.label}</span>
-                  </div>
-
-                  <Switch
-                    checked={section.enabled}
-                    onCheckedChange={(checked) => toggleSection(section.id, checked)}
-                    aria-label={`Show ${section.label}`}
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Row 8: Collapsed "Advanced" Section */}
-          <div className="py-6">
-            <button
-              type="button"
-              onClick={() => setAdvancedOpen(prev => !prev)}
-              className="w-full flex items-center justify-between text-left py-1 group"
-            >
-              <div>
-                <div className="text-sm font-medium text-zinc-100 flex items-center gap-2">
-                  {advancedOpen ? (
-                    <ChevronDown className="size-4 text-zinc-400" />
-                  ) : (
-                    <ChevronRight className="size-4 text-zinc-400" />
-                  )}
-                  <span>Advanced</span>
-                </div>
-                <p className="text-xs text-zinc-400 mt-0.5 pl-6">
-                  ER:LC Server-Key and public credit visibility.
-                </p>
-              </div>
-              <span className="text-xs text-zinc-500 group-hover:text-zinc-300">
-                {advancedOpen ? 'Hide' : 'Show'}
-              </span>
-            </button>
-
-            {advancedOpen && (
-              <div className="mt-5 pl-6 space-y-6 border-l border-white/[0.06]">
-                {/* Show server credits on my page */}
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <div className="text-xs font-medium text-zinc-200">Show server credits on my page</div>
-                    <p className="text-xs text-zinc-400 mt-0.5">
-                      Display your server's total credit balance in the public stats card.
-                    </p>
-                  </div>
-                  <Switch
-                    checked={showCredits}
-                    onCheckedChange={(checked) => {
-                      setShowCredits(checked);
-                      setHasChanges(true);
-                    }}
-                  />
-                </div>
-
-                {/* ER:LC Server-Key */}
-                <div className="space-y-2.5">
-                  <div>
-                    <div className="text-xs font-medium text-zinc-200">ER:LC Server-Key</div>
-                    <p className="text-xs text-zinc-400 mt-0.5">
-                      Shared with Promote Server. Used to display live in-game players, staff, and queue size.
-                    </p>
-                  </div>
-
-                  {erlcConnected && (
-                    <div className="p-3 rounded-xl bg-zinc-900/70 border border-white/[0.08] flex flex-wrap items-center justify-between gap-2">
-                      <div className="text-xs text-zinc-200">
-                        Connected key: <span className="font-mono text-zinc-400">{maskedKey}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          disabled={erlcTesting}
-                          onClick={handleTestErlc}
-                          className="h-7 px-3 rounded-full text-xs border-white/[0.08] bg-zinc-950 text-zinc-200"
-                        >
-                          {erlcTesting ? 'Testing…' : 'Test'}
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={handleDisconnectErlc}
-                          className="h-7 px-3 rounded-full text-xs border-red-500/20 text-red-400 hover:bg-red-500/10"
-                        >
-                          Disconnect
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="flex flex-wrap gap-2">
-                    <Input
-                      type="password"
-                      value={erlcApiKey}
-                      onChange={(e) => setErlcApiKey(e.target.value)}
-                      placeholder={erlcConnected ? 'Enter new Server-Key to replace…' : 'Paste your PRC Server-Key…'}
-                      className="h-9 text-xs bg-zinc-900/70 border-white/[0.08] text-zinc-200 flex-1 min-w-[200px]"
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      disabled={erlcTesting || (!erlcApiKey.trim() && !erlcConnected)}
-                      onClick={handleTestErlc}
-                      className="h-9 px-3.5 rounded-full text-xs border-white/[0.08] bg-zinc-900 text-zinc-200"
-                    >
-                      Test
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      disabled={erlcTesting || !erlcApiKey.trim()}
-                      onClick={handleConnectErlc}
-                      className="h-9 px-4 rounded-full text-xs bg-zinc-100 text-zinc-900 hover:bg-white"
-                    >
-                      Save key
-                    </Button>
-                  </div>
-
-                  {erlcError && (
-                    <div className="text-xs text-red-400 flex items-center gap-1.5">
-                      <AlertCircle className="size-3.5 shrink-0" />
-                      <span>{erlcError}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Sticky Live Mini Preview on the Right */}
-        <div className="xl:sticky xl:top-6 rounded-2xl border border-white/[0.08] bg-[#0E0E11] overflow-hidden">
-          <div className="px-4 py-2.5 border-b border-white/[0.06] flex items-center justify-between text-[11px] text-zinc-400">
-            <span>Live preview</span>
-            <span className="truncate max-w-[180px] text-zinc-500">{domainHost}/{activeSlug}</span>
-          </div>
-
-          {/* Mini 3:1 Banner */}
-          <div className="w-full aspect-[3/1] max-h-[96px] bg-zinc-900 relative overflow-hidden">
-            {previewBanner ? (
-              <img src={previewBanner} alt="" className="w-full h-full object-cover" />
-            ) : (
-              <div className="w-full h-full bg-zinc-900 border-b border-white/[0.05]" />
-            )}
-          </div>
-
-          <div className="p-4 pt-0">
-            {/* Overlapping Icon + Identity Row */}
-            <div className="flex items-end justify-between gap-2 -mt-6 mb-3 relative z-10">
-              <div className="size-12 rounded-xl border-2 border-[#0E0E11] bg-zinc-900 overflow-hidden shrink-0">
-                <ServerIcon
-                  guildId={guildId}
-                  iconHash={guild?.icon}
-                  name={serverName}
-                  size={48}
-                  className="size-full object-cover"
-                />
-              </div>
-              <span className="px-2.5 py-1 rounded-full text-[10px] font-medium bg-[var(--accent)] text-[var(--accent-foreground)]">
-                Join
-              </span>
-            </div>
-
-            <div className="text-sm font-semibold text-zinc-100 break-words leading-snug">
-              {serverName}
-            </div>
-
-            {tagList.length > 0 && (
-              <div className="flex flex-wrap gap-1 mt-2">
-                {tagList.slice(0, 4).map(tag => (
-                  <span
-                    key={tag}
-                    className="px-2 py-0.5 rounded-full text-[10px] bg-zinc-900 border border-white/[0.06] text-zinc-400"
-                  >
-                    #{tag}
-                  </span>
-                ))}
-              </div>
-            )}
-
-            <div className="mt-3 pt-3 border-t border-white/[0.06] space-y-2">
-              {sections
-                .filter(s => s.enabled)
-                .map(s => (
-                  <div
-                    key={s.id}
-                    className="px-2.5 py-1.5 rounded-lg bg-zinc-900/50 border border-white/[0.05] text-[11px] text-zinc-300 flex items-center justify-between"
-                  >
-                    <span>{s.label}</span>
-                    {s.id === 'about' && (
-                      <span className="text-[10px] text-zinc-500 truncate max-w-[120px]">
-                        {description ? `${description.slice(0, 24)}…` : 'Empty'}
-                      </span>
-                    )}
-                    {s.id === 'staff' && (
-                      <span className="text-[10px] text-zinc-500">{staffList.length} shown</span>
-                    )}
-                    {s.id === 'partners' && (
-                      <span className="text-[10px] text-zinc-500">{partnerList.length} shown</span>
-                    )}
-                  </div>
-                ))}
-            </div>
-          </div>
+          )}
         </div>
       </div>
 
-      {/* Single Save Bar with Clear Unsaved State */}
+      {/* Single Save Bar with Clear Unsaved State (Generous bottom padding prevents overlap) */}
       <div className="fixed bottom-0 left-0 right-0 z-40 bg-[#0E0E11]/95 backdrop-blur border-t border-white/[0.08] px-6 py-3.5">
-        <div className="max-w-[1100px] mx-auto flex items-center justify-between gap-4">
+        <div className="max-w-[1280px] mx-auto flex items-center justify-between gap-4">
           <div className="text-xs">
             {hasChanges ? (
               <span className="text-amber-400 font-medium flex items-center gap-1.5">

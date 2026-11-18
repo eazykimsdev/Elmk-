@@ -40,7 +40,8 @@ import {
 
 export const SIDEBAR_SHOP_NAV = {
   category: 'Shop',
-  boosts: 'Boosts',
+  shop: 'Shop',
+  boosts: 'Shop',
   premium: 'Premium',
 } as const;
 
@@ -485,14 +486,9 @@ export function DashboardSidebar({
         label: SIDEBAR_SHOP_NAV.category,
         items: [
           {
-            label: SIDEBAR_SHOP_NAV.boosts,
-            href: `/dashboard/${currentGuildId}/boosts`,
+            label: 'Shop',
+            href: `/dashboard/${currentGuildId}/shop`,
             icon: ShoppingBag,
-          },
-          {
-            label: SIDEBAR_SHOP_NAV.premium,
-            href: `/dashboard/${currentGuildId}/premium`,
-            icon: Sparkles,
           },
         ],
       },
@@ -539,6 +535,9 @@ export function DashboardSidebar({
   }, [currentGuildId, canBump, pendingRequestsCount, myJoinsExpanded, isRecruiter, isAdmin]);
 
   const isItemActive = (item: NavigationItem) => {
+    if (item.href.endsWith('/shop')) {
+      return location.pathname.endsWith('/shop') || location.pathname.endsWith('/boosts') || location.pathname.endsWith('/premium');
+    }
     if (item.href.includes('?')) {
       return currentPath === item.href;
     }

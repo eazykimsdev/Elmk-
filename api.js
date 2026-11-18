@@ -5,6 +5,7 @@ import {
   listAllCustomUrls,
   adminRemoveCustomUrl,
   adminReassignCustomUrl,
+  adminAssignReservedCustomUrl,
   loadBlockedWords,
   saveBlockedWords
 } from './customUrlManager.js';
@@ -15,6 +16,9 @@ import {
   getFormDraft,
   saveFormDraft,
   deleteFormDraft,
+  getApplicantDraft,
+  saveApplicantDraft,
+  deleteApplicantDraft,
   resolvePublicForm,
   submitApplication,
   getServerSubmissions,
@@ -6272,6 +6276,20 @@ export function createDashboardRouter() {
     }
   });
 
+  router.post('/api/admin/custom-urls/assign-reserved', requireAdminRole, async (req, res) => {
+    try {
+      const { slug, targetServerId, reason } = req.body || {};
+      if (!slug || !targetServerId) {
+        return res.status(400).json({ error: 'Slug and targetServerId are required.' });
+      }
+      const adminId = req.dashboardSession?.user?.id || 'admin';
+      const result = await adminAssignReservedCustomUrl(slug, targetServerId, adminId, reason);
+      res.json({ success: true, record: result });
+    } catch (err) {
+      res.status(400).json({ error: err.message });
+    }
+  });
+
   router.get('/api/admin/custom-urls/blocked', requireAdminRole, (req, res) => {
     const list = loadBlockedWords();
     res.json({ blockedWords: list });
@@ -6580,20 +6598,54 @@ export function createDashboardRouter() {
       return res.status(404).json({ error: 'Application form not found.' });
     }
 
-    // Check if authenticated user already has an application
+    // Check if authenticated user already has an application or draft
     const user = req.dashboardSession?.user || req.session?.user;
     let userApplication = null;
+    let applicantDraft = null;
     if (user?.id) {
       const submissions = getServerSubmissions(resolved.server.id, 'all');
       userApplication = submissions.find(s => s.applicantId === String(user.id) && s.formId === resolved.form.id) || null;
+      applicantDraft = getApplicantDraft(resolved.form.id, user.id);
     }
 
     res.json({
       success: true,
       form: resolved.form,
       server: resolved.server,
-      userApplication
+      userApplication,
+      applicantDraft
     });
+  });
+
+  // 6.5 Applicant Draft Auto-save: POST /api/public/forms/:formId/draft
+  router.post(['/public/forms/:formId/draft', '/api/public/forms/:formId/draft'], (req, res) => {
+    try {
+      const { formId } = req.params;
+      const { answers, currentStep } = req.body || {};
+      const user = req.dashboardSession?.user || req.session?.user;
+      if (!user || !user.id) {
+        return res.status(401).json({ error: 'Sign in required to save draft.' });
+      }
+      const draft = saveApplicantDraft(formId, user.id, answers || {}, currentStep || 0);
+      res.json({ success: true, draft });
+    } catch (err) {
+      res.status(400).json({ error: err.message });
+    }
+  });
+
+  // 6.6 Applicant Draft Retrieval: GET /api/public/forms/:formId/draft
+  router.get(['/public/forms/:formId/draft', '/api/public/forms/:formId/draft'], (req, res) => {
+    try {
+      const { formId } = req.params;
+      const user = req.dashboardSession?.user || req.session?.user;
+      if (!user || !user.id) {
+        return res.status(401).json({ error: 'Sign in required.' });
+      }
+      const draft = getApplicantDraft(formId, user.id);
+      res.json({ success: true, draft });
+    } catch (err) {
+      res.status(400).json({ error: err.message });
+    }
   });
 
   // 7. Public Application Submission: POST /api/public/forms/:formId/submit
@@ -6679,20 +6731,24 @@ export function createDashboardRouter() {
   router.get('/user/daily-checkin', (req, res) => {
     const userId = req.dashboardSession?.user?.id;
     const settings = getAdminSettings();
-    const rewardAmount = Number(settings.daily_checkin_reward_credits) || 10;
+    const rewardAmount = Number(settings.daily_checkin_reward_credits) || 3;
     const now = new Date();
     const nextResetUtc = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1, 0, 0, 0)).toISOString();
     if (!userId) {
-      return res.json({ streak: 0, claimedToday: false, rewardAmount, nextResetUtc });
+      return res.json({ streak: 0, claimedToday: false, reward: rewardAmount, rewardAmount, nextResetUtc });
     }
     const data = loadPartnershipsData();
     const userAch = data.achievements[userId] || { lastCheckin: 0, streak: 0, lastClaimDate: null };
     const todayUtc = now.toISOString().slice(0, 10);
     const guildId = req.query.guildId ? String(req.query.guildId) : '';
+    const serverClaimKey = guildId ? `${guildId}:${todayUtc}` : `user:${userId}:${todayUtc}`;
+    const serverAlreadyClaimed = Boolean(data.serverClaims?.[serverClaimKey]);
+    const claimedToday = Boolean(userAch.lastClaimDate === todayUtc || serverAlreadyClaimed);
     const reminderPref = guildId ? getReminderPreference(userId, guildId) : { enabled: false };
     res.json({
       streak: userAch.streak || 0,
-      claimedToday: userAch.lastClaimDate === todayUtc,
+      claimedToday,
+      reward: rewardAmount,
       rewardAmount,
       lastClaimDate: userAch.lastClaimDate || null,
       nextResetUtc,

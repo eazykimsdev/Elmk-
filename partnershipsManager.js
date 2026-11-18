@@ -983,7 +983,18 @@ export function claimDailyReward(userId, guildIdOrOptions = null, options = {}) 
   const todayUtc = now.toISOString().slice(0, 10);
   const yesterdayUtc = new Date(now.getTime() - 86400000).toISOString().slice(0, 10);
 
-  if (userAch.lastClaimDate === todayUtc) {
+  data.serverClaims = data.serverClaims || {};
+  const allServers = getPromotedServers(true);
+  const targetServer = guildId
+    ? allServers.find(s => String(s.id) === String(guildId) || String(s.guildId) === String(guildId))
+    : allServers.find(s => String(s.ownerId) === String(userId));
+  const resolvedGuildId = targetServer?.id || guildId || null;
+
+  const serverClaimKey = resolvedGuildId
+    ? `${resolvedGuildId}:${todayUtc}`
+    : `user:${userId}:${todayUtc}`;
+
+  if (userAch.lastClaimDate === todayUtc || data.serverClaims[serverClaimKey]) {
     const nextResetUtc = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1, 0, 0, 0));
     const diffMs = nextResetUtc.getTime() - now.getTime();
     const hoursRemaining = Math.max(1, Math.ceil(diffMs / (3600 * 1000)));
@@ -999,18 +1010,18 @@ export function claimDailyReward(userId, guildIdOrOptions = null, options = {}) 
   userAch.lastClaimDate = todayUtc;
   userAch.lastCheckin = now.getTime();
 
-  // Consistent daily reward set in settings (default 10 credits)
+  // Consistent daily reward set in settings (default 3 credits)
   const settings = getAdminSettings();
-  const rewardAmount = Number(settings.daily_checkin_reward_credits) || 10;
+  const rewardAmount = Number(settings.daily_checkin_reward_credits) || 3;
   balances[userId] = (balances[userId] || 0) + rewardAmount;
 
-  const allServers = getPromotedServers(true);
-  const targetServer = guildId
-    ? allServers.find(s => String(s.id) === String(guildId) || String(s.guildId) === String(guildId))
-    : allServers.find(s => String(s.ownerId) === String(userId));
-  const resolvedGuildId = targetServer?.id || guildId || null;
-
   data.achievements[userId] = userAch;
+  data.serverClaims[serverClaimKey] = {
+    claimedAt: now.getTime(),
+    userId,
+    guildId: resolvedGuildId,
+    amount: rewardAmount
+  };
   data.transactions.unshift({
     id: `tx_${now.getTime()}_checkin`,
     userId,
@@ -1020,6 +1031,10 @@ export function claimDailyReward(userId, guildIdOrOptions = null, options = {}) 
     description: `Day ${userAch.streak} Daily Check-In reward claimed (+${rewardAmount} credits)`,
     timestamp: now.getTime()
   });
+
+  const ledgerIdempotencyKey = resolvedGuildId
+    ? `daily_checkin:guild:${resolvedGuildId}:${todayUtc}`
+    : `daily_checkin:user:${userId}:${todayUtc}`;
 
   try {
     recordLedgerTransaction({
@@ -1033,9 +1048,14 @@ export function claimDailyReward(userId, guildIdOrOptions = null, options = {}) 
       description: `Day ${userAch.streak} Daily Check-In reward claimed (+${rewardAmount} credits)`,
       triggeredBy: 'Daily Check-In',
       status: 'posted',
-      idempotencyKey: `daily_checkin:${userId}:${todayUtc}`
+      idempotencyKey: ledgerIdempotencyKey
     });
-  } catch {}
+  } catch (txErr) {
+    if (txErr.code === 'DUPLICATE_LEDGER_ENTRY' || txErr.message?.includes('Duplicate')) {
+      throw new Error(`Daily reward already claimed today. Next claim available in 00:00 UTC.`);
+    }
+    throw txErr;
+  }
 
   saveUserBalances(balances);
   savePartnershipsData(data);

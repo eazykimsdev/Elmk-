@@ -10,7 +10,14 @@ import {
   Share2,
   AlertCircle,
   Clock,
-  ArrowLeft
+  ArrowLeft,
+  Trophy,
+  Shield,
+  Coins,
+  Copy,
+  Award,
+  Sparkles,
+  Link2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ServerIcon } from '@/components/ui/ServerIcon';
@@ -26,6 +33,7 @@ import {
 } from '@/components/ui/dialog';
 import { useAuth } from '@/lib/auth';
 import { apiFetch } from '@/lib/api';
+import { cn } from '@/lib/utils';
 
 interface ServerDetails {
   id: string;
@@ -57,6 +65,7 @@ interface ServerDetails {
     joinCode?: string;
     lastCheckedAt?: string | null;
     status: string;
+    error?: string | null;
   } | null;
   pageSections?: string[];
   sectionVisibility?: Record<string, boolean>;
@@ -69,7 +78,7 @@ interface ServerDetails {
   showStaffList?: boolean;
   staffList?: Array<{ id?: string; role: string; username: string; displayName?: string; avatarUrl?: string | null }>;
   showPartnerList?: boolean;
-  partnerList?: Array<{ id?: string; name: string; iconUrl?: string | null; memberCount?: number; link?: string }>;
+  partnerList?: Array<{ id?: string; name: string; iconUrl?: string | null; memberCount?: number; link?: string; category?: string }>;
   customUrl?: string | null;
   owner_discord_id?: string | null;
   owner_display_name?: string | null;
@@ -118,6 +127,8 @@ export function PublicServerListingPage() {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
+  const [activeTab, setActiveTab] = useState<'overview' | 'reviews' | 'staff' | 'partners'>('overview');
+
   const [reviews, setReviews] = useState<Review[]>([]);
   const [reviewRating, setReviewRating] = useState<number>(5);
   const [reviewText, setReviewText] = useState<string>('');
@@ -126,7 +137,8 @@ export function PublicServerListingPage() {
   const [reviewEligibility, setReviewEligibility] = useState<{ canReview: boolean; message?: string } | null>(null);
 
   const [copiedLink, setCopiedLink] = useState<boolean>(false);
-  const [showAllBadges, setShowAllBadges] = useState<boolean>(false);
+  const [copiedSlug, setCopiedSlug] = useState<boolean>(false);
+  const [badgesDialogOpen, setBadgesDialogOpen] = useState<boolean>(false);
 
   // Report Modal
   const [reportModalOpen, setReportModalOpen] = useState<boolean>(false);
@@ -188,6 +200,14 @@ export function PublicServerListingPage() {
     setTimeout(() => setCopiedLink(false), 2000);
   };
 
+  const handleCopySlug = () => {
+    if (!server?.customUrl) return;
+    const shareUrl = `${window.location.origin}/${server.customUrl}`;
+    navigator.clipboard.writeText(shareUrl).catch(() => {});
+    setCopiedSlug(true);
+    setTimeout(() => setCopiedSlug(false), 2000);
+  };
+
   const handleSubmitReview = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!server || !reviewText.trim()) return;
@@ -236,10 +256,10 @@ export function PublicServerListingPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-[var(--background,#09090B)] text-[var(--foreground,#F4F4F5)] font-sans">
-        <div className="max-w-[1100px] mx-auto px-4 sm:px-6 py-8 space-y-6">
-          <div className="w-full aspect-[3/1] max-h-[280px] rounded-2xl bg-[var(--surface,#121215)] border border-[var(--border,#27272A)] animate-pulse" />
+        <div className="max-w-[1200px] mx-auto px-4 sm:px-6 py-8 space-y-6">
+          <div className="w-full aspect-[3/1] max-h-[300px] rounded-2xl bg-[var(--surface,#121215)] border border-[var(--border,#27272A)] animate-pulse" />
           <div className="flex items-center gap-4">
-            <div className="size-[88px] -mt-8 rounded-2xl bg-[var(--surface,#121215)] border border-[var(--border,#27272A)] animate-pulse" />
+            <div className="size-[112px] -mt-[40px] rounded-2xl bg-[var(--surface,#121215)] border border-[var(--border,#27272A)] animate-pulse" />
             <div className="space-y-2 flex-1">
               <div className="h-7 w-64 rounded bg-[var(--surface,#121215)] animate-pulse" />
               <div className="h-4 w-40 rounded bg-[var(--surface,#121215)] animate-pulse" />
@@ -277,7 +297,6 @@ export function PublicServerListingPage() {
   const isPremium = Boolean(server.is_premium);
   const joinReward = Number(server.rewardCoins) || (isPremium ? 5 : 2);
   const badges = Array.isArray(server.earnedBadges) ? server.earnedBadges : [];
-  const visibleBadges = showAllBadges ? badges : badges.slice(0, 4);
   const tags = Array.isArray(server.tags) ? server.tags.filter(Boolean) : [];
   const vis = server.sectionVisibility || { about: true, erlc: true, reviews: true, badges: true, staff: true, partners: true };
 
@@ -285,35 +304,41 @@ export function PublicServerListingPage() {
   const ownerId = owner?.id || server.owner_discord_id || null;
   const ownerAvatar = owner?.avatar || server.ownerAvatar || null;
 
+  const hasStaff = Boolean(server.showStaffList && Array.isArray(server.staffList) && server.staffList.length > 0);
+  const hasPartners = Boolean(server.showPartnerList && Array.isArray(server.partnerList) && server.partnerList.length > 0);
+  const hasReviews = vis.reviews !== false;
+
   const officialLinks = [
-    server.socialLinks?.discord || server.inviteUrl ? { label: 'Discord Community', url: server.socialLinks?.discord || server.inviteUrl } : null,
+    server.socialLinks?.discord || server.inviteUrl ? { label: 'Discord Server', url: server.socialLinks?.discord || server.inviteUrl } : null,
     server.socialLinks?.roblox ? { label: 'Roblox Group', url: server.socialLinks.roblox } : null,
-    server.socialLinks?.website ? { label: 'Official Website', url: server.socialLinks.website } : null,
-    server.socialLinks?.twitter ? { label: 'X / Social', url: server.socialLinks.twitter } : null
+    server.socialLinks?.website ? { label: 'Website', url: server.socialLinks.website } : null,
+    server.socialLinks?.twitter ? { label: 'X / Twitter', url: server.socialLinks.twitter } : null
   ].filter(Boolean) as Array<{ label: string; url: string }>;
+
+  const showCreditsStat = server.showCredits !== false && server.serverCredits !== null && server.serverCredits !== undefined;
 
   return (
     <div className="min-h-screen bg-[var(--background,#09090B)] text-[var(--foreground,#F4F4F5)] font-sans pb-16">
-      {/* Centered 1100px Container with Equal Side Padding */}
-      <div className="max-w-[1100px] mx-auto px-4 sm:px-6 pt-6">
+      {/* Centered 1200px Container with Equal Side Padding */}
+      <div className="max-w-[1200px] mx-auto px-4 sm:px-6 pt-6">
         {/* Top Breadcrumb Bar */}
         <div className="flex items-center justify-between gap-4 mb-4 text-xs text-zinc-400">
-          <div className="flex items-center gap-2">
-            <Link to="/servers" className="hover:text-white transition-colors inline-flex items-center gap-1.5">
+          <div className="flex items-center gap-2 min-w-0">
+            <Link to="/servers" className="hover:text-white transition-colors inline-flex items-center gap-1.5 shrink-0">
               <ArrowLeft className="size-3.5" />
               <span>Directory</span>
             </Link>
             <span className="text-zinc-600">/</span>
-            <span className="text-zinc-200 truncate max-w-[240px]">{server.name}</span>
+            <span className="text-zinc-200 truncate max-w-[280px]">{server.name}</span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             <button
               type="button"
               onClick={handleShare}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-[var(--border,#27272A)] bg-[var(--surface,#121215)] text-xs text-zinc-300 hover:text-white transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-white/[0.08] bg-[#121215] text-xs text-zinc-300 hover:text-white hover:border-white/20 transition-colors cursor-pointer"
             >
-              {copiedLink ? <Check className="size-3.5" /> : <Share2 className="size-3.5" />}
-              <span>{copiedLink ? 'Copied link' : 'Share'}</span>
+              {copiedLink ? <Check className="size-3.5 text-emerald-400" /> : <Share2 className="size-3.5" />}
+              <span>{copiedLink ? 'Copied' : 'Share'}</span>
             </button>
             <button
               type="button"
@@ -321,7 +346,7 @@ export function PublicServerListingPage() {
                 setReportSuccess(false);
                 setReportModalOpen(true);
               }}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-[var(--border,#27272A)] bg-[var(--surface,#121215)] text-xs text-zinc-400 hover:text-zinc-200 transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-white/[0.08] bg-[#121215] text-xs text-zinc-400 hover:text-zinc-200 hover:border-white/20 transition-colors cursor-pointer"
             >
               <Flag className="size-3.5" />
               <span>Report</span>
@@ -329,8 +354,8 @@ export function PublicServerListingPage() {
           </div>
         </div>
 
-        {/* Banner: Inside Page Width, Rounded Corners, 3:1 Ratio Capped at 280px High */}
-        <div className="w-full aspect-[3/1] max-h-[280px] rounded-2xl overflow-hidden bg-[var(--surface,#121215)] border border-[var(--border,#27272A)] relative">
+        {/* Banner: Inside Page Width, Rounded Corners, 3:1 Ratio Capped at 300px High, Object-fit Cover */}
+        <div className="w-full aspect-[3/1] max-h-[300px] rounded-2xl overflow-hidden bg-[#121215] border border-white/[0.08] relative">
           {server.bannerUrl ? (
             <img
               src={server.bannerUrl}
@@ -339,30 +364,34 @@ export function PublicServerListingPage() {
             />
           ) : (
             <div className="w-full h-full bg-[#121215] flex items-center justify-center">
-              <span className="text-xs text-zinc-600 select-none">{server.category || 'Community'}</span>
+              <span className="text-xs text-zinc-600 select-none uppercase tracking-wider font-semibold">
+                {server.category || 'ConnectingERLC Community'}
+              </span>
             </div>
           )}
         </div>
 
-        {/* Identity Row: Directly Below Banner in Normal Flow, 88px Icon Overlaps Bottom Edge by 32px */}
+        {/* Identity Row: Icon Overlaps Banner Bottom Edge by 40px, Always in Front */}
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 px-2 sm:px-4">
-          <div className="flex flex-col sm:flex-row sm:items-end gap-4 min-w-0 flex-1">
-            <div className="size-[88px] -mt-8 relative z-20 shrink-0 rounded-2xl ring-4 ring-[var(--background,#09090B)] bg-[var(--surface,#121215)] overflow-hidden">
+          <div className="flex flex-col sm:flex-row sm:items-end gap-5 min-w-0 flex-1">
+            {/* 112px Server Icon: rounded-2xl, object-fit cover, fully inside its frame */}
+            <div className="size-[112px] -mt-[40px] relative z-20 shrink-0 rounded-2xl ring-4 ring-[var(--background,#09090B)] bg-[#121215] overflow-hidden shadow-xl flex items-center justify-center">
               <ServerIcon
+                guildId={server.id}
                 name={server.name}
                 iconUrl={server.iconUrl || server.icon}
-                size="xl"
+                size={112}
                 className="w-full h-full object-cover rounded-2xl"
               />
             </div>
 
-            <div className="pt-2 sm:pt-3 min-w-0 flex-1 space-y-1.5">
+            <div className="pt-2 sm:pt-4 min-w-0 flex-1 space-y-2">
               <div className="flex flex-wrap items-center gap-2">
-                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[var(--foreground,#F4F4F5)] break-words leading-tight">
+                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white break-words leading-tight">
                   {server.name}
                 </h1>
                 {isVerified && (
-                  <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-[var(--surface,#18181B)] border border-[var(--border,#27272A)] text-zinc-200">
+                  <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-white/[0.08] border border-white/15 text-zinc-200">
                     Verified
                   </span>
                 )}
@@ -371,489 +400,655 @@ export function PublicServerListingPage() {
                     Premium
                   </span>
                 )}
+                {server.customUrl && (
+                  <button
+                    type="button"
+                    onClick={handleCopySlug}
+                    title="Click to copy custom short link"
+                    className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-mono text-zinc-400 bg-white/[0.04] border border-white/[0.08] hover:text-white hover:border-white/20 transition-colors cursor-pointer"
+                  >
+                    <Link2 className="size-3 text-zinc-500" />
+                    <span>/{server.customUrl}</span>
+                    {copiedSlug ? <Check className="size-3 text-emerald-400" /> : <Copy className="size-3 text-zinc-500" />}
+                  </button>
+                )}
               </div>
 
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs sm:text-sm text-zinc-400">
-                <span>{server.category || 'Roleplay Server'}</span>
-                <span className="text-zinc-600">•</span>
-                <span className="inline-flex items-center gap-1">
-                  <Users className="size-3.5 text-zinc-500" />
-                  <span>{Number(server.memberCount || 0).toLocaleString()} members</span>
+              {/* Chips: Category + Tags */}
+              <div className="flex flex-wrap items-center gap-1.5 text-xs">
+                <span className="px-2.5 py-0.5 rounded-md bg-white/[0.06] border border-white/[0.08] text-zinc-300 font-medium">
+                  {server.category || 'Roleplay Server'}
                 </span>
-                {ratingSummary.count > 0 && (
-                  <>
-                    <span className="text-zinc-600">•</span>
-                    <span className="inline-flex items-center gap-1 text-zinc-300">
-                      <Star className="size-3.5 fill-current text-[var(--accent)]" />
-                      <span>{ratingSummary.average.toFixed(1)} ({ratingSummary.count})</span>
-                    </span>
-                  </>
-                )}
+                {tags.map((tag, idx) => (
+                  <span
+                    key={idx}
+                    className="px-2 py-0.5 rounded-md bg-white/[0.03] border border-white/[0.06] text-zinc-400"
+                  >
+                    {tag}
+                  </span>
+                ))}
               </div>
             </div>
           </div>
 
           {/* Join Button on the Right */}
-          <div className="shrink-0 pt-2 sm:pt-0">
+          <div className="shrink-0 pt-2 sm:pt-0 flex items-center gap-3">
             <Button
               type="button"
               onClick={handleJoinServer}
-              className="h-11 px-6 rounded-full bg-[var(--accent,#F97316)] hover:opacity-95 text-white font-semibold text-sm inline-flex items-center gap-2 cursor-pointer"
+              className="h-11 px-6 rounded-xl bg-[var(--accent,#F97316)] hover:opacity-95 text-white font-semibold text-sm inline-flex items-center gap-2 cursor-pointer shadow-sm"
             >
               <span>Join Server</span>
-              <span className="px-2 py-0.5 rounded-full bg-black/20 text-xs font-medium">
-                +{joinReward} credits
+              <span className="px-2 py-0.5 rounded-md bg-black/25 text-xs font-medium">
+                +{joinReward} cr
               </span>
               <ExternalLink className="size-3.5" />
             </Button>
           </div>
         </div>
 
-        {/* Tags Under Identity Row */}
-        {tags.length > 0 && (
-          <div className="flex flex-wrap items-center gap-2 mt-4 px-2 sm:px-4">
-            {tags.map((tag, idx) => (
-              <span
-                key={idx}
-                className="px-3 py-1 rounded-full text-xs bg-[var(--surface,#121215)] border border-[var(--border,#27272A)] text-zinc-300"
-              >
-                {tag}
-              </span>
-            ))}
+        {/* Stats Strip Under Header: Four Large Numbers with Tabular Numerals & Small Line Icons */}
+        <div
+          className={cn(
+            'grid gap-3.5 mt-8',
+            showCreditsStat ? 'grid-cols-2 md:grid-cols-4' : 'grid-cols-2 md:grid-cols-3'
+          )}
+        >
+          {/* 1. Members */}
+          <div className="rounded-xl border border-white/[0.08] bg-[#0E0E11] p-4 space-y-1">
+            <div className="flex items-center justify-between text-zinc-400">
+              <span className="text-xs font-medium">Members</span>
+              <Users className="size-4 text-zinc-400" />
+            </div>
+            <div className="text-2xl sm:text-3xl font-bold font-mono tabular-nums text-white">
+              {Number(server.memberCount || 0).toLocaleString()}
+            </div>
           </div>
-        )}
 
-        {/* Two Columns on Desktop (Main Column + 340px Side Column), One Column on Phone, 24px Gaps */}
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-6 items-start mt-6">
-          {/* ── MAIN COLUMN ── */}
-          <div className="space-y-6 min-w-0">
-            {/* 1. About Section */}
-            {vis.about !== false && (
-              <section className="rounded-2xl bg-[var(--surface,#121215)] border border-[var(--border,#27272A)] p-6 space-y-3">
-                <h2 className="text-base font-semibold text-[var(--foreground,#F4F4F5)]">About</h2>
-                {server.description ? (
-                  <div className="text-sm text-zinc-300 leading-relaxed prose prose-invert max-w-none">
-                    <MarkdownRenderer content={server.description} />
-                  </div>
-                ) : (
-                  <p className="text-sm text-zinc-500">No description provided.</p>
-                )}
-              </section>
+          {/* 2. Directory Rank */}
+          <div className="rounded-xl border border-white/[0.08] bg-[#0E0E11] p-4 space-y-1">
+            <div className="flex items-center justify-between text-zinc-400">
+              <span className="text-xs font-medium">Directory Rank</span>
+              <Trophy className="size-4 text-amber-400" />
+            </div>
+            <div className="text-2xl sm:text-3xl font-bold font-mono tabular-nums text-white">
+              {server.leaderboardRank ? `#${server.leaderboardRank}` : '—'}
+            </div>
+          </div>
+
+          {/* 3. Community Level */}
+          <div className="rounded-xl border border-white/[0.08] bg-[#0E0E11] p-4 space-y-1">
+            <div className="flex items-center justify-between text-zinc-400">
+              <span className="text-xs font-medium">Community Level</span>
+              <Shield className="size-4 text-indigo-400" />
+            </div>
+            <div className="text-2xl sm:text-3xl font-bold font-mono tabular-nums text-white">
+              Level {server.serverLevel || 1}
+            </div>
+          </div>
+
+          {/* 4. Server Credits (only if enabled) */}
+          {showCreditsStat && (
+            <div className="rounded-xl border border-white/[0.08] bg-[#0E0E11] p-4 space-y-1">
+              <div className="flex items-center justify-between text-zinc-400">
+                <span className="text-xs font-medium">Server Credits</span>
+                <Coins className="size-4 text-[var(--accent)]" />
+              </div>
+              <div className="text-2xl sm:text-3xl font-bold font-mono tabular-nums text-white">
+                {Number(server.serverCredits).toLocaleString()}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Tabs Strip Under Stats Strip */}
+        <div className="flex items-center gap-1 border-b border-white/[0.08] mt-8 pb-px overflow-x-auto scrollbar-none">
+          <button
+            type="button"
+            onClick={() => setActiveTab('overview')}
+            className={cn(
+              'px-4 py-2.5 text-xs font-semibold border-b-2 -mb-px transition-colors cursor-pointer shrink-0 focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-[var(--accent)] rounded-t',
+              activeTab === 'overview'
+                ? 'border-[var(--accent,#F97316)] text-white'
+                : 'border-transparent text-zinc-400 hover:text-zinc-200'
             )}
+          >
+            Overview
+          </button>
 
-            {/* 2. Live In-Game Block (Only when an ER:LC key is saved) */}
-            {server.erlc && vis.erlc !== false && (
-              <section className="rounded-2xl bg-[var(--surface,#121215)] border border-[var(--border,#27272A)] p-6 space-y-4">
-                <div className="flex items-center justify-between gap-2">
-                  <h2 className="text-base font-semibold text-[var(--foreground,#F4F4F5)]">
-                    Live In-Game Status
-                  </h2>
-                  {server.erlc.status === 'connected' && server.erlc.currentPlayers !== null && (
-                    <span className="text-xs text-zinc-400 inline-flex items-center gap-1">
-                      <Clock className="size-3 text-zinc-500" />
-                      <span>{formatSecondsAgo(server.erlc.lastCheckedAt)}</span>
-                    </span>
+          {hasReviews && (
+            <button
+              type="button"
+              onClick={() => setActiveTab('reviews')}
+              className={cn(
+                'px-4 py-2.5 text-xs font-semibold border-b-2 -mb-px transition-colors cursor-pointer shrink-0 focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-[var(--accent)] rounded-t',
+                activeTab === 'reviews'
+                  ? 'border-[var(--accent,#F97316)] text-white'
+                  : 'border-transparent text-zinc-400 hover:text-zinc-200'
+              )}
+            >
+              Reviews {ratingSummary.count > 0 && `(${ratingSummary.count})`}
+            </button>
+          )}
+
+          {hasStaff && (
+            <button
+              type="button"
+              onClick={() => setActiveTab('staff')}
+              className={cn(
+                'px-4 py-2.5 text-xs font-semibold border-b-2 -mb-px transition-colors cursor-pointer shrink-0 focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-[var(--accent)] rounded-t',
+                activeTab === 'staff'
+                  ? 'border-[var(--accent,#F97316)] text-white'
+                  : 'border-transparent text-zinc-400 hover:text-zinc-200'
+              )}
+            >
+              Staff ({server.staffList?.length || 0})
+            </button>
+          )}
+
+          {hasPartners && (
+            <button
+              type="button"
+              onClick={() => setActiveTab('partners')}
+              className={cn(
+                'px-4 py-2.5 text-xs font-semibold border-b-2 -mb-px transition-colors cursor-pointer shrink-0 focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-[var(--accent)] rounded-t',
+                activeTab === 'partners'
+                  ? 'border-[var(--accent,#F97316)] text-white'
+                  : 'border-transparent text-zinc-400 hover:text-zinc-200'
+              )}
+            >
+              Partners ({server.partnerList?.length || 0})
+            </button>
+          )}
+        </div>
+
+        {/* ═══════════════════════════════════════════════════════════
+            TAB 1: OVERVIEW
+           ═══════════════════════════════════════════════════════════ */}
+        {activeTab === 'overview' && (
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-6 items-start mt-6 animate-in fade-in-50 duration-150">
+            {/* ── MAIN COLUMN ── */}
+            <div className="space-y-6 min-w-0">
+              {/* About Section */}
+              {vis.about !== false && (
+                <section className="rounded-2xl bg-[#0E0E11] border border-white/[0.08] p-6 space-y-3">
+                  <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-400">About</h2>
+                  {server.description ? (
+                    <div className="text-sm text-zinc-300 leading-relaxed prose prose-invert max-w-none">
+                      <MarkdownRenderer content={server.description} />
+                    </div>
+                  ) : (
+                    <p className="text-sm text-zinc-500">No description provided.</p>
                   )}
-                </div>
+                </section>
+              )}
 
-                {server.erlc.status === 'connected' && server.erlc.currentPlayers !== null ? (
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-3 gap-4">
-                      <div>
-                        <div className="text-2xl sm:text-3xl font-bold text-[var(--foreground,#F4F4F5)] tabular-nums">
-                          {server.erlc.currentPlayers}
-                          <span className="text-base font-normal text-zinc-500">
-                            {' '}/ {server.erlc.maxPlayers || 40}
-                          </span>
-                        </div>
-                        <div className="text-xs text-zinc-400 mt-0.5">Players in game</div>
-                      </div>
-
-                      <div>
-                        <div className="text-2xl sm:text-3xl font-bold text-[var(--foreground,#F4F4F5)] tabular-nums">
-                          {Number(server.erlc.staffInGame || 0)}
-                        </div>
-                        <div className="text-xs text-zinc-400 mt-0.5">Staff in game</div>
-                      </div>
-
-                      <div>
-                        <div className="text-2xl sm:text-3xl font-bold text-[var(--foreground,#F4F4F5)] tabular-nums">
-                          {Number(server.erlc.queueSize || 0)}
-                        </div>
-                        <div className="text-xs text-zinc-400 mt-0.5">Queue size</div>
-                      </div>
-                    </div>
-
-                    {/* Thin Progress Bar */}
-                    <div className="w-full h-1.5 rounded-full bg-zinc-800 overflow-hidden">
-                      <div
-                        className="h-full bg-[var(--accent,#F97316)] rounded-full"
-                        style={{
-                          width: `${Math.min(
-                            100,
-                            Math.round(
-                              ((Number(server.erlc.currentPlayers) || 0) /
-                                Math.max(1, Number(server.erlc.maxPlayers) || 40)) *
-                                100
-                            )
-                          )}%`
-                        }}
-                      />
-                    </div>
-                  </div>
-                ) : (
-                  <div className="py-4 text-sm text-zinc-400">
-                    Live status unavailable
-                  </div>
-                )}
-              </section>
-            )}
-
-            {/* 3. Reviews Section */}
-            {vis.reviews !== false && (
-              <section className="rounded-2xl bg-[var(--surface,#121215)] border border-[var(--border,#27272A)] p-6 space-y-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h2 className="text-base font-semibold text-[var(--foreground,#F4F4F5)]">
-                      Community Reviews
+              {/* Badges Row: Small shield shapes with line icons & tooltip (no emojis, max 6 + View all) */}
+              {vis.badges !== false && badges.length > 0 && (
+                <section className="rounded-2xl bg-[#0E0E11] border border-white/[0.08] p-6 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-400">
+                      Earned Badges
                     </h2>
-                    <p className="text-xs text-zinc-400 mt-0.5">
-                      Real feedback from verified Discord members
-                    </p>
-                  </div>
-                  {ratingSummary.count > 0 && (
-                    <div className="text-right">
-                      <div className="text-lg font-bold text-[var(--foreground,#F4F4F5)]">
-                        {ratingSummary.average.toFixed(1)} / 5.0
-                      </div>
-                      <div className="text-xs text-zinc-400">{ratingSummary.count} reviews</div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Review Form for eligible signed-in users */}
-                {user && reviewEligibility?.canReview && (
-                  <form onSubmit={handleSubmitReview} className="space-y-3 pt-2 border-t border-[var(--border,#27272A)]">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-medium text-zinc-300">Your rating</span>
-                      <div className="flex items-center gap-1">
-                        {[1, 2, 3, 4, 5].map((star) => (
-                          <button
-                            key={star}
-                            type="button"
-                            onClick={() => setReviewRating(star)}
-                            className="p-1 cursor-pointer"
-                            aria-label={`Rate ${star} stars`}
-                          >
-                            <Star
-                              className={`size-4 ${
-                                star <= reviewRating
-                                  ? 'fill-current text-[var(--accent,#F97316)]'
-                                  : 'text-zinc-600'
-                              }`}
-                            />
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                    <textarea
-                      value={reviewText}
-                      onChange={(e) => setReviewText(e.target.value)}
-                      rows={3}
-                      maxLength={500}
-                      placeholder="Share your experience in this community..."
-                      className="w-full rounded-xl bg-[#09090B] border border-[var(--border,#27272A)] p-3 text-sm text-white placeholder:text-zinc-500 focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
-                    />
-                    {reviewError && <p className="text-xs text-red-400">{reviewError}</p>}
-                    <div className="flex justify-end">
-                      <Button
-                        type="submit"
-                        disabled={submittingReview || !reviewText.trim()}
-                        className="h-9 px-4 rounded-full bg-white text-black text-xs font-semibold hover:bg-zinc-200 cursor-pointer"
+                    {badges.length > 6 && (
+                      <button
+                        type="button"
+                        onClick={() => setBadgesDialogOpen(true)}
+                        className="text-xs text-[var(--accent)] hover:underline cursor-pointer"
                       >
-                        {submittingReview ? 'Submitting...' : 'Submit Review'}
-                      </Button>
-                    </div>
-                  </form>
-                )}
-
-                {/* Reviews List */}
-                {reviews.length === 0 ? (
-                  <div className="py-6 text-center space-y-1">
-                    <p className="text-sm font-medium text-zinc-300">No reviews yet</p>
-                    <p className="text-xs text-zinc-500">
-                      Members who join and stay in this server can leave a verified review.
-                    </p>
+                        View all ({badges.length})
+                      </button>
+                    )}
                   </div>
-                ) : (
-                  <div className="space-y-4 divide-y divide-[var(--border,#27272A)]">
-                    {reviews.map((rev) => (
-                      <div key={rev.id} className="pt-4 first:pt-0 space-y-2">
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-2.5 min-w-0">
-                            <UserAvatar
-                              userId={rev.user_id}
-                              avatarUrl={rev.user_avatar}
-                              name={rev.display_name || rev.user_name}
-                              size={32}
-                              className="rounded-full shrink-0"
-                            />
-                            <div className="min-w-0">
-                              <div className="text-xs font-semibold text-white truncate">
-                                {rev.display_name || rev.user_name}
-                              </div>
-                              <div className="text-[11px] text-zinc-500">
-                                {new Date(rev.created_at).toLocaleDateString()}
-                              </div>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-0.5 shrink-0">
-                            {Array.from({ length: 5 }).map((_, idx) => (
-                              <Star
-                                key={idx}
-                                className={`size-3.5 ${
-                                  idx < rev.rating
-                                    ? 'fill-current text-[var(--accent,#F97316)]'
-                                    : 'text-zinc-700'
-                                }`}
-                              />
-                            ))}
-                          </div>
-                        </div>
-                        <p className="text-sm text-zinc-300 leading-relaxed break-words">
-                          {rev.text}
-                        </p>
+
+                  <div className="flex flex-wrap gap-2.5">
+                    {badges.slice(0, 6).map((b) => (
+                      <div
+                        key={b.id}
+                        title={b.description}
+                        className="group relative inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-white/[0.08] bg-[#141418] hover:border-white/20 transition-colors select-none"
+                      >
+                        <Shield className="size-3.5 text-[var(--accent)] shrink-0" />
+                        <span className="text-xs font-medium text-zinc-200">{b.label}</span>
                       </div>
                     ))}
                   </div>
-                )}
-              </section>
-            )}
-          </div>
+                </section>
+              )}
 
-          {/* ── SIDE COLUMN (340px on Desktop) ── */}
-          <aside className="w-full lg:w-[340px] space-y-6">
-            {/* 1. Owner Card */}
-            <div className="rounded-2xl bg-[var(--surface,#121215)] border border-[var(--border,#27272A)] p-5 space-y-3">
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                Server Owner
-              </h3>
-              {ownerName || ownerId ? (
-                <div className="flex items-center gap-3">
-                  <UserAvatar
-                    userId={ownerId || undefined}
-                    avatarUrl={ownerAvatar}
-                    name={ownerName || 'Owner'}
-                    size={40}
-                    className="rounded-full shrink-0"
-                  />
-                  <div className="min-w-0">
-                    <div className="text-sm font-semibold text-white truncate">
-                      {ownerName || `User ${String(ownerId).slice(0, 6)}`}
-                    </div>
-                    {owner?.username && (
-                      <div className="text-xs text-zinc-400 truncate">@{owner.username}</div>
+              {/* Live In-Game Block (Only when an ER:LC key is saved) */}
+              {server.erlc && vis.erlc !== false && (
+                <section className="rounded-2xl bg-[#0E0E11] border border-white/[0.08] p-6 space-y-4">
+                  <div className="flex items-center justify-between gap-2">
+                    <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-400">
+                      Live In-Game Status
+                    </h2>
+                    {server.erlc.status === 'connected' && server.erlc.currentPlayers !== null && (
+                      <span className="text-xs text-zinc-400 inline-flex items-center gap-1">
+                        <Clock className="size-3 text-zinc-500" />
+                        <span>{formatSecondsAgo(server.erlc.lastCheckedAt)}</span>
+                      </span>
                     )}
                   </div>
-                </div>
-              ) : (
-                <p className="text-xs text-zinc-500">Owner information unavailable</p>
+
+                  {server.erlc.status === 'connected' && server.erlc.currentPlayers !== null ? (
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-3 gap-4">
+                        <div>
+                          <div className="text-2xl sm:text-3xl font-bold font-mono text-white tabular-nums">
+                            {server.erlc.currentPlayers}
+                            <span className="text-base font-normal text-zinc-500">
+                              {' '}/ {server.erlc.maxPlayers || 40}
+                            </span>
+                          </div>
+                          <div className="text-xs text-zinc-400 mt-0.5">Players in game</div>
+                        </div>
+
+                        <div>
+                          <div className="text-2xl sm:text-3xl font-bold font-mono text-white tabular-nums">
+                            {Number(server.erlc.staffInGame || 0)}
+                          </div>
+                          <div className="text-xs text-zinc-400 mt-0.5">Staff in game</div>
+                        </div>
+
+                        <div>
+                          <div className="text-2xl sm:text-3xl font-bold font-mono text-white tabular-nums">
+                            {Number(server.erlc.queueSize || 0)}
+                          </div>
+                          <div className="text-xs text-zinc-400 mt-0.5">Queue size</div>
+                        </div>
+                      </div>
+
+                      {/* Thin Progress Bar */}
+                      <div className="w-full h-1.5 rounded-full bg-zinc-800 overflow-hidden">
+                        <div
+                          className="h-full bg-[var(--accent,#F97316)] rounded-full transition-all"
+                          style={{
+                            width: `${Math.min(
+                              100,
+                              Math.round(
+                                ((Number(server.erlc.currentPlayers) || 0) /
+                                  Math.max(1, Number(server.erlc.maxPlayers) || 40)) *
+                                  100
+                              )
+                            )}%`
+                          }}
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="py-2 text-xs text-zinc-400">
+                      Live status unavailable
+                    </div>
+                  )}
+                </section>
               )}
             </div>
 
-            {/* 2. Stats Card (Directory Rank, Community Level, Server Total Credits if enabled) */}
-            <div className="rounded-2xl bg-[var(--surface,#121215)] border border-[var(--border,#27272A)] p-5 space-y-3">
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                Community Stats
-              </h3>
-              <div className="space-y-2.5 text-sm">
-                <div className="flex items-center justify-between">
-                  <span className="text-zinc-400">Directory rank</span>
-                  <span className="font-semibold text-white tabular-nums">
-                    #{server.leaderboardRank || 1}
-                  </span>
+            {/* ── SIDE COLUMN (340px) ── */}
+            <aside className="w-full lg:w-[340px] space-y-6">
+              {/* Owner Card */}
+              <div className="rounded-2xl bg-[#0E0E11] border border-white/[0.08] p-5 space-y-3">
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
+                  Server Owner
+                </h3>
+                {ownerName || ownerId ? (
+                  <div className="flex items-center gap-3">
+                    <UserAvatar
+                      userId={ownerId || undefined}
+                      avatarUrl={ownerAvatar}
+                      name={ownerName || 'Owner'}
+                      size={44}
+                      className="rounded-full shrink-0 ring-2 ring-white/10"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm font-semibold text-white truncate">
+                        {ownerName || `User ${String(ownerId).slice(0, 6)}`}
+                      </div>
+                      <div className="text-xs text-zinc-400">Community Founder</div>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-xs text-zinc-500">Owner information unavailable</p>
+                )}
+              </div>
+
+              {/* Official Links */}
+              {officialLinks.length > 0 && (
+                <div className="rounded-2xl bg-[#0E0E11] border border-white/[0.08] p-5 space-y-3">
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
+                    Official Links
+                  </h3>
+                  <div className="space-y-2">
+                    {officialLinks.map((link, idx) => (
+                      <a
+                        key={idx}
+                        href={link.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-between p-2.5 rounded-xl border border-white/[0.06] bg-[#141418] hover:border-white/20 transition-colors text-xs text-zinc-300 hover:text-white"
+                      >
+                        <span className="font-medium">{link.label}</span>
+                        <ExternalLink className="size-3 text-zinc-500" />
+                      </a>
+                    ))}
+                  </div>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-zinc-400">Community level</span>
-                  <span className="font-semibold text-white tabular-nums">
-                    Level {server.serverLevel || 1}
-                  </span>
+              )}
+            </aside>
+          </div>
+        )}
+
+        {/* ═══════════════════════════════════════════════════════════
+            TAB 2: REVIEWS
+           ═══════════════════════════════════════════════════════════ */}
+        {activeTab === 'reviews' && hasReviews && (
+          <div className="mt-6 space-y-6 animate-in fade-in-50 duration-150">
+            <section className="rounded-2xl bg-[#0E0E11] border border-white/[0.08] p-6 space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-base font-semibold text-white">Community Reviews</h2>
+                  <p className="text-xs text-zinc-400 mt-0.5">Real feedback from verified Discord members</p>
                 </div>
-                {server.showCredits !== false && server.serverCredits !== null && server.serverCredits !== undefined && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-zinc-400">Server credits</span>
-                    <span className="font-semibold text-white tabular-nums">
-                      {Number(server.serverCredits).toLocaleString()} credits
-                    </span>
+                {ratingSummary.count > 0 && (
+                  <div className="text-right">
+                    <div className="text-lg font-bold font-mono text-white">
+                      {ratingSummary.average.toFixed(1)} / 5.0
+                    </div>
+                    <div className="text-xs text-zinc-400">{ratingSummary.count} reviews</div>
                   </div>
                 )}
               </div>
-            </div>
 
-            {/* 3. Badges Card (Plain text chips, no emojis, max 4 with View all) */}
-            {vis.badges !== false && badges.length > 0 && (
-              <div className="rounded-2xl bg-[var(--surface,#121215)] border border-[var(--border,#27272A)] p-5 space-y-3">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                    Badges
-                  </h3>
-                  {badges.length > 4 && (
-                    <button
-                      type="button"
-                      onClick={() => setShowAllBadges((v) => !v)}
-                      className="text-xs text-[var(--accent)] hover:underline cursor-pointer"
-                    >
-                      {showAllBadges ? 'Show less' : `View all (${badges.length})`}
-                    </button>
-                  )}
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {visibleBadges.map((b) => (
-                    <span
-                      key={b.id}
-                      title={b.description}
-                      className="px-2.5 py-1 rounded-full text-xs font-medium bg-[#18181B] border border-[var(--border,#27272A)] text-zinc-200"
-                    >
-                      {b.label}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* 4. Official Links */}
-            {officialLinks.length > 0 && (
-              <div className="rounded-2xl bg-[var(--surface,#121215)] border border-[var(--border,#27272A)] p-5 space-y-3">
-                <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                  Official Links
-                </h3>
-                <div className="space-y-2">
-                  {officialLinks.map((lnk, idx) => (
-                    <a
-                      key={idx}
-                      href={lnk.url.startsWith('http') ? lnk.url : `https://${lnk.url}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center justify-between px-3 py-2 rounded-xl bg-[#09090B] border border-[var(--border,#27272A)] text-xs text-zinc-300 hover:text-white hover:border-zinc-700 transition-colors"
-                    >
-                      <span className="inline-flex items-center gap-2 truncate">
-                        <Globe className="size-3.5 text-zinc-500 shrink-0" />
-                        <span className="truncate">{lnk.label}</span>
-                      </span>
-                      <ExternalLink className="size-3 text-zinc-500 shrink-0" />
-                    </a>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* 5. Staff Team (If owner turned it on) */}
-            {server.showStaffList && Array.isArray(server.staffList) && server.staffList.length > 0 && (
-              <div className="rounded-2xl bg-[var(--surface,#121215)] border border-[var(--border,#27272A)] p-5 space-y-3">
-                <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                  Staff Team
-                </h3>
-                <div className="space-y-2.5">
-                  {server.staffList.map((st, idx) => (
-                    <div key={st.id || idx} className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <UserAvatar
-                          userId={st.id}
-                          avatarUrl={st.avatarUrl}
-                          name={st.displayName || st.username}
-                          size={28}
-                          className="rounded-full shrink-0"
-                        />
-                        <span className="text-xs font-medium text-white truncate">
-                          {st.displayName || st.username}
-                        </span>
-                      </div>
-                      <span className="text-[11px] text-zinc-400 shrink-0">{st.role || 'Staff'}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* 6. Partners (If owner turned it on) */}
-            {server.showPartnerList && Array.isArray(server.partnerList) && server.partnerList.length > 0 && (
-              <div className="rounded-2xl bg-[var(--surface,#121215)] border border-[var(--border,#27272A)] p-5 space-y-3">
-                <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                  Partners
-                </h3>
-                <div className="space-y-2.5">
-                  {server.partnerList.map((pt, idx) => (
-                    <div key={pt.id || idx} className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <ServerIcon
-                          name={pt.name}
-                          iconUrl={pt.iconUrl}
-                          size="sm"
-                          className="size-7 rounded-lg shrink-0"
-                        />
-                        <span className="text-xs font-medium text-white truncate">{pt.name}</span>
-                      </div>
-                      {pt.link && (
-                        <a
-                          href={pt.link.startsWith('http') || pt.link.startsWith('/') ? pt.link : `https://${pt.link}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-xs text-zinc-400 hover:text-white shrink-0"
+              {/* Review Form for eligible signed-in users */}
+              {user && reviewEligibility?.canReview && (
+                <form onSubmit={handleSubmitReview} className="space-y-3 pt-4 border-t border-white/[0.08]">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-medium text-zinc-300">Your rating</span>
+                    <div className="flex items-center gap-1">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <button
+                          key={star}
+                          type="button"
+                          onClick={() => setReviewRating(star)}
+                          className="p-1 cursor-pointer"
+                          aria-label={`Rate ${star} stars`}
                         >
-                          View
-                        </a>
-                      )}
+                          <Star
+                            className={cn(
+                              'size-4',
+                              star <= reviewRating
+                                ? 'fill-current text-[var(--accent,#F97316)]'
+                                : 'text-zinc-600'
+                            )}
+                          />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <textarea
+                    value={reviewText}
+                    onChange={(e) => setReviewText(e.target.value)}
+                    rows={3}
+                    maxLength={500}
+                    placeholder="Share your experience in this community..."
+                    className="w-full rounded-xl bg-[#09090B] border border-white/[0.08] p-3 text-sm text-white placeholder:text-zinc-500 focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
+                  />
+                  {reviewError && <p className="text-xs text-red-400">{reviewError}</p>}
+                  <div className="flex justify-end">
+                    <Button
+                      type="submit"
+                      disabled={submittingReview || !reviewText.trim()}
+                      className="h-9 px-4 rounded-xl bg-white text-black text-xs font-semibold hover:bg-zinc-200 cursor-pointer"
+                    >
+                      {submittingReview ? 'Submitting...' : 'Submit Review'}
+                    </Button>
+                  </div>
+                </form>
+              )}
+
+              {/* Reviews List */}
+              {reviews.length === 0 ? (
+                <div className="py-8 text-center space-y-1">
+                  <p className="text-sm font-medium text-zinc-300">No reviews yet</p>
+                  <p className="text-xs text-zinc-500">
+                    Members who join and stay in this server can leave a verified review.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4 divide-y divide-white/[0.06]">
+                  {reviews.map((rev) => (
+                    <div key={rev.id} className="pt-4 first:pt-0 space-y-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <UserAvatar
+                            userId={rev.user_id}
+                            avatarUrl={rev.user_avatar}
+                            name={rev.display_name || rev.user_name}
+                            size={32}
+                            className="rounded-full shrink-0"
+                          />
+                          <div className="min-w-0">
+                            <div className="text-xs font-semibold text-white truncate">
+                              {rev.display_name || rev.user_name}
+                            </div>
+                            <div className="text-[11px] text-zinc-500">
+                              {new Date(rev.created_at).toLocaleDateString()}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-0.5 shrink-0">
+                          {Array.from({ length: 5 }).map((_, idx) => (
+                            <Star
+                              key={idx}
+                              className={cn(
+                                'size-3.5',
+                                idx < rev.rating
+                                  ? 'fill-current text-[var(--accent,#F97316)]'
+                                  : 'text-zinc-700'
+                              )}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                      <p className="text-sm text-zinc-300 leading-relaxed break-words">{rev.text}</p>
                     </div>
                   ))}
                 </div>
+              )}
+            </section>
+          </div>
+        )}
+
+        {/* ═══════════════════════════════════════════════════════════
+            TAB 3: STAFF
+           ═══════════════════════════════════════════════════════════ */}
+        {activeTab === 'staff' && hasStaff && (
+          <div className="mt-6 animate-in fade-in-50 duration-150">
+            <section className="rounded-2xl bg-[#0E0E11] border border-white/[0.08] p-6 space-y-4">
+              <div>
+                <h2 className="text-base font-semibold text-white">Staff Team</h2>
+                <p className="text-xs text-zinc-400 mt-0.5">Verified server management and administration</p>
               </div>
-            )}
-          </aside>
-        </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 pt-2">
+                {server.staffList!.map((member, idx) => (
+                  <div
+                    key={idx}
+                    className="p-3.5 rounded-xl border border-white/[0.06] bg-[#141418] flex items-center gap-3"
+                  >
+                    <UserAvatar
+                      userId={member.id}
+                      avatarUrl={member.avatarUrl}
+                      name={member.displayName || member.username}
+                      size={36}
+                      className="rounded-full shrink-0 ring-1 ring-white/10"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <div className="text-xs font-semibold text-white truncate">
+                        {member.displayName || member.username}
+                      </div>
+                      <div className="text-[11px] text-[var(--accent)] font-medium truncate">
+                        {member.role || 'Staff'}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          </div>
+        )}
+
+        {/* ═══════════════════════════════════════════════════════════
+            TAB 4: PARTNERS
+           ═══════════════════════════════════════════════════════════ */}
+        {activeTab === 'partners' && hasPartners && (
+          <div className="mt-6 animate-in fade-in-50 duration-150">
+            <section className="rounded-2xl bg-[#0E0E11] border border-white/[0.08] p-6 space-y-4">
+              <div>
+                <h2 className="text-base font-semibold text-white">Affiliated Communities</h2>
+                <p className="text-xs text-zinc-400 mt-0.5">Official server alliances and mutual partners</p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 pt-2">
+                {server.partnerList!.map((partner, idx) => (
+                  <div
+                    key={idx}
+                    className="p-3.5 rounded-xl border border-white/[0.06] bg-[#141418] flex items-center justify-between gap-3"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <ServerIcon
+                        serverId={partner.id}
+                        name={partner.name}
+                        iconUrl={partner.iconUrl}
+                        size={36}
+                        className="rounded-xl shrink-0"
+                      />
+                      <div className="min-w-0">
+                        <div className="text-xs font-semibold text-white truncate">{partner.name}</div>
+                        {partner.memberCount ? (
+                          <div className="text-[11px] text-zinc-400">
+                            {partner.memberCount.toLocaleString()} members
+                          </div>
+                        ) : null}
+                      </div>
+                    </div>
+                    {partner.link && (
+                      <a
+                        href={partner.link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-2.5 py-1 rounded-lg border border-white/[0.08] bg-white/[0.04] text-[11px] font-medium text-zinc-300 hover:text-white hover:border-white/20 transition-colors shrink-0"
+                      >
+                        Visit
+                      </a>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </section>
+          </div>
+        )}
       </div>
+
+      {/* Badges Dialog: "View all" */}
+      <Dialog open={badgesDialogOpen} onOpenChange={setBadgesDialogOpen}>
+        <DialogContent className="max-w-[480px] bg-[#0E0E11] border border-white/[0.1] rounded-2xl p-6 space-y-4">
+          <DialogHeader>
+            <DialogTitle className="text-base font-bold text-white flex items-center gap-2">
+              <Shield className="size-4 text-[var(--accent)]" />
+              <span>Earned Community Badges</span>
+            </DialogTitle>
+            <DialogDescription className="text-xs text-zinc-400">
+              Verified badges awarded to {server.name} based on platform activity and achievements.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-2.5 max-h-[320px] overflow-y-auto pr-1">
+            {badges.map((b) => (
+              <div
+                key={b.id}
+                className="p-3 rounded-xl border border-white/[0.06] bg-[#141418] flex items-start gap-3"
+              >
+                <div className="size-8 rounded-lg bg-[var(--accent)]/15 border border-[var(--accent)]/30 flex items-center justify-center shrink-0 mt-0.5">
+                  <Shield className="size-4 text-[var(--accent)]" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-xs font-semibold text-white">{b.label}</div>
+                  <div className="text-[11px] text-zinc-400 mt-0.5 leading-relaxed">{b.description}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setBadgesDialogOpen(false)}
+              className="text-xs border-white/10 text-zinc-300"
+            >
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Report Modal */}
       <Dialog open={reportModalOpen} onOpenChange={setReportModalOpen}>
-        <DialogContent className="bg-[#121215] border-[var(--border,#27272A)] text-white max-w-md">
+        <DialogContent className="max-w-[420px] bg-[#0E0E11] border border-white/[0.1] rounded-2xl p-6 space-y-4">
           <DialogHeader>
-            <DialogTitle className="text-base font-semibold">Report Server</DialogTitle>
+            <DialogTitle className="text-base font-bold text-white flex items-center gap-2">
+              <Flag className="size-4 text-red-400" />
+              <span>Report Community</span>
+            </DialogTitle>
             <DialogDescription className="text-xs text-zinc-400">
-              Submit a report for staff review regarding {server.name}.
+              Help keep the directory safe. Reports are audited by staff.
             </DialogDescription>
           </DialogHeader>
+
           {reportSuccess ? (
-            <div className="py-4 text-sm text-zinc-300">
-              Thank you. Your report has been submitted to platform staff.
+            <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-300">
+              Thank you. Your report has been submitted for administrative review.
             </div>
           ) : (
-            <div className="space-y-3 py-2">
-              <textarea
-                value={reportReason}
-                onChange={(e) => setReportReason(e.target.value)}
-                rows={4}
-                placeholder="Describe the issue clearly..."
-                className="w-full rounded-xl bg-[#09090B] border border-[var(--border,#27272A)] p-3 text-xs text-white placeholder:text-zinc-500 focus:outline-none"
-              />
-              <DialogFooter>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={() => setReportModalOpen(false)}
-                  className="text-xs text-zinc-400"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="button"
-                  disabled={submittingReport || !reportReason.trim()}
-                  onClick={handleSubmitReport}
-                  className="text-xs bg-white text-black hover:bg-zinc-200 rounded-full px-4"
-                >
-                  {submittingReport ? 'Submitting...' : 'Submit Report'}
-                </Button>
-              </DialogFooter>
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-zinc-300">Reason</label>
+                <textarea
+                  value={reportReason}
+                  onChange={(e) => setReportReason(e.target.value)}
+                  rows={3}
+                  maxLength={500}
+                  placeholder="Describe the issue (e.g. invalid invite, inappropriate content, fake community)..."
+                  className="w-full rounded-xl bg-[#09090B] border border-white/[0.08] p-3 text-xs text-white placeholder:text-zinc-500 focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
+                />
+              </div>
             </div>
           )}
+
+          <DialogFooter className="gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setReportModalOpen(false)}
+              className="text-xs border-white/10 text-zinc-300"
+            >
+              {reportSuccess ? 'Close' : 'Cancel'}
+            </Button>
+            {!reportSuccess && (
+              <Button
+                type="button"
+                disabled={submittingReport || !reportReason.trim()}
+                onClick={handleSubmitReport}
+                className="text-xs bg-red-600 hover:bg-red-500 text-white font-semibold"
+              >
+                {submittingReport ? 'Submitting...' : 'Send Report'}
+              </Button>
+            )}
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

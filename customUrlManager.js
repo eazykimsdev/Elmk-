@@ -176,7 +176,7 @@ export function validateCustomUrlName(rawName) {
 
   // Reserved site routes
   if (RESERVED_WORDS.has(name)) {
-    return { valid: false, error: `The name "${name}" is a reserved system route and cannot be used.` };
+    return { valid: false, error: 'This name is reserved. Contact staff.' };
   }
 
   // Check blocked words and leet/unicode normalizations
@@ -189,7 +189,7 @@ export function validateCustomUrlName(rawName) {
       if (!bVar) continue;
       for (const nVar of variants) {
         if (nVar.includes(bVar) || name.includes(blocked.toLowerCase())) {
-          return { valid: false, error: `The name "${name}" contains blocked or restricted words.` };
+          return { valid: false, error: 'This name is reserved. Contact staff.' };
         }
       }
     }
@@ -428,6 +428,56 @@ export async function adminReassignCustomUrl(slug, targetServerId, adminUserId, 
     oldServerId,
     newServerId: sid,
     reason
+  });
+
+  return record;
+}
+
+/**
+ * Admin: Assign a reserved or brand name to a server with reason and audit log
+ */
+export async function adminAssignReservedCustomUrl(slug, targetServerId, adminUserId, reason = 'Administrative reserved assignment') {
+  const clean = String(slug || '').trim().toLowerCase();
+  const sid = String(targetServerId);
+
+  if (!clean || !sid) {
+    throw new Error('Slug and target server ID are required.');
+  }
+
+  const servers = getPromotedServers(true);
+  const targetServer = servers.find(s => String(s.id) === sid || String(s.guildId) === sid);
+  if (!targetServer) {
+    throw new Error('Target server not found.');
+  }
+
+  const customUrls = loadCustomUrls();
+  const existing = customUrls[clean];
+  const oldServerId = existing?.serverId || null;
+
+  if (oldServerId && oldServerId !== sid) {
+    await updatePromotedServerDetails(oldServerId, { customUrl: null });
+  }
+
+  const record = {
+    slug: clean,
+    serverId: sid,
+    serverName: targetServer.name || 'Community Server',
+    claimedBy: adminUserId,
+    isReservedAssignment: true,
+    claimedAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+
+  customUrls[clean] = record;
+  saveCustomUrls(customUrls);
+
+  targetServer.customUrl = clean;
+  await updatePromotedServerDetails(sid, { customUrl: clean });
+
+  logAudit('admin_assign_reserved_custom_url', adminUserId, {
+    slug: clean,
+    serverId: sid,
+    reason: reason || 'Reserved name assigned by administrator'
   });
 
   return record;

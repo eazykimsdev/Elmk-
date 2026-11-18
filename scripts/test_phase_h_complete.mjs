@@ -512,7 +512,7 @@ const day4MissedDay3 = new Date('2026-05-04T11:00:00Z');
 
 const claim1 = await claimDailyReward(CHECKIN_USER, { now: day1, guildId: GUILD_ID });
 assert.equal(claim1.streak, 1);
-assert.equal(claim1.reward, 10);
+assert.equal(claim1.reward, 3);
 
 let duplicateBlocked = false;
 try {

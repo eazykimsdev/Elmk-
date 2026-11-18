@@ -25,7 +25,7 @@ const DEFAULT_SETTINGS = {
   join_reward_credits: 2,
   premium_join_reward_credits: 5,
   daily_join_reward_cap_per_server: 50,
-  daily_checkin_reward_credits: 10,
+  daily_checkin_reward_credits: 3,
   join_minimum_stay_seconds: 120,
   join_retention_window_hours: 72,
   recruiter_reward_credits: 4,
@@ -144,7 +144,8 @@ export async function buyServerPremium(serverId, userId, options = {}) {
     const ledgerTx = recordLedgerTransaction({
       serverId: sid,
       guildId: sid,
-      userId: userId ? String(userId) : null,
+      userId: `guild_${sid}`,
+      triggeredBy: userId ? String(userId) : 'Manager',
       type: 'spent',
       amount: price,
       reason: `premium ${durationDays} days`,
@@ -162,10 +163,13 @@ export async function buyServerPremium(serverId, userId, options = {}) {
 
     return {
       ok: true,
+      success: true,
       serverId: sid,
       daysAdded: durationDays,
+      daysLeft: Math.max(0, Math.ceil((newExp - now) / (24 * 3600 * 1000))),
       premiumUntil: newExp,
       price,
+      newBalance: balance - price,
       txId: ledgerTx.id
     };
   } finally {

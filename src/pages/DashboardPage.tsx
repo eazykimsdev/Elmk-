@@ -35,8 +35,8 @@ import { MyJoinsTab } from './dashboard/MyJoinsTab';
 import { HistoryTab } from './dashboard/HistoryTab';
 import { TransferTab } from './dashboard/TransferTab';
 import { UptimeTab } from './dashboard/UptimeTab';
-import { PremiumTab } from './dashboard/PremiumTab';
 import { BoostsTab } from './dashboard/BoostsTab';
+import { ShopTab } from './dashboard/ShopTab';
 import { ChangelogTab } from './dashboard/ChangelogTab';
 import { ServerDetailsTab } from './dashboard/ServerDetailsTab';
 import { BotManagementTab } from './dashboard/BotManagementTab';
@@ -44,7 +44,6 @@ import { DiscordConnectionTab } from './dashboard/DiscordConnectionTab';
 import { SettingsTab } from './dashboard/SettingsTab';
 import { PartnershipsTab } from './dashboard/PartnershipsTab';
 import { RecruitsTab } from './dashboard/RecruitsTab';
-import { ShopTab } from './dashboard/ShopTab';
 import { FormsTab } from './dashboard/FormsTab';
 import { NotFoundPage } from './NotFoundPage';
 import { UnderConstructionPage } from './UnderConstructionPage';
@@ -819,9 +818,9 @@ export function DashboardPage() {
       leaderboard: 'Leaderboard',
       joins: 'My joins',
       partnerships: 'Partnerships',
-      boosts: 'Boosts',
-      shop: 'Boosts',
-      premium: 'Premium',
+      boosts: 'Shop',
+      shop: 'Shop',
+      premium: 'Shop',
       forms: 'Applications',
       applications: 'Applications',
       history: 'Credit history',
@@ -1225,26 +1224,16 @@ export function DashboardPage() {
             </TabErrorBoundary>
           )}
 
-          {(activeTabKey === 'boosts' || activeTabKey === 'shop' || activeTabKey === 'server-shop') && (
-            <BoostsTab
+          {(activeTabKey === 'boosts' || activeTabKey === 'shop' || activeTabKey === 'server-shop' || activeTabKey === 'premium') && (
+            <ShopTab
               currentGuildId={currentGuildId}
               guild={selectedGuild}
               workspace={workspace}
               config={config}
               serverName={selectedGuild?.name || 'Server'}
-              initialSubTab="shop"
+              initialTab={activeTabKey === 'premium' ? 'premium' : 'boosts'}
               onNavigateTab={(t) => navigate(`/dashboard/${currentGuildId}/${t}`)}
               addToast={(v, t, b) => addToast(v, t, b || '')}
-            />
-          )}
-
-          {activeTabKey === 'premium' && (
-            <PremiumTab
-              guild={selectedGuild}
-              workspace={workspace}
-              config={config}
-              onNavigateTab={(t) => navigate(`/dashboard/${currentGuildId}/${t}`)}
-              addToast={addToast}
             />
           )}
 
